@@ -6,10 +6,23 @@ const User = require('../models/User');
 // @access  Private
 exports.getUserBookings = async (req, res) => {
   try {
+    console.log('📋 Fetching all bookings for user:', req.user?.email);
+    
+    // Check if user is authenticated
+    if (!req.user || !req.user.email) {
+      console.error('❌ No user found in request');
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+    
     // For your reference, fetch ALL user bookings regardless of status
     const bookings = await Booking.find({ email: req.user.email })
       .populate('activity')
       .sort({ date: 1 });
+    
+    console.log(`✅ Found ${bookings.length} total bookings for user ${req.user.email}`);
     
     res.status(200).json({
       success: true,
@@ -17,7 +30,7 @@ exports.getUserBookings = async (req, res) => {
       data: bookings
     });
   } catch (err) {
-    console.error('Error fetching user bookings:', err);
+    console.error('❌ Error fetching user bookings:', err);
     res.status(500).json({
       success: false,
       error: 'Server Error'
@@ -30,11 +43,22 @@ exports.getUserBookings = async (req, res) => {
 // @access  Private
 exports.getUserBookingHistory = async (req, res) => {
   try {
+    console.log('📋 Fetching booking history for user:', req.user?.email);
+    
+    // Check if user is authenticated
+    if (!req.user || !req.user.email) {
+      console.error('❌ No user found in request');
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     // First, automatically mark past confirmed bookings as completed
-    await Booking.updateMany(
+    const updateResult = await Booking.updateMany(
       {
         email: req.user.email,
         status: 'confirmed',
@@ -42,6 +66,8 @@ exports.getUserBookingHistory = async (req, res) => {
       },
       { status: 'completed' }
     );
+    
+    console.log(`🔄 Updated ${updateResult.modifiedCount} past bookings to completed status`);
 
     // Then fetch all completed, cancelled, or past bookings
     const bookings = await Booking.find({
@@ -55,7 +81,7 @@ exports.getUserBookingHistory = async (req, res) => {
     .populate('activity')
     .sort({ date: -1 });
     
-    console.log(`Found ${bookings.length} history bookings for user ${req.user.email}`);
+    console.log(`✅ Found ${bookings.length} history bookings for user ${req.user.email}`);
     
     res.status(200).json({
       success: true,
@@ -63,7 +89,7 @@ exports.getUserBookingHistory = async (req, res) => {
       data: bookings
     });
   } catch (err) {
-    console.error('Error fetching user booking history:', err);
+    console.error('❌ Error fetching user booking history:', err);
     res.status(500).json({
       success: false,
       error: 'Server Error'
@@ -76,9 +102,30 @@ exports.getUserBookingHistory = async (req, res) => {
 // @access  Private
 exports.getUpcomingBookings = async (req, res) => {
   try {
+    console.log('📋 Fetching upcoming bookings for user:', req.user?.email);
+    
+    // Check if user is authenticated
+    if (!req.user || !req.user.email) {
+      console.error('❌ No user found in request');
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    console.log('🔍 Searching for bookings with:', {
+      email: req.user.email,
+      status: { $in: ['confirmed', 'pending'] },
+      date: { $gte: today }
+    });
+    
+    // First, check total bookings for this email
+    const totalBookingsForEmail = await Booking.countDocuments({ email: req.user.email });
+    console.log(`📊 Total bookings found for email ${req.user.email}: ${totalBookingsForEmail}`);
+    
     const bookings = await Booking.find({
       email: req.user.email,
       status: { $in: ['confirmed', 'pending'] },
@@ -87,12 +134,18 @@ exports.getUpcomingBookings = async (req, res) => {
     .populate('activity')
     .sort({ date: 1 });
     
+    console.log(`✅ Found ${bookings.length} upcoming bookings for user ${req.user.email}`);
+    if (bookings.length > 0) {
+      console.log('📝 Booking IDs:', bookings.map(b => b._id));
+    }
+    
     res.status(200).json({
       success: true,
       count: bookings.length,
       data: bookings
     });
   } catch (err) {
+    console.error('❌ Error fetching upcoming bookings:', err);
     res.status(500).json({
       success: false,
       error: 'Server Error'
@@ -105,6 +158,17 @@ exports.getUpcomingBookings = async (req, res) => {
 // @access  Private
 exports.getUserBookingStats = async (req, res) => {
   try {
+    console.log('📊 Fetching booking stats for user:', req.user?.email);
+    
+    // Check if user is authenticated
+    if (!req.user || !req.user.email) {
+      console.error('❌ No user found in request');
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -128,6 +192,14 @@ exports.getUserBookingStats = async (req, res) => {
       status: 'cancelled'
     });
     
+    console.log(`📈 Booking stats for ${req.user.email}:`, {
+      total: totalBookings,
+      pending: pendingBookings,
+      confirmed: confirmedBookings,
+      completed: completedBookings,
+      cancelled: cancelledBookings
+    });
+    
     // Get recent bookings
     const recentBookings = await Booking.find({
       email: req.user.email,
@@ -135,6 +207,8 @@ exports.getUserBookingStats = async (req, res) => {
     .sort({ createdAt: -1 })
     .limit(3)
     .populate('activity');
+    
+    console.log(`📝 Recent bookings count: ${recentBookings.length}`);
     
     res.status(200).json({
       success: true,
@@ -148,6 +222,7 @@ exports.getUserBookingStats = async (req, res) => {
       }
     });
   } catch (err) {
+    console.error('❌ Error fetching booking stats:', err);
     res.status(500).json({
       success: false,
       error: 'Server Error'

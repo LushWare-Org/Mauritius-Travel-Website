@@ -5,4 +5,7 @@ const debugController = require('../controllers/debugController');
 // Route to test Cloudinary connection
 router.get('/cloudinary', debugController.testCloudinary);
 
+// Route to check database connection and data
+router.get('/database', debugController.checkDatabase);
+
 module.exports = router;

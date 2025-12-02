@@ -126,16 +126,58 @@ exports.getActivityById = async (req, res) => {
 // @access  Private (Admin only)
 exports.createActivity = async (req, res) => {
   try {
+    console.log('📝 Creating new activity...');
+    console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
+    
+    // Check database connection
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      console.error('❌ Database not connected! Connection state:', mongoose.connection.readyState);
+      return res.status(500).json({
+        success: false,
+        error: 'Database connection not available'
+      });
+    }
+    
+    console.log('✅ Database connection verified');
+    
     const activity = await Activity.create(req.body);
+    
+    console.log('✅ Activity created successfully:', activity._id);
+    console.log('📊 Activity data:', {
+      _id: activity._id,
+      title: activity.title,
+      type: activity.type,
+      status: activity.status
+    });
     
     res.status(201).json({
       success: true,
       data: activity
     });
   } catch (err) {
+    console.error('❌ Error creating activity:', err);
+    console.error('❌ Error details:', {
+      message: err.message,
+      name: err.name,
+      code: err.code,
+      errors: err.errors
+    });
+    
+    // More detailed error response
+    let errorMessage = err.message;
+    if (err.errors) {
+      const validationErrors = Object.keys(err.errors).map(key => ({
+        field: key,
+        message: err.errors[key].message
+      }));
+      errorMessage = `Validation errors: ${JSON.stringify(validationErrors)}`;
+    }
+    
     res.status(400).json({
       success: false,
-      error: err.message
+      error: errorMessage,
+      details: err.errors || undefined
     });
   }
 };

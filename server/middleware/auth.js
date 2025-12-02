@@ -20,6 +20,7 @@ exports.protect = async (req, res, next) => {
 
   // Make sure token exists
   if (!token) {
+    console.log('❌ No token found in request');
     return res.status(401).json({
       success: false,
       error: 'Not authorized to access this route'
@@ -32,9 +33,19 @@ exports.protect = async (req, res, next) => {
 
     // Get user from the token
     req.user = await User.findById(decoded.id);
-
+    
+    if (!req.user) {
+      console.error('❌ User not found for token');
+      return res.status(401).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
+    console.log('✅ User authenticated:', req.user.email);
     next();
   } catch (err) {
+    console.error('❌ Token verification failed:', err.message);
     return res.status(401).json({
       success: false,
       error: 'Not authorized to access this route'

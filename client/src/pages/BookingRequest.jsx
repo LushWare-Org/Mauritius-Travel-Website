@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { activitiesAPI, bookingsAPI, userBookingsAPI } from '../utils/api';
 import ConfirmationModal from '../components/booking/ConfirmationModal';
+import { useAuth } from '../contexts/AuthContext';
 
 const BookingRequest = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
+    const { currentUser } = useAuth();
     const [activity, setActivity] = useState(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -24,15 +26,29 @@ const BookingRequest = () => {
     const [bookingId, setBookingId] = useState('');
 
     // Get pre-selected data from state if available (from the activity detail page)
+    // Also prefill user data if logged in
     useEffect(() => {
+        const updates = {};
+        
         if (location.state?.selectedDate) {
-            setFormData(prev => ({
-                ...prev,
-                date: location.state.selectedDate,
-                guests: location.state.guests || 2
-            }));
+            updates.date = location.state.selectedDate;
+            updates.guests = location.state.guests || 2;
         }
-    }, [location.state]);
+        
+        // Prefill with logged-in user's data
+        if (currentUser) {
+            if (currentUser.email && !formData.email) {
+                updates.email = currentUser.email;
+            }
+            if (currentUser.name && !formData.fullName) {
+                updates.fullName = currentUser.name;
+            }
+        }
+        
+        if (Object.keys(updates).length > 0) {
+            setFormData(prev => ({ ...prev, ...updates }));
+        }
+    }, [location.state, currentUser]);
 
     // Fetch activity data
     useEffect(() => {
@@ -250,16 +266,25 @@ const BookingRequest = () => {
                             
                             {/* Email */}
                             <div>
-                                <label htmlFor="email" className="block text-gray-700 font-medium mb-2">Email Address *</label>
+                                <label htmlFor="email" className="block text-gray-700 font-medium mb-2">
+                                    Email Address *
+                                    {currentUser && (
+                                        <span className="text-xs text-gray-500 ml-2">(Using your account email)</span>
+                                    )}
+                                </label>
                                 <input
                                     type="email"
                                     id="email"
                                     name="email"
                                     value={formData.email}
                                     onChange={handleInputChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className={`w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                        currentUser ? 'bg-gray-50 cursor-not-allowed' : ''
+                                    }`}
                                     required
-                                    placeholder="Enter your email address"
+                                    placeholder={currentUser ? currentUser.email : "Enter your email address"}
+                                    readOnly={!!currentUser}
+                                    title={currentUser ? "Email is set to your account email" : ""}
                                 />
                             </div>
                             

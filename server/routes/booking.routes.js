@@ -1,9 +1,40 @@
 const express = require('express');
 const router = express.Router();
 const bookingController = require('../controllers/bookingController');
+const { protect } = require('../middleware/auth');
 
-// Route to create a booking
-router.post('/', bookingController.createBooking);
+// Optional auth middleware - doesn't fail if no token, just sets req.user if token exists
+const optionalAuth = async (req, res, next) => {
+  let token;
+
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    token = req.headers.authorization.split(' ')[1];
+  } else if (req.cookies.token) {
+    token = req.cookies.token;
+  }
+
+  if (token) {
+    try {
+      const jwt = require('jsonwebtoken');
+      const User = require('../models/User');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = await User.findById(decoded.id);
+      if (req.user) {
+        console.log('✅ Optional auth: User found:', req.user.email);
+      }
+    } catch (err) {
+      // Token invalid, but continue without user
+      console.log('⚠️ Optional auth: Token invalid, continuing without user');
+    }
+  }
+  next();
+};
+
+// Route to create a booking - optional auth (if logged in, use their email)
+router.post('/', optionalAuth, bookingController.createBooking);
 
 // Route to get all bookings (admin only)
 router.get('/', bookingController.getAllBookings);

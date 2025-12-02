@@ -72,49 +72,83 @@ exports.register = async (req, res, next) => {
 exports.login = async (req, res, next) => {
   try {
     // Enhanced debugging for login
-    console.log('Login attempt from origin:', req.headers.origin);
-    console.log('Login attempt for email:', req.body.email);
+    console.log('🔐 Login attempt from origin:', req.headers.origin);
+    console.log('📧 Login attempt for email:', req.body.email);
+    console.log('📦 Request body:', {
+      email: req.body.email,
+      password: req.body.password ? '[REDACTED]' : undefined
+    });
+    
+    // Check database connection
+    const mongoose = require('mongoose');
+    const connectionState = mongoose.connection.readyState;
+    console.log('🔗 Database connection state:', connectionState === 1 ? 'Connected' : 'NOT Connected');
+    
+    if (connectionState !== 1) {
+      console.error('❌ Database not connected! Cannot login user.');
+      return res.status(500).json({
+        success: false,
+        error: 'Database connection not available. Please try again later.'
+      });
+    }
     
     const { email, password } = req.body;
 
     // Validate email & password
     if (!email || !password) {
-      console.log('Login failed: Missing email or password');
+      console.log('❌ Login failed: Missing email or password');
       return res.status(400).json({ 
         success: false, 
         error: 'Please provide an email and password' 
       });
     }
 
+    console.log('🔍 Searching for user with email:', email);
     // Check for user
     const user = await User.findOne({ email }).select('+password');
 
     if (!user) {
-      console.log(`Login failed: No user found with email ${email}`);
+      console.log(`❌ Login failed: No user found with email ${email}`);
+      // Check if any users exist
+      const userCount = await User.countDocuments();
+      console.log(`📊 Total users in database: ${userCount}`);
       return res.status(401).json({ 
         success: false, 
         error: 'Invalid credentials' 
       });
     }
 
+    console.log(`✅ User found: ${user.name} (${user._id})`);
+    console.log('🔑 Verifying password...');
+    
     // Check if password matches
     const isMatch = await user.matchPassword(password);
 
     if (!isMatch) {
-      console.log(`Login failed: Invalid password for user ${email}`);
+      console.log(`❌ Login failed: Invalid password for user ${email}`);
       return res.status(401).json({ 
         success: false, 
         error: 'Invalid credentials' 
       });
     }
     
+    console.log('✅ Password verified successfully');
     // Log successful login
-    console.log(`User logged in successfully: ${user.name} (${user._id})`);
-    console.log('Preparing token response for login');
+    console.log(`✅ User logged in successfully: ${user.name} (${user._id})`);
+    console.log('🔐 Preparing token response for login');
 
     sendTokenResponse(user, 200, res);
   } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
+    console.error('❌ Error in login:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
+    res.status(400).json({ 
+      success: false, 
+      error: error.message || 'Login failed' 
+    });
   }
 };
 
@@ -345,13 +379,31 @@ exports.resetPassword = async (req, res, next) => {
 
 // Helper function to get token from model, create cookie and send response
 const sendTokenResponse = (user, statusCode, res) => {
+  // Check if JWT_SECRET is configured
+  if (!process.env.JWT_SECRET) {
+    console.error('❌ JWT_SECRET is not configured!');
+    return res.status(500).json({
+      success: false,
+      error: 'Server configuration error: JWT_SECRET is missing. Please contact administrator.'
+    });
+  }
+  
   // Create token
   const token = user.getSignedJwtToken();
-  console.log(`Generated JWT token for user ${user.email}`);
+  console.log(`✅ Generated JWT token for user ${user.email}`);
 
+  // Calculate expiration - use JWT_EXPIRE or default to 30 days
+  const jwtExpire = process.env.JWT_EXPIRE || '30d';
+  let expiresInDays = 30;
+  
+  // Parse JWT_EXPIRE (e.g., "30d" = 30 days)
+  if (jwtExpire.endsWith('d')) {
+    expiresInDays = parseInt(jwtExpire);
+  }
+  
   const options = {
     expires: new Date(
-      Date.now() + process.env.JWT_COOKIE_EXPIRE * 24 * 60 * 60 * 1000
+      Date.now() + expiresInDays * 24 * 60 * 60 * 1000
     ),
     httpOnly: true,
     path: '/',  // Ensure cookie is available across the entire site
