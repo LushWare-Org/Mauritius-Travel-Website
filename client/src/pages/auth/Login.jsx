@@ -7,7 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, setError, clearError } = useAuth();
+  const { login, error, setError, clearError } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   
   // Determine where to redirect after login
@@ -29,12 +29,26 @@ const Login = () => {
     clearError();
     
     try {
-      await login(values.email, values.password);
-      navigate(from, { replace: true });
+      console.log('🔐 Attempting to login with email:', values.email);
+      const result = await login(values.email, values.password);
+      console.log('✅ Login successful:', result);
+      
+      // Small delay to ensure state is updated
+      setTimeout(() => {
+        navigate(from, { replace: true });
+      }, 100);
     } catch (error) {
-      console.error(error);
-      setFieldError('email', 'Invalid email or password');
-      setFieldError('password', 'Invalid email or password');
+      console.error('❌ Login error:', error);
+      console.error('❌ Login error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      const errorMessage = error.response?.data?.error || error.message || 'Invalid email or password';
+      setError(errorMessage);
+      setFieldError('email', errorMessage);
+      setFieldError('password', errorMessage);
     } finally {
       setIsLoading(false);
       setSubmitting(false);
@@ -49,6 +63,13 @@ const Login = () => {
             <h2 className="text-3xl font-bold text-gray-800 font-display">Welcome Back</h2>
             <p className="mt-2 text-gray-600">Log in to your account to book activities</p>
           </div>
+          
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
+              {error}
+            </div>
+          )}
           
           {/* Email/Password Login Form */}
           <Formik

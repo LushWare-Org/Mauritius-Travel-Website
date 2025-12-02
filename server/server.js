@@ -31,11 +31,11 @@ app.disable('x-powered-by');
 app.use((req, res, next) => {
   // Add X-Content-Type-Options header to prevent MIME type sniffing
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  
+
   // Add other security headers
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  
+
   next();
 });
 
@@ -44,12 +44,16 @@ app.use(express.json());
 
 // Add cache-control middleware for API endpoints
 app.use((req, res, next) => {
-  // For API endpoints, set proper cache headers 
+  // For API endpoints, set proper cache headers
   // For GET requests to /api/v1/activities, cache for 5 minutes
   if (req.method === 'GET' && req.url.match(/^\/api\/v1\/activities/)) {
-    res.setHeader('Cache-Control', 'public, max-age=300');  } else {
+    res.setHeader('Cache-Control', 'public, max-age=300');
+  } else {
     // For other API endpoints (especially those that modify data), don't cache
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader(
+      'Cache-Control',
+      'no-store, no-cache, must-revalidate, proxy-revalidate'
+    );
     res.setHeader('Pragma', 'no-cache');
     // Remove Expires header as Cache-Control is preferred
   }
@@ -64,28 +68,39 @@ if (corsOriginValue && corsOriginValue.startsWith('CORS_ORIGIN=')) {
   corsOriginValue = corsOriginValue.replace('CORS_ORIGIN=', '');
 }
 
-const allowedOrigins = corsOriginValue 
-  ? (corsOriginValue === '*' ? '*' : corsOriginValue.split(',').map(origin => origin.trim()))
-  : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173', 'https://maldives-activity-booking-frontend.onrender.com'];
+const allowedOrigins = corsOriginValue
+  ? corsOriginValue === '*'
+    ? '*'
+    : corsOriginValue.split(',').map((origin) => origin.trim())
+  : [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:5173',
+      'https://maldives-activity-booking-frontend.onrender.com',
+    ];
 
 // Enhanced CORS configuration for debugging
-const corsOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000'];
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',')
+  : ['http://localhost:3000'];
 console.log('Configured CORS origins:', corsOrigins);
 
-app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (corsOrigins.indexOf(origin) !== -1 || !origin) {
-      callback(null, true);
-    } else {
-      console.log('CORS blocked origin:', origin);
-      callback(null, true); // Temporarily allow all origins for testing
-    }
-  },
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, curl requests)
+      if (!origin) return callback(null, true);
+
+      if (corsOrigins.indexOf(origin) !== -1 || !origin) {
+        callback(null, true);
+      } else {
+        console.log('CORS blocked origin:', origin);
+        callback(null, true); // Temporarily allow all origins for testing
+      }
+    },
+    credentials: true,
+  })
+);
 
 // Add OPTIONS handling for preflight requests
 app.options('*', cors());
@@ -104,16 +119,18 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // File upload middleware with improved configuration
-app.use(fileUpload({
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max file size
-  abortOnLimit: true,
-  useTempFiles: false,
-  createParentPath: true,
-  debug: process.env.NODE_ENV !== 'production',
-  responseOnLimit: 'File size limit exceeded (max 10MB)',
-  safeFileNames: true,
-  preserveExtension: true
-}));
+app.use(
+  fileUpload({
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max file size
+    abortOnLimit: true,
+    useTempFiles: false,
+    createParentPath: true,
+    debug: process.env.NODE_ENV !== 'production',
+    responseOnLimit: 'File size limit exceeded (max 10MB)',
+    safeFileNames: true,
+    preserveExtension: true,
+  })
+);
 
 // Add API root endpoint
 // Add root endpoint to check if server is running
@@ -125,9 +142,9 @@ app.get('/', (req, res) => {
       '/api/v1/activities',
       '/api/v1/server-status',
       '/api/v1/auth',
-      '/api/v1/bookings'
+      '/api/v1/bookings',
     ],
-    documentation: 'API documentation coming soon'
+    documentation: 'API documentation coming soon',
   });
 });
 
@@ -136,7 +153,7 @@ app.get('/api/v1', (req, res) => {
     message: 'Maldives Activity Booking API',
     status: 'Running',
     version: 'v1',
-    documentation: '/api/v1/server-status for more details'
+    documentation: '/api/v1/server-status for more details',
   });
 });
 
@@ -145,20 +162,20 @@ app.get('/api/v1/test-connection', (req, res) => {
   // Extract token if present
   let token;
   const authHeader = req.headers.authorization;
-  
+
   if (authHeader && authHeader.startsWith('Bearer')) {
     token = authHeader.split(' ')[1];
   } else if (req.cookies.token) {
     token = req.cookies.token;
   }
-  
+
   // Detailed connection information
   res.json({
     success: true,
     message: 'Connection successful',
     server: {
       environment: process.env.NODE_ENV,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     },
     request: {
       origin: req.headers.origin || 'No origin header',
@@ -167,11 +184,13 @@ app.get('/api/v1/test-connection', (req, res) => {
       contentType: req.headers['content-type'],
       cookies: req.cookies ? Object.keys(req.cookies) : [],
       hasAuthorizationHeader: !!authHeader,
-      hasToken: !!token
+      hasToken: !!token,
     },
     cors: {
-      configuredOrigins: Array.isArray(allowedOrigins) ? allowedOrigins : 'Wildcard (*)'
-    }
+      configuredOrigins: Array.isArray(allowedOrigins)
+        ? allowedOrigins
+        : 'Wildcard (*)',
+    },
   });
 });
 
@@ -182,22 +201,22 @@ app.get('/api/v1/server-status', (req, res) => {
     timestamp: new Date().toISOString(),
     cors: {
       allowedOrigins,
-      requestOrigin: req.headers.origin || 'No origin in request'
+      requestOrigin: req.headers.origin || 'No origin in request',
     },
     env: {
       nodeEnv: process.env.NODE_ENV,
       corsOriginRaw: process.env.CORS_ORIGIN,
-      port: process.env.PORT || 5000
-    }
+      port: process.env.PORT || 5000,
+    },
   });
 });
 
 // Test endpoint for CORS
 app.get('/api/v1/cors-test', (req, res) => {
-  res.json({ 
-    success: true, 
+  res.json({
+    success: true,
     message: 'CORS is working correctly',
-    origin: req.headers.origin || 'No origin header'
+    origin: req.headers.origin || 'No origin header',
   });
 });
 
@@ -219,15 +238,83 @@ app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/user/bookings', userBookingRoutes);
 
-// Add debug routes in non-production environments
-if (process.env.NODE_ENV !== 'production') {
-  const debugRoutes = require('./routes/debug.routes');
-  app.use('/api/v1/debug', debugRoutes);
-}
+// Add debug routes (available in all environments for troubleshooting)
+const debugRoutes = require('./routes/debug.routes');
+app.use('/api/v1/debug', debugRoutes);
 
 // Always include debug upload routes for troubleshooting
 const debugUploadRoutes = require('./routes/debugUpload.routes');
 app.use('/api/v1/debug', debugUploadRoutes);
+
+// Add this after your route mounting but before the 404 handler
+app.get('/api/v1/db-debug', async (req, res) => {
+  try {
+    const mongoose = require('mongoose');
+    const User = require('./models/User');
+
+    // Get current connection info
+    const connection = mongoose.connection;
+    const db = connection.db;
+
+    let connectionInfo = {
+      host: connection.host,
+      port: connection.port,
+      databaseName: db ? db.databaseName : 'Not connected',
+      readyState: connection.readyState,
+      states: {
+        0: 'disconnected',
+        1: 'connected',
+        2: 'connecting',
+        3: 'disconnecting',
+      },
+    };
+
+    // Try to count users
+    let userCount = 0;
+    let userList = [];
+
+    if (db) {
+      try {
+        userCount = await User.countDocuments();
+        userList = await User.find({})
+          .select('email name role createdAt')
+          .limit(5);
+      } catch (err) {
+        console.log('Error counting users:', err.message);
+      }
+    }
+
+    res.json({
+      success: true,
+      database: {
+        ...connectionInfo,
+        stateDescription: connectionInfo.states[connectionInfo.readyState],
+      },
+      data: {
+        totalUsers: userCount,
+        sampleUsers: userList,
+      },
+      environment: {
+        mongoUri: process.env.MONGODB_URI
+          ? process.env.MONGODB_URI.replace(
+              /\/\/([^:]+):([^@]+)@/,
+              '//***:***@'
+            )
+          : 'Not set',
+        databaseName: process.env.MONGODB_URI
+          ? process.env.MONGODB_URI.split('/').pop().split('?')[0]
+          : 'Unknown',
+        nodeEnv: process.env.NODE_ENV,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    });
+  }
+});
 
 // Handle 404 errors - Route not found
 app.all('*', (req, res, next) => {
@@ -240,21 +327,24 @@ app.all('*', (req, res, next) => {
 app.use((err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
-  
+
   // Get origin from request headers
   const origin = req.headers.origin;
-  
+
   // Set CORS headers in error responses if the origin is allowed
   if (origin && allowedOrigins.indexOf(origin) !== -1) {
     res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header(
+      'Access-Control-Allow-Methods',
+      'GET, POST, PUT, DELETE, OPTIONS'
+    );
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.header('Access-Control-Allow-Credentials', 'true');
   }
-  
+
   res.status(err.statusCode).json({
     success: false,
-    error: err.message
+    error: err.message,
   });
 });
 
@@ -263,17 +353,28 @@ const PORT = process.env.PORT || 5000;
 console.log('🚀 Starting Maldives Activity Booking Server...');
 console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`🌐 Port: ${PORT}`);
-console.log(`🔗 Database: ${process.env.MONGODB_URI ? 'Configured' : 'NOT CONFIGURED'}`);
-console.log(`🔐 JWT Secret: ${process.env.JWT_SECRET ? 'Configured' : 'NOT CONFIGURED'}`);
-console.log(`☁️ Cloudinary: ${process.env.CLOUDINARY_CLOUD_NAME ? 'Configured' : 'NOT CONFIGURED'}`);
-
-const server = app.listen(
-  PORT,
-  () => {
-    console.log(`✅ Server successfully running on port ${PORT}`);
-    console.log(`🌍 Server URL: ${process.env.NODE_ENV === 'production' ? 'https://maldives-activity-booking-backend.onrender.com' : `http://localhost:${PORT}`}`);
-  }
+console.log(
+  `🔗 Database: ${process.env.MONGODB_URI ? 'Configured' : 'NOT CONFIGURED'}`
 );
+console.log(
+  `🔐 JWT Secret: ${process.env.JWT_SECRET ? 'Configured' : 'NOT CONFIGURED'}`
+);
+console.log(
+  `☁️ Cloudinary: ${
+    process.env.CLOUDINARY_CLOUD_NAME ? 'Configured' : 'NOT CONFIGURED'
+  }`
+);
+
+const server = app.listen(PORT, () => {
+  console.log(`✅ Server successfully running on port ${PORT}`);
+  console.log(
+    `🌍 Server URL: ${
+      process.env.NODE_ENV === 'production'
+        ? 'https://maldives-activity-booking-backend.onrender.com'
+        : `http://localhost:${PORT}`
+    }`
+  );
+});
 
 // Handle server startup errors
 server.on('error', (error) => {
