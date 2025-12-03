@@ -168,4 +168,17 @@ export const uploadImage = async (file) => {
   }
 };
 
+// Contact API
+export const contactAPI = {
+  submitContact: (contactData) => API.post('/contact', contactData),
+  getAllContacts: () => API.get('/contact'),
+  getContactById: (id) => API.get(`/contact/${id}`),
+  updateContactStatus: (id, status) => API.put(`/contact/${id}/status`, { status }),
+  replyToContact: (id, replyMessage) => API.post(`/contact/${id}/reply`, { replyMessage }),
+  deleteContact: (id) => API.delete(`/contact/${id}`),
+  getContactStats: () => API.get('/contact/stats'),
+  getUserContacts: () => API.get('/contact/user')
+};
+
+
 export default API;

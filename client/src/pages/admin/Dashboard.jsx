@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { dashboardAPI } from '../../utils/api';
+import AdminContacts from './AdminContacts.jsx';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -13,11 +14,21 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [recentBookings, setRecentBookings] = useState([]);
+  const [activeTab, setActiveTab] = useState('dashboard'); // Add tab state
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
 
+/*************  ✨ Windsurf Command ⭐  *************/
+/**
+ * Fetches the dashboard statistics
+ * 
+ * @returns {Promise<void>} 
+ * 
+ * @throws {Error} if the API call fails
+ */
+/*******  1a2f9136-34e2-4038-8f93-6fcffaf40f49  *******/
   const fetchDashboardData = async () => {
     setLoading(true);
     setError('');
@@ -86,6 +97,39 @@ const AdminDashboard = () => {
         </div>
       </div>
 
+      {/* Tab Navigation */}
+      <div className="mb-6 border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className={`${
+              activeTab === 'dashboard'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors duration-200`}
+          >
+            <i className="fas fa-tachometer-alt mr-2"></i>
+            Dashboard Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('contacts')}
+            className={`${
+              activeTab === 'contacts'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors duration-200`}
+          >
+            <i className="fas fa-envelope mr-2"></i>
+            Contact Inquiries
+            {stats.contactInquiries && stats.contactInquiries > 0 && (
+              <span className="ml-2 bg-blue-100 text-blue-600 text-xs font-semibold px-2 py-0.5 rounded-full">
+                {stats.contactInquiries}
+              </span>
+            )}
+          </button>
+        </nav>
+      </div>
+
       {/* Error Message */}
       {error && (
         <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded shadow-sm">
@@ -115,239 +159,275 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
-          <p className="text-gray-500">Loading dashboard data...</p>
-        </div>
-      ) : (
+      {activeTab === 'dashboard' ? (
         <>
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg border border-gray-50">
-              <div className="px-5 py-6">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="bg-blue-100 p-3 rounded-full">
-                    <i className="fas fa-hiking text-blue-600 text-xl"></i>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+              <p className="text-gray-500">Loading dashboard data...</p>
+            </div>
+          ) : (
+            <>
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div className="bg-white overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg border border-gray-50">
+                  <div className="px-5 py-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="bg-blue-100 p-3 rounded-full">
+                        <i className="fas fa-hiking text-blue-600 text-xl"></i>
+                      </div>
+                      <span className="text-xs font-medium text-gray-500 bg-blue-50 py-1 px-2 rounded-md">Activities</span>
+                    </div>
+                    <dl>
+                      <dt className="text-sm font-medium text-gray-500 truncate">Total Activities</dt>
+                      <dd className="mt-2 text-3xl font-extrabold text-blue-600">{stats.totalActivities}</dd>
+                    </dl>
+                    <div className="mt-5">
+                      <Link to="/admin/activities" className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center">
+                        View all activities 
+                        <svg className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </Link>
+                    </div>
                   </div>
-                  <span className="text-xs font-medium text-gray-500 bg-blue-50 py-1 px-2 rounded-md">Activities</span>
                 </div>
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Activities</dt>
-                  <dd className="mt-2 text-3xl font-extrabold text-blue-600">{stats.totalActivities}</dd>
-                </dl>
-                <div className="mt-5">
-                  <Link to="/admin/activities" className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center">
-                    View all activities 
-                    <svg className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </Link>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg border border-gray-50">
-              <div className="px-5 py-6">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="bg-green-100 p-3 rounded-full">
-                    <i className="fas fa-calendar-check text-green-600 text-xl"></i>
-                  </div>
-                  <span className="text-xs font-medium text-gray-500 bg-green-50 py-1 px-2 rounded-md">Bookings</span>
-                </div>
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Bookings</dt>
-                  <dd className="mt-2 text-3xl font-extrabold text-green-600">{stats.totalBookings}</dd>
-                </dl>
-                <div className="mt-5">
-                  <Link to="/admin/bookings" className="text-sm text-green-600 hover:text-green-800 font-medium flex items-center">
-                    Manage bookings 
-                    <svg className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </Link>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg border border-gray-50">
-              <div className="px-5 py-6">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="bg-indigo-100 p-3 rounded-full">
-                    <i className="fas fa-users text-indigo-600 text-xl"></i>
-                  </div>
-                  <span className="text-xs font-medium text-gray-500 bg-indigo-50 py-1 px-2 rounded-md">Users</span>
-                </div>
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Users</dt>
-                  <dd className="mt-2 text-3xl font-extrabold text-indigo-600">{stats.totalUsers}</dd>
-                </dl>
-                <div className="mt-5">
-                  <Link to="/admin/users" className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center">
-                    View users 
-                    <svg className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </Link>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg border border-gray-50">
-              <div className="px-5 py-6">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="bg-yellow-100 p-3 rounded-full">
-                    <i className="fas fa-clock text-yellow-600 text-xl"></i>
-                  </div>
-                  <span className="text-xs font-medium text-gray-500 bg-yellow-50 py-1 px-2 rounded-md">Pending</span>
-                </div>
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Pending Bookings</dt>
-                  <dd className="mt-2 text-3xl font-extrabold text-yellow-600">{stats.pendingBookings}</dd>
-                </dl>
-                <div className="mt-5">
-                  <Link to="/admin/bookings?status=pending" className="text-sm text-yellow-600 hover:text-yellow-800 font-medium flex items-center">
-                    Review pending 
-                    <svg className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Bookings */}
-          <div className="bg-white shadow-md rounded-lg mb-8 border border-gray-100">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-white to-blue-50">
-              <div>
-                <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Bookings</h3>
-                <p className="text-sm text-gray-500 mt-1">Latest activity on your platform</p>
-              </div>
-              <Link to="/admin/bookings" className="text-sm bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md transition-colors duration-200 flex items-center">
-                View all 
-                <i className="fas fa-arrow-right ml-2"></i>
-              </Link>
-            </div>
-            {recentBookings.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Booking ID
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Activity
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Customer
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Amount
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {recentBookings.map((booking) => (
-                      <tr key={booking._id} className="hover:bg-blue-50 transition-colors duration-150">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                          <Link to={`/admin/bookings/${booking._id}`} className="hover:underline">{booking.bookingReference}</Link>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{booking.activity ? booking.activity.title : 'Unknown Activity'}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{booking.fullName}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-600">{formatDate(booking.date)}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <StatusBadge status={booking.status} />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">${booking.totalPrice}</div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="py-8 px-4 text-center">
-                <div className="mx-auto h-16 w-16 rounded-full bg-blue-50 flex items-center justify-center mb-4">
-                  <i className="fas fa-calendar-day text-blue-500 text-xl"></i>
-                </div>
-                <p className="text-gray-500 font-medium">No recent bookings found.</p>
-                <p className="text-gray-400 text-sm mt-1">New bookings will appear here when created.</p>
-              </div>
-            )}
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-white shadow-md rounded-lg border border-gray-100">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-white to-blue-50">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Quick Actions</h3>
-              <p className="text-sm text-gray-500 mt-1">Shortcuts to common tasks</p>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <Link 
-                  to="/admin/activities/new"
-                  className="group bg-gradient-to-br from-blue-50 to-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-300 flex flex-col items-center justify-center text-center"
-                >
-                  <div className="bg-blue-100 text-blue-600 rounded-full p-4 mb-4 group-hover:scale-110 transition-transform duration-200">
-                    <i className="fas fa-plus-circle text-2xl"></i>
-                  </div>
-                  <h4 className="text-gray-900 font-semibold mb-2">Add New Activity</h4>
-                  <p className="text-gray-500 text-sm">Create a new activity listing for your customers</p>
-                </Link>
                 
-                <Link 
-                  to="/admin/bookings?status=pending"
-                  className="group bg-gradient-to-br from-yellow-50 to-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-300 flex flex-col items-center justify-center text-center"
-                >
-                  <div className="bg-yellow-100 text-yellow-600 rounded-full p-4 mb-4 group-hover:scale-110 transition-transform duration-200">
-                    <i className="fas fa-clipboard-check text-2xl"></i>
+                <div className="bg-white overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg border border-gray-50">
+                  <div className="px-5 py-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="bg-green-100 p-3 rounded-full">
+                        <i className="fas fa-calendar-check text-green-600 text-xl"></i>
+                      </div>
+                      <span className="text-xs font-medium text-gray-500 bg-green-50 py-1 px-2 rounded-md">Bookings</span>
+                    </div>
+                    <dl>
+                      <dt className="text-sm font-medium text-gray-500 truncate">Total Bookings</dt>
+                      <dd className="mt-2 text-3xl font-extrabold text-green-600">{stats.totalBookings}</dd>
+                    </dl>
+                    <div className="mt-5">
+                      <Link to="/admin/bookings" className="text-sm text-green-600 hover:text-green-800 font-medium flex items-center">
+                        Manage bookings 
+                        <svg className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </Link>
+                    </div>
                   </div>
-                  <h4 className="text-gray-900 font-semibold mb-2">Pending Bookings</h4>
-                  <p className="text-gray-500 text-sm">Review and approve booking requests from customers</p>
-                </Link>
+                </div>
                 
-                <Link 
-                  to="/admin/settings"
-                  className="group bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-300 flex flex-col items-center justify-center text-center"
-                >
-                  <div className="bg-gray-100 text-gray-600 rounded-full p-4 mb-4 group-hover:scale-110 transition-transform duration-200">
-                    <i className="fas fa-cog text-2xl"></i>
+                <div className="bg-white overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg border border-gray-50">
+                  <div className="px-5 py-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="bg-indigo-100 p-3 rounded-full">
+                        <i className="fas fa-users text-indigo-600 text-xl"></i>
+                      </div>
+                      <span className="text-xs font-medium text-gray-500 bg-indigo-50 py-1 px-2 rounded-md">Users</span>
+                    </div>
+                    <dl>
+                      <dt className="text-sm font-medium text-gray-500 truncate">Total Users</dt>
+                      <dd className="mt-2 text-3xl font-extrabold text-indigo-600">{stats.totalUsers}</dd>
+                    </dl>
+                    <div className="mt-5">
+                      <Link to="/admin/users" className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center">
+                        View users 
+                        <svg className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </Link>
+                    </div>
                   </div>
-                  <h4 className="text-gray-900 font-semibold mb-2">Site Settings</h4>
-                  <p className="text-gray-500 text-sm">Configure and manage global website settings</p>
-                </Link>
+                </div>
+                
+                <div className="bg-white overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg border border-gray-50">
+                  <div className="px-5 py-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="bg-yellow-100 p-3 rounded-full">
+                        <i className="fas fa-clock text-yellow-600 text-xl"></i>
+                      </div>
+                      <span className="text-xs font-medium text-gray-500 bg-yellow-50 py-1 px-2 rounded-md">Pending</span>
+                    </div>
+                    <dl>
+                      <dt className="text-sm font-medium text-gray-500 truncate">Pending Bookings</dt>
+                      <dd className="mt-2 text-3xl font-extrabold text-yellow-600">{stats.pendingBookings}</dd>
+                    </dl>
+                    <div className="mt-5">
+                      <Link to="/admin/bookings?status=pending" className="text-sm text-yellow-600 hover:text-yellow-800 font-medium flex items-center">
+                        Review pending 
+                        <svg className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Refresh Button */}
-          <div className="mt-8 flex justify-center">
-            <button
-              onClick={fetchDashboardData}
-              className="inline-flex items-center px-5 py-2.5 border border-blue-300 rounded-md bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium shadow hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
-            >
-              <svg className="mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Refresh Dashboard Data
-            </button>
-          </div>
+              {/* Recent Bookings */}
+              <div className="bg-white shadow-md rounded-lg mb-8 border border-gray-100">
+                <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-white to-blue-50">
+                  <div>
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Bookings</h3>
+                    <p className="text-sm text-gray-500 mt-1">Latest activity on your platform</p>
+                  </div>
+                  <Link to="/admin/bookings" className="text-sm bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md transition-colors duration-200 flex items-center">
+                    View all 
+                    <i className="fas fa-arrow-right ml-2"></i>
+                  </Link>
+                </div>
+                {recentBookings.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Booking ID
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Activity
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Customer
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Date
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Amount
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {recentBookings.map((booking) => (
+                          <tr key={booking._id} className="hover:bg-blue-50 transition-colors duration-150">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                              <Link to={`/admin/bookings/${booking._id}`} className="hover:underline">{booking.bookingReference}</Link>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">{booking.activity ? booking.activity.title : 'Unknown Activity'}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{booking.fullName}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-600">{formatDate(booking.date)}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <StatusBadge status={booking.status} />
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">${booking.totalPrice}</div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="py-8 px-4 text-center">
+                    <div className="mx-auto h-16 w-16 rounded-full bg-blue-50 flex items-center justify-center mb-4">
+                      <i className="fas fa-calendar-day text-blue-500 text-xl"></i>
+                    </div>
+                    <p className="text-gray-500 font-medium">No recent bookings found.</p>
+                    <p className="text-gray-400 text-sm mt-1">New bookings will appear here when created.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Actions */}
+              <div className="bg-white shadow-md rounded-lg border border-gray-100 mb-8">
+                <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-white to-blue-50">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">Quick Actions</h3>
+                  <p className="text-sm text-gray-500 mt-1">Shortcuts to common tasks</p>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <Link 
+                      to="/admin/activities/new"
+                      className="group bg-gradient-to-br from-blue-50 to-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-300 flex flex-col items-center justify-center text-center"
+                    >
+                      <div className="bg-blue-100 text-blue-600 rounded-full p-4 mb-4 group-hover:scale-110 transition-transform duration-200">
+                        <i className="fas fa-plus-circle text-2xl"></i>
+                      </div>
+                      <h4 className="text-gray-900 font-semibold mb-2">Add New Activity</h4>
+                      <p className="text-gray-500 text-sm">Create a new activity listing for your customers</p>
+                    </Link>
+                    
+                    <Link 
+                      to="/admin/bookings?status=pending"
+                      className="group bg-gradient-to-br from-yellow-50 to-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-300 flex flex-col items-center justify-center text-center"
+                    >
+                      <div className="bg-yellow-100 text-yellow-600 rounded-full p-4 mb-4 group-hover:scale-110 transition-transform duration-200">
+                        <i className="fas fa-clipboard-check text-2xl"></i>
+                      </div>
+                      <h4 className="text-gray-900 font-semibold mb-2">Pending Bookings</h4>
+                      <p className="text-gray-500 text-sm">Review and approve booking requests from customers</p>
+                    </Link>
+                    
+                    <Link 
+                      to="/admin/contact"
+                      className="group bg-gradient-to-br from-purple-50 to-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-300 flex flex-col items-center justify-center text-center"
+                    >
+                      <div className="bg-purple-100 text-purple-600 rounded-full p-4 mb-4 group-hover:scale-110 transition-transform duration-200">
+                        <i className="fas fa-envelope text-2xl"></i>
+                      </div>
+                      <h4 className="text-gray-900 font-semibold mb-2">Contact Inquiries</h4>
+                      <p className="text-gray-500 text-sm">View and manage customer contact inquiries</p>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+              {/* Refresh Button */}
+              <div className="mt-8 flex justify-center">
+                <button
+                  onClick={fetchDashboardData}
+                  className="inline-flex items-center px-5 py-2.5 border border-blue-300 rounded-md bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium shadow hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+                >
+                  <svg className="mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh Dashboard Data
+                </button>
+              </div>
+            </>
+          )}
         </>
+      ) : (
+        /* Contact Inquiries Tab */
+        <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-white to-purple-50">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-800">Contact Inquiries Management</h2>
+                <p className="text-gray-600 text-sm mt-1">View and manage customer inquiries and messages</p>
+              </div>
+              <div className="text-sm bg-purple-100 text-purple-700 py-2 px-3 rounded-md font-medium">
+                <i className="fas fa-headset mr-2"></i>
+                Customer Support
+              </div>
+            </div>
+          </div>
+          <div className="p-6">
+            <div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <i className="fas fa-info-circle text-blue-500 text-lg"></i>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-blue-700">
+                    This section allows you to view and manage all contact inquiries from your customers. 
+                    You can reply to inquiries, update their status, and track communication history.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <AdminContacts />
+          </div>
+        </div>
       )}
     </AdminLayout>
   );
