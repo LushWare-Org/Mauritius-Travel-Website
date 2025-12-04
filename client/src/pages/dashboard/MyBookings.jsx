@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { useAuth } from '../../contexts/AuthContext';
 import BookingStatusBadge from '../../components/dashboard/BookingStatusBadge';
@@ -12,6 +13,8 @@ const MyBookings = () => {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [retryCount, setRetryCount] = useState(0);
+  const [cancelNotification, setCancelNotification] = useState(null);
+  const navigate = useNavigate();
   
   useEffect(() => {
     fetchBookings();
@@ -20,7 +23,6 @@ const MyBookings = () => {
   const fetchBookings = async () => {
     setLoading(true);
     try {
-      // Check for authentication token
       const token = localStorage.getItem('token');
       if (!token) {
         console.error('No authentication token found when trying to fetch bookings');
@@ -62,7 +64,41 @@ const MyBookings = () => {
     cancelled: bookings.filter(booking => booking.status === 'cancelled').length
   };
   
-  const handleCancelBooking = async (bookingId) => {
+  const handleCancelBooking = (booking) => {
+    // Show notification instead of directly cancelling
+    setCancelNotification({
+      bookingId: booking._id,
+      bookingReference: booking.bookingReference,
+      activityName: booking.activity?.title || 'Unknown Activity',
+      date: booking.date,
+      totalPrice: booking.totalPrice
+    });
+
+    // Auto-hide after 10 seconds
+    setTimeout(() => {
+      if (cancelNotification?.bookingId === booking._id) {
+        setCancelNotification(null);
+      }
+    }, 10000);
+  };
+  
+  const handleContactAdminForCancellation = () => {
+    if (cancelNotification) {
+      navigate('/contact', {
+        state: {
+          prefillMessage: `I would like to cancel my activity booking (Reference: ${cancelNotification.bookingReference}) for "${cancelNotification.activityName}" scheduled on ${formatDate(cancelNotification.date)}. Please assist with the cancellation process and provide information about any applicable cancellation fees or refunds.`
+        }
+      });
+      setCancelNotification(null);
+    }
+  };
+  
+  const handleCloseNotification = () => {
+    setCancelNotification(null);
+  };
+  
+  const handleActualCancel = async (bookingId) => {
+    // Keep the existing functionality for actual cancellation if needed
     if (!window.confirm('Are you sure you want to cancel this booking?')) {
       return;
     }
@@ -72,7 +108,6 @@ const MyBookings = () => {
       const response = await userBookingsAPI.cancelBooking(bookingId);
       
       if (response.data.success) {
-        // Replace the cancelled booking with the updated one from the server
         const updatedBooking = response.data.data;
         
         setBookings(prevBookings => 
@@ -81,7 +116,6 @@ const MyBookings = () => {
           )
         );
         
-        // Show a success message
         alert('Booking cancelled successfully');
       } else {
         setError('Failed to cancel booking');
@@ -106,6 +140,49 @@ const MyBookings = () => {
   return (
     <DashboardLayout title="My Bookings">
       <div>
+        {/* Cancel Notification */}
+        {cancelNotification && (
+          <div className="fixed top-4 right-4 z-50 w-96 animate-slide-in">
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg shadow-lg">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <i className="fas fa-info-circle text-blue-500 text-xl"></i>
+                </div>
+                <div className="ml-3 flex-1">
+                  <p className="text-sm text-blue-700 font-medium mb-1">Booking Cancellation Request</p>
+                  <p className="text-sm text-blue-600 mb-3">
+                    To cancel your booking <span className="font-semibold">{cancelNotification.bookingReference}</span> for "{cancelNotification.activityName}", please contact our admin team through the Contact Us page.
+                  </p>
+                  <div className="mt-2 flex space-x-3">
+                    <button
+                      onClick={handleContactAdminForCancellation}
+                      className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      <i className="fas fa-envelope mr-1.5"></i>
+                      Contact Admin
+                    </button>
+                    <button
+                      onClick={handleCloseNotification}
+                      className="inline-flex items-center px-3 py-1.5 bg-gray-200 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-300 transition-colors"
+                    >
+                      <i className="fas fa-times mr-1.5"></i>
+                      Close
+                    </button>
+                  </div>
+                </div>
+                <div className="ml-4 flex-shrink-0">
+                  <button
+                    onClick={handleCloseNotification}
+                    className="inline-flex text-gray-400 hover:text-gray-500"
+                  >
+                    <i className="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="border-b border-gray-200 mb-6">
           <nav className="flex space-x-8">
@@ -233,16 +310,27 @@ const MyBookings = () => {
                       <div className="space-x-3">
                         {booking.status === 'pending' && (
                           <button 
-                            onClick={() => handleCancelBooking(booking._id)}
-                            className="px-4 py-2 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                            onClick={() => handleCancelBooking(booking)}
+                            className="px-4 py-2 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors flex items-center"
                           >
-                            Cancel
+                            <i className="fas fa-times-circle mr-2"></i>
+                            Cancel Booking
+                          </button>
+                        )}
+                        {booking.status === 'confirmed' && (
+                          <button 
+                            onClick={() => handleCancelBooking(booking)}
+                            className="px-4 py-2 bg-yellow-50 text-yellow-700 rounded hover:bg-yellow-100 transition-colors flex items-center"
+                          >
+                            <i className="fas fa-question-circle mr-2"></i>
+                            Request Cancellation
                           </button>
                         )}
                         <button 
                           onClick={() => window.location.href = `/dashboard/booking/${booking._id}`}
-                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center"
                         >
+                          <i className="fas fa-eye mr-2"></i>
                           View Details
                         </button>
                       </div>
@@ -286,7 +374,50 @@ const MyBookings = () => {
               Refresh Bookings
             </button>
           </div>
-        )}      </div>
+        )}
+
+        {/* Cancellation Info Card */}
+        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <div className="bg-blue-100 p-3 rounded-full">
+                <i className="fas fa-info-circle text-blue-600 text-xl"></i>
+              </div>
+            </div>
+            <div className="ml-4">
+              <h3 className="text-lg font-semibold text-blue-800 mb-2">Need to Cancel a Booking?</h3>
+              <p className="text-blue-700 mb-3">
+                To cancel any booking, please contact our admin team through the Contact Us page. We'll assist you with:
+              </p>
+              <ul className="text-blue-600 space-y-1 mb-4">
+                <li className="flex items-start">
+                  <i className="fas fa-check text-green-500 mt-0.5 mr-2"></i>
+                  <span>Cancellation request processing</span>
+                </li>
+                <li className="flex items-start">
+                  <i className="fas fa-check text-green-500 mt-0.5 mr-2"></i>
+                  <span>Refund information (if applicable)</span>
+                </li>
+                <li className="flex items-start">
+                  <i className="fas fa-check text-green-500 mt-0.5 mr-2"></i>
+                  <span>Cancellation fee details</span>
+                </li>
+                <li className="flex items-start">
+                  <i className="fas fa-check text-green-500 mt-0.5 mr-2"></i>
+                  <span>Alternative booking options</span>
+                </li>
+              </ul>
+              <button
+                onClick={() => navigate('/contact')}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              >
+                <i className="fas fa-headset mr-2"></i>
+                Contact Support Team
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
       {/* Hidden debugger that can be activated with Alt+D */}
       <DashboardDebugger />
     </DashboardLayout>

@@ -77,6 +77,13 @@ import AdminBookingDetail from './pages/admin/BookingDetail'; // Add this import
 import AdminUsers from './pages/admin/Users';
 import AdminActivityView from './pages/admin/AdminActivityView';
 
+import AirportTransferList from './components/AirportTransferList';
+import AirportTransferBookingForm from './components/AirportTransferBookingForm';
+import AirportTransfers from './pages/admin/AirportTransfers';
+import AirportTransferForm from './pages/admin/AirportTransferForm';
+import AirportTransferBookings from './pages/admin/AirportTransferBookings';
+import UserAirportTransfers from './pages/dashboard/UserAirportTransfers';
+
 // Wrapper component to conditionally render Header and Navbar
 const AppContent = () => {
   const location = useLocation();
@@ -99,6 +106,11 @@ const AppContent = () => {
           <Route path="/contact" element={<Contact />} />
           <Route path="/activities/:id" element={<ActivityDetail />} />
           <Route path="/booking/:id" element={<BookingRequest />} />
+          <Route path="/airport-transfers" element={<AirportTransferList />} />
+          <Route
+            path="/airport-transfer/book/:id?"
+            element={<AirportTransferBookingForm />}
+          />
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
@@ -134,6 +146,16 @@ const AppContent = () => {
             element={
               <ProtectedRoute>
                 <EditProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/airport-transfers"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout title="My Airport Transfers">
+                  <UserAirportTransfers />
+                </DashboardLayout>
               </ProtectedRoute>
             }
           />
@@ -219,6 +241,38 @@ const AppContent = () => {
             element={
               <AdminRoute>
                 <AdminUsers />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/airport-transfers"
+            element={
+              <AdminRoute>
+                <AirportTransfers />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/airport-transfers/new"
+            element={
+              <AdminRoute>
+                <AirportTransferForm />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/airport-transfers/:id/edit"
+            element={
+              <AdminRoute>
+                <AirportTransferForm />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/airport-transfer-bookings"
+            element={
+              <AdminRoute>
+                <AirportTransferBookings />
               </AdminRoute>
             }
           />

@@ -1,7 +1,7 @@
+// utils/api.js
 import axios from 'axios';
 
 // Create axios instance with base URL - use environment variable or fallback to local development
-// Check if the environment variable is being properly loaded, otherwise use a fallback
 const envApiUrl = import.meta.env.VITE_API_URL;
 const API_URL = (typeof envApiUrl === 'string' && !envApiUrl.startsWith('VITE_API_URL=')) 
   ? envApiUrl 
@@ -25,7 +25,7 @@ const API = axios.create({
 // Add request interceptor to include auth token if available
 API.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token'); // Keep only localStorage as in working version
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -53,7 +53,7 @@ API.interceptors.request.use(
   },  (error) => Promise.reject(error)
 );
 
-// Add response interceptor for error handling
+// Add response interceptor for error handling - keep it simple like working version
 API.interceptors.response.use(
   (response) => {
     // Log successful responses in development
@@ -83,9 +83,160 @@ API.interceptors.response.use(
       console.error('- Incorrect API URL:', error.config?.baseURL);
     }
     
+    // Don't automatically redirect on 401 - let components handle it
     return Promise.reject(error);
   }
 );
+
+// Dashboard API - Since there's no dedicated dashboard endpoint, fetch from multiple endpoints
+export const dashboardAPI = {
+  getStats: async () => {
+    try {
+      console.log('Fetching dashboard stats from individual endpoints...');
+      
+      // Fetch all data from individual endpoints
+      const [
+        activitiesRes,
+        bookingsRes,
+        usersRes,
+        contactsRes,
+        airportBookingsRes
+      ] = await Promise.allSettled([
+        API.get('/activities'),
+        API.get('/bookings'),
+        API.get('/users'),
+        API.get('/contact'),
+        API.get('/airport-transfer-bookings')
+      ]);
+
+      // Helper function to extract data from promises
+      const extractData = (result) => {
+        if (result.status === 'fulfilled' && result.value && result.value.data) {
+          const data = result.value.data;
+          
+          // Handle different response formats
+          if (Array.isArray(data)) {
+            return data;
+          } else if (data.data && Array.isArray(data.data)) {
+            return data.data;
+          } else if (data.result && Array.isArray(data.result)) {
+            return data.result;
+          } else if (data.success && data.data && Array.isArray(data.data)) {
+            return data.data;
+          }
+        }
+        return [];
+      };
+
+      // Process the data
+      const activities = extractData(activitiesRes);
+      const bookings = extractData(bookingsRes);
+      const users = extractData(usersRes);
+      const contacts = extractData(contactsRes);
+      const airportBookings = extractData(airportBookingsRes);
+
+      console.log('Dashboard data counts:', {
+        activities: activities.length,
+        bookings: bookings.length,
+        users: users.length,
+        contacts: contacts.length,
+        airportBookings: airportBookings.length
+      });
+
+      // Calculate stats
+      const totalActivities = activities.length;
+      const totalBookings = bookings.length;
+      const totalUsers = users.length;
+      const pendingBookings = bookings.filter(b => b.status === 'pending' || b.bookingStatus === 'pending').length;
+      
+      // Contact stats
+      const totalContacts = contacts.length;
+      const unreadContacts = contacts.filter(c => 
+        c.status === 'unread' || !c.status || c.status === 'new' || c.isRead === false || c.read === false
+      ).length;
+      
+      // Airport transfer stats
+      const airportTotal = airportBookings.length;
+      const airportPending = airportBookings.filter(b => b.status === 'pending').length;
+      const airportConfirmed = airportBookings.filter(b => b.status === 'confirmed').length;
+      const airportCompleted = airportBookings.filter(b => b.status === 'completed').length;
+      const airportRevenue = airportBookings.reduce((sum, booking) => 
+        sum + (parseFloat(booking.totalPrice) || parseFloat(booking.price) || 0), 0
+      );
+      
+      // Recent bookings (last 5)
+      const recentBookings = bookings
+        .sort((a, b) => {
+          const dateA = new Date(a.createdAt || a.bookingDate || a.date || 0);
+          const dateB = new Date(b.createdAt || b.bookingDate || b.date || 0);
+          return dateB - dateA;
+        })
+        .slice(0, 5);
+      
+      // Recent airport bookings (last 5)
+      const recentAirportBookings = airportBookings
+        .sort((a, b) => {
+          const dateA = new Date(a.createdAt || a.bookingDate || a.date || 0);
+          const dateB = new Date(b.createdAt || b.bookingDate || b.date || 0);
+          return dateB - dateA;
+        })
+        .slice(0, 5);
+
+      // Construct the response in the expected format
+      const result = {
+        data: {
+          success: true,
+          data: {
+            totalActivities,
+            totalBookings,
+            totalUsers,
+            pendingBookings,
+            totalContacts,
+            unreadContacts,
+            recentBookings,
+            recentAirportBookings,
+            airportTransfers: {
+              totalBookings: airportTotal,
+              totalRevenue: airportRevenue,
+              pendingBookings: airportPending,
+              confirmedBookings: airportConfirmed,
+              completedBookings: airportCompleted
+            }
+          }
+        }
+      };
+
+      console.log('Dashboard stats calculated:', result.data.data);
+      return result;
+
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      // Return a fallback response with zeros
+      return {
+        data: {
+          success: true,
+          data: {
+            totalActivities: 0,
+            totalBookings: 0,
+            totalUsers: 0,
+            pendingBookings: 0,
+            totalContacts: 0,
+            unreadContacts: 0,
+            recentBookings: [],
+            recentAirportBookings: [],
+            airportTransfers: {
+              totalBookings: 0,
+              totalRevenue: 0,
+              pendingBookings: 0,
+              confirmedBookings: 0,
+              completedBookings: 0
+            }
+          }
+        }
+      };
+    }
+  }
+};
 
 // Activities API
 export const activitiesAPI = {
@@ -134,11 +285,6 @@ export const usersAPI = {
   getBookingCount: (id) => API.get(`/users/${id}/bookings/count`)
 };
 
-// Dashboard API
-export const dashboardAPI = {
-  getStats: () => API.get('/dashboard/stats')
-};
-
 // User Bookings API
 export const userBookingsAPI = {
   getAll: () => API.get('/user/bookings'),
@@ -180,5 +326,37 @@ export const contactAPI = {
   getUserContacts: () => API.get('/contact/user')
 };
 
+// Airport Transfer API
+export const airportTransferAPI = {
+  getAll: (params) => API.get('/airport-transfers', { params }),
+  getActive: () => API.get('/airport-transfers/active'),
+  getById: (id) => API.get(`/airport-transfers/${id}`),
+  create: (data) => API.post('/airport-transfers', data),
+  update: (id, data) => API.put(`/airport-transfers/${id}`, data),
+  delete: (id) => API.delete(`/airport-transfers/${id}`)
+};
+
+// Airport Transfer Booking API
+export const airportTransferBookingAPI = {
+  createBooking: (data) => API.post('/airport-transfer-bookings', data),
+  getAllBookings: (params) => API.get('/airport-transfer-bookings', { params }),
+  getBookingStats: () => API.get('/airport-transfer-bookings/stats'),
+  getBookingById: (id) => API.get(`/airport-transfer-bookings/${id}`),
+  updateBookingStatus: (id, status, adminNotes) => 
+    API.put(`/airport-transfer-bookings/${id}/status`, { status, adminNotes }),
+  updateBooking: (id, data) => API.put(`/airport-transfer-bookings/${id}`, data),
+  deleteBooking: (id) => API.delete(`/airport-transfer-bookings/${id}`),
+  getUserBookings: () => API.get('/airport-transfer-bookings/user/my-bookings')
+};
+
+// Authentication API
+export const authAPI = {
+  login: (credentials) => API.post('/auth/login', credentials),
+  register: (userData) => API.post('/auth/register', userData),
+  logout: () => API.post('/auth/logout'),
+  getProfile: () => API.get('/auth/profile'),
+  updateProfile: (userData) => API.put('/auth/profile', userData),
+  changePassword: (passwordData) => API.put('/auth/change-password', passwordData)
+};
 
 export default API;

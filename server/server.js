@@ -24,6 +24,9 @@ const userBookingRoutes = require('./routes/userBooking.routes');
 const userContactRoutes = require('./routes/userContactRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 
+const airportTransferRoutes = require('./routes/airportTransfer');
+const airportTransferBookingRoutes = require('./routes/airportTransferBooking');
+
 const app = express();
 
 // Disable X-Powered-By header
@@ -241,6 +244,9 @@ app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/user/bookings', userBookingRoutes);
 app.use('/api/v1/contact', contactRoutes); // Public submit + admin routes
 app.use('/api/v1/user/contact', userContactRoutes); // User's own contacts
+
+app.use('/api/v1/airport-transfers', airportTransferRoutes);
+app.use('/api/v1/airport-transfer-bookings', airportTransferBookingRoutes);
 
 // Add debug routes (available in all environments for troubleshooting)
 const debugRoutes = require('./routes/debug.routes');
