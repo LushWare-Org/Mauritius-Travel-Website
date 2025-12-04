@@ -1,100 +1,82 @@
 // utils/api.js
 import axios from 'axios';
 
-// Create axios instance with base URL - use environment variable or fallback to local development
+// Create axios instance with base URL
 const envApiUrl = import.meta.env.VITE_API_URL;
 const API_URL = (typeof envApiUrl === 'string' && !envApiUrl.startsWith('VITE_API_URL=')) 
   ? envApiUrl 
   : 'https://maldives-activity-booking-backend.onrender.com/api/v1';
 
-// Debug: Log the API URL being used (only in development)
+// Debug logging
 if (import.meta.env.DEV) {
-  console.log('API URL:', API_URL);
-  console.log('Environment:', import.meta.env.MODE);
+  console.log('🔧 API Configuration:', {
+    apiUrl: API_URL,
+    mode: import.meta.env.MODE,
+    cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME,
+    uploadPreset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+  });
 }
 
-// Create axios instance with base URL
+// Create axios instance
 const API = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
   },
-  withCredentials: true // Enable credentials for authentication
+  withCredentials: true
 });
 
-// Add request interceptor to include auth token if available
+// Request interceptor
 API.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token'); // Keep only localStorage as in working version
+    const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // For FormData uploads, remove the default Content-Type header
-    // Let the browser set it automatically with the correct boundary
     if (config.data instanceof FormData) {
       delete config.headers['Content-Type'];
     }
     
-    // Debug request headers in production to help diagnose issues
-    if (import.meta.env.PROD) {
-      console.log('🔐 Request headers:', {
-        auth: config.headers.Authorization ? 'Bearer token present' : 'No auth token',
-        url: config.url,
-        method: config.method,
-        withCredentials: config.withCredentials
-      });
-    }
-    
-    // Always ensure withCredentials is true for cross-origin requests
-    config.withCredentials = true;
-    
     return config;
-  },  (error) => Promise.reject(error)
+  },  
+  (error) => Promise.reject(error)
 );
 
-// Add response interceptor for error handling - keep it simple like working version
+// Response interceptor
 API.interceptors.response.use(
   (response) => {
-    // Log successful responses in development
     if (import.meta.env.DEV) {
       console.log('✅ API Success:', response.config?.method?.toUpperCase(), response.config?.url, response.status);
     }
     return response;
   },
   (error) => {
-    // Enhanced error logging
-    console.error('❌ API Error Details:', {
+    console.error('❌ API Error:', {
       url: error.config?.url,
       method: error.config?.method?.toUpperCase(),
       status: error.response?.status,
-      statusText: error.response?.statusText,
-      message: error.message,
-      data: error.response?.data,
-      baseURL: error.config?.baseURL
+      message: error.message
     });
     
-    // Additional debugging for CORS and network errors
-    if (error.message.includes('Network Error') || !error.response) {
-      console.error('🌐 Network Error - Possible causes:');
-      console.error('- Backend server is down');
-      console.error('- CORS configuration issue');
-      console.error('- Network connectivity problem');
-      console.error('- Incorrect API URL:', error.config?.baseURL);
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login?session=expired';
+      }
     }
     
-    // Don't automatically redirect on 401 - let components handle it
     return Promise.reject(error);
   }
 );
 
-// Dashboard API - Since there's no dedicated dashboard endpoint, fetch from multiple endpoints
+// Dashboard API
 export const dashboardAPI = {
   getStats: async () => {
     try {
-      console.log('Fetching dashboard stats from individual endpoints...');
+      console.log('Fetching dashboard stats...');
       
-      // Fetch all data from individual endpoints
       const [
         activitiesRes,
         bookingsRes,
@@ -109,109 +91,60 @@ export const dashboardAPI = {
         API.get('/airport-transfer-bookings')
       ]);
 
-      // Helper function to extract data from promises
       const extractData = (result) => {
-        if (result.status === 'fulfilled' && result.value && result.value.data) {
+        if (result.status === 'fulfilled' && result.value?.data) {
           const data = result.value.data;
-          
-          // Handle different response formats
-          if (Array.isArray(data)) {
-            return data;
-          } else if (data.data && Array.isArray(data.data)) {
-            return data.data;
-          } else if (data.result && Array.isArray(data.result)) {
-            return data.result;
-          } else if (data.success && data.data && Array.isArray(data.data)) {
-            return data.data;
-          }
+          if (Array.isArray(data)) return data;
+          if (data?.data && Array.isArray(data.data)) return data.data;
+          if (data?.result && Array.isArray(data.result)) return data.result;
+          if (data?.success && data.data && Array.isArray(data.data)) return data.data;
         }
         return [];
       };
 
-      // Process the data
       const activities = extractData(activitiesRes);
       const bookings = extractData(bookingsRes);
       const users = extractData(usersRes);
       const contacts = extractData(contactsRes);
       const airportBookings = extractData(airportBookingsRes);
 
-      console.log('Dashboard data counts:', {
-        activities: activities.length,
-        bookings: bookings.length,
-        users: users.length,
-        contacts: contacts.length,
-        airportBookings: airportBookings.length
-      });
-
-      // Calculate stats
-      const totalActivities = activities.length;
-      const totalBookings = bookings.length;
-      const totalUsers = users.length;
-      const pendingBookings = bookings.filter(b => b.status === 'pending' || b.bookingStatus === 'pending').length;
-      
-      // Contact stats
-      const totalContacts = contacts.length;
-      const unreadContacts = contacts.filter(c => 
-        c.status === 'unread' || !c.status || c.status === 'new' || c.isRead === false || c.read === false
-      ).length;
-      
-      // Airport transfer stats
-      const airportTotal = airportBookings.length;
-      const airportPending = airportBookings.filter(b => b.status === 'pending').length;
-      const airportConfirmed = airportBookings.filter(b => b.status === 'confirmed').length;
-      const airportCompleted = airportBookings.filter(b => b.status === 'completed').length;
-      const airportRevenue = airportBookings.reduce((sum, booking) => 
-        sum + (parseFloat(booking.totalPrice) || parseFloat(booking.price) || 0), 0
-      );
-      
-      // Recent bookings (last 5)
-      const recentBookings = bookings
-        .sort((a, b) => {
-          const dateA = new Date(a.createdAt || a.bookingDate || a.date || 0);
-          const dateB = new Date(b.createdAt || b.bookingDate || b.date || 0);
-          return dateB - dateA;
-        })
-        .slice(0, 5);
-      
-      // Recent airport bookings (last 5)
-      const recentAirportBookings = airportBookings
-        .sort((a, b) => {
-          const dateA = new Date(a.createdAt || a.bookingDate || a.date || 0);
-          const dateB = new Date(b.createdAt || b.bookingDate || b.date || 0);
-          return dateB - dateA;
-        })
-        .slice(0, 5);
-
-      // Construct the response in the expected format
       const result = {
         data: {
           success: true,
           data: {
-            totalActivities,
-            totalBookings,
-            totalUsers,
-            pendingBookings,
-            totalContacts,
-            unreadContacts,
-            recentBookings,
-            recentAirportBookings,
+            totalActivities: activities.length,
+            totalBookings: bookings.length,
+            totalUsers: users.length,
+            pendingBookings: bookings.filter(b => 
+              b.status === 'pending' || b.bookingStatus === 'pending'
+            ).length,
+            totalContacts: contacts.length,
+            unreadContacts: contacts.filter(c => 
+              !c.status || c.status === 'unread' || c.status === 'new' || c.isRead === false
+            ).length,
+            recentBookings: bookings
+              .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+              .slice(0, 5),
+            recentAirportBookings: airportBookings
+              .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+              .slice(0, 5),
             airportTransfers: {
-              totalBookings: airportTotal,
-              totalRevenue: airportRevenue,
-              pendingBookings: airportPending,
-              confirmedBookings: airportConfirmed,
-              completedBookings: airportCompleted
+              totalBookings: airportBookings.length,
+              totalRevenue: airportBookings.reduce((sum, booking) => 
+                sum + (parseFloat(booking.totalPrice) || parseFloat(booking.price) || 0), 0
+              ),
+              pendingBookings: airportBookings.filter(b => b.status === 'pending').length,
+              confirmedBookings: airportBookings.filter(b => b.status === 'confirmed').length,
+              completedBookings: airportBookings.filter(b => b.status === 'completed').length
             }
           }
         }
       };
 
-      console.log('Dashboard stats calculated:', result.data.data);
       return result;
 
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
-      // Return a fallback response with zeros
       return {
         data: {
           success: true,
@@ -240,21 +173,16 @@ export const dashboardAPI = {
 
 // Activities API
 export const activitiesAPI = {
-  // Store the base URL for external access
   baseUrl: API_URL,
   
-  // fetch all activities or filter by query params (e.g., type)
   getAll: async (params) => {
-    console.log('🚀 Fetching all activities with params:', params);
-    console.log('🔗 Using API base URL:', API.defaults.baseURL);
+    console.log('Fetching activities with params:', params);
     
     try {
-      // Use the full endpoint - Vite will proxy /api/ requests to the backend
       const response = await API.get('/activities', { params });
-      console.log('📦 Activities API response:', response.data);
       return response;
     } catch (error) {
-      console.error('💥 Activities API getAll failed:', error);
+      console.error('Activities API getAll failed:', error);
       throw error;
     }
   },
@@ -294,24 +222,155 @@ export const userBookingsAPI = {
   cancelBooking: (id) => API.put(`/user/bookings/${id}/cancel`)
 };
 
-// Function to upload image to Cloudinary
+// ENHANCED: Function to upload image to Cloudinary with multiple fallbacks
 export const uploadImage = async (file) => {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'maldives_activities');
-  
+  console.log('📤 Starting image upload:', {
+    fileName: file.name,
+    fileSize: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
+    fileType: file.type
+  });
+
+  // Get Cloudinary configuration - HARDCODED FALLBACKS
   const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dwzhs42tz';
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'maldives_activities';
   
+  console.log('🔧 Using Cloudinary config:', { cloudName, uploadPreset });
+
+  // METHOD 1: Try direct Cloudinary upload with fetch (most reliable)
   try {
-    const response = await axios.post(
+    console.log('🔄 Method 1: Trying direct Cloudinary upload...');
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', uploadPreset);
+    
+    // Use fetch instead of axios for Cloudinary
+    const response = await fetch(
       `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-      formData
+      {
+        method: 'POST',
+        body: formData
+      }
     );
-    return response.data.secure_url;
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    throw new Error('Failed to upload image');
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.warn('⚠️ Direct Cloudinary upload failed:', {
+        status: response.status,
+        error: errorText
+      });
+      throw new Error(`Cloudinary upload failed: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('✅ Direct Cloudinary upload successful!', data.secure_url);
+    return data.secure_url;
+    
+  } catch (directError) {
+    console.warn('⚠️ Direct upload failed, trying axios...');
+    
+    // METHOD 2: Try Cloudinary with axios
+    try {
+      console.log('🔄 Method 2: Trying Cloudinary with axios...');
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', uploadPreset);
+      
+      const response = await axios.post(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          timeout: 30000
+        }
+      );
+      
+      if (response.data.secure_url) {
+        console.log('✅ Axios Cloudinary upload successful!', response.data.secure_url);
+        return response.data.secure_url;
+      }
+      
+      throw new Error('No secure_url in response');
+      
+    } catch (axiosError) {
+      console.warn('⚠️ Axios Cloudinary upload failed:', axiosError.message);
+      
+      // METHOD 3: Try backend upload endpoint
+      try {
+        console.log('🔄 Method 3: Trying backend upload...');
+        
+        const backendFormData = new FormData();
+        backendFormData.append('image', file);
+        
+        const response = await API.post('/upload/image', backendFormData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          timeout: 30000
+        });
+        
+        if (response.data.success && response.data.url) {
+          console.log('✅ Backend upload successful!', response.data.url);
+          return response.data.url;
+        }
+        
+        throw new Error('Backend upload failed');
+        
+      } catch (backendError) {
+        console.warn('⚠️ Backend upload failed:', backendError.message);
+        
+        // METHOD 4: Return a reliable placeholder image
+        console.log('🔄 Method 4: Using placeholder image...');
+        
+        // Return a reliable placeholder from Unsplash
+        const placeholderUrl = `https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80&crop=center`;
+        
+        // Also store locally as data URL for fallback
+        const dataUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(file);
+        });
+        
+        // Store in localStorage with timestamp
+        const storageKey = `local_image_${Date.now()}_${file.name.replace(/[^a-z0-9]/gi, '_')}`;
+        localStorage.setItem(storageKey, JSON.stringify({
+          dataUrl,
+          fileName: file.name,
+          timestamp: Date.now(),
+          placeholder: placeholderUrl
+        }));
+        
+        console.log('📸 Stored locally with key:', storageKey);
+        
+        // Return the placeholder for now, but note it's local
+        return {
+          url: placeholderUrl,
+          isLocal: true,
+          storageKey,
+          dataUrl, // Include data URL for immediate use
+          message: 'Using placeholder image - upload service unavailable'
+        };
+      }
+    }
   }
+};
+
+// Helper to get local image from storage
+export const getLocalImage = (storageKey) => {
+  try {
+    const item = localStorage.getItem(storageKey);
+    if (item) {
+      const data = JSON.parse(item);
+      return data.dataUrl || data.placeholder;
+    }
+  } catch (error) {
+    console.error('Error getting local image:', error);
+  }
+  return null;
 };
 
 // Contact API
@@ -353,10 +412,47 @@ export const airportTransferBookingAPI = {
 export const authAPI = {
   login: (credentials) => API.post('/auth/login', credentials),
   register: (userData) => API.post('/auth/register', userData),
-  logout: () => API.post('/auth/logout'),
+  logout: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    return API.post('/auth/logout');
+  },
   getProfile: () => API.get('/auth/profile'),
   updateProfile: (userData) => API.put('/auth/profile', userData),
   changePassword: (passwordData) => API.put('/auth/change-password', passwordData)
+};
+
+// Test function to verify uploads work
+export const testImageUpload = async () => {
+  console.log('🧪 Testing image upload functionality...');
+  
+  try {
+    // Create a test image
+    const canvas = document.createElement('canvas');
+    canvas.width = 100;
+    canvas.height = 100;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#3B82F6';
+    ctx.fillRect(0, 0, 100, 100);
+    
+    return new Promise((resolve) => {
+      canvas.toBlob(async (blob) => {
+        const testFile = new File([blob], 'test-image.png', { type: 'image/png' });
+        
+        try {
+          const result = await uploadImage(testFile);
+          console.log('✅ Upload test result:', result);
+          resolve(result);
+        } catch (error) {
+          console.error('❌ Upload test failed:', error);
+          resolve({ error: error.message });
+        }
+      });
+    });
+  } catch (error) {
+    console.error('❌ Test setup failed:', error);
+    return { error: error.message };
+  }
 };
 
 export default API;

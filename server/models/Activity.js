@@ -1,84 +1,122 @@
 const mongoose = require('mongoose');
 
-const ActivitySchema = new mongoose.Schema({
+const activitySchema = new mongoose.Schema({
   title: {
     type: String,
     required: [true, 'Please add a title'],
     trim: true,
-    maxlength: [100, 'Title cannot be more than 100 characters']
   },
   description: {
     type: String,
-    required: [true, 'Please add a description']
+    required: [true, 'Please add a description'],
   },
   shortDescription: {
     type: String,
-    maxlength: [200, 'Short description cannot be more than 200 characters']
+    maxlength: [200, 'Short description cannot exceed 200 characters'],
   },
+  // Keep price for backward compatibility
   price: {
     type: Number,
-    required: [true, 'Please add a price']
+    required: [true, 'Please add a price'],
+    min: [0, 'Price cannot be negative'],
+  },
+  // Add new price fields
+  fullDayPrice: {
+    type: Number,
+    required: [true, 'Please add full day price'],
+    min: [0, 'Full day price cannot be negative'],
+  },
+  halfDayPrice: {
+    type: Number,
+    required: [true, 'Please add half day price'],
+    min: [0, 'Half day price cannot be negative'],
   },
   duration: {
     type: Number,
-    required: [true, 'Please add a duration']
-  },
-  rating: {
-    type: Number,
-    min: [1, 'Rating must be at least 1'],
-    max: [5, 'Rating cannot be more than 5'],
-    default: 5
-  },
-  reviewCount: {
-    type: Number,
-    default: 0
-  },
-  type: {
-    type: String,
-    required: [true, 'Please add an activity type'],
-    enum: ['cruises', 'diving', 'island-tours', 'water-sports', 'adventure', 'cultural', 'wellness']
+    required: [true, 'Please add duration'],
   },
   location: {
     type: String,
-    required: [true, 'Please add a location']
+    required: [true, 'Please add location'],
+  },
+  type: {
+    type: String,
+    required: [true, 'Please add activity type'],
+    enum: [
+      'water-sports',
+      'cruises',
+      'island-tours',
+      'diving',
+      'adventure',
+      'cultural',
+      'wellness',
+    ],
   },
   image: {
     type: String,
-    required: [true, 'Please add an image URL']
+    required: [true, 'Please add an image'],
   },
   galleryImages: {
     type: [String],
-    default: []
+    default: [],
   },
-  included: {
-    type: [String],
-    default: []
+  rating: {
+    type: Number,
+    min: 0,
+    max: 5,
+    default: 5,
   },
-  notIncluded: {
-    type: [String],
-    default: []
-  },
-  requirements: {
-    type: [String],
-    default: []
+  reviewCount: {
+    type: Number,
+    default: 0,
   },
   maxParticipants: {
     type: Number,
-    default: 10
+    default: 10,
+  },
+  included: {
+    type: [String],
+    default: [],
+  },
+  notIncluded: {
+    type: [String],
+    default: [],
+  },
+  requirements: {
+    type: [String],
+    default: [],
   },
   featured: {
     type: Boolean,
-    default: false
+    default: false,
   },
   status: {
     type: String,
     enum: ['active', 'inactive'],
-    default: 'active'
+    default: 'active',
   },
   createdAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
-module.exports = mongoose.model('Activity', ActivitySchema);
+// Update the updatedAt field before saving
+activitySchema.pre('save', function(next) {
+  this.updatedAt = Date.now();
+  next();
+});
+
+// Middleware to set price from fullDayPrice if not provided
+activitySchema.pre('save', function(next) {
+  if (!this.price && this.fullDayPrice) {
+    this.price = this.fullDayPrice;
+  }
+  next();
+});
+
+module.exports = mongoose.model('Activity', activitySchema);

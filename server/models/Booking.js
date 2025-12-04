@@ -20,6 +20,15 @@ const BookingSchema = new mongoose.Schema({
     required: [true, 'Number of guests is required'],
     min: [1, 'At least 1 guest is required']
   },
+  durationType: {
+    type: String,
+    enum: ['Half Day', 'Full Day'],
+    required: false
+  },
+  pricePerPerson: {
+    type: Number,
+    required: false
+  },
   totalPrice: {
     type: Number,
     required: [true, 'Total price is required']

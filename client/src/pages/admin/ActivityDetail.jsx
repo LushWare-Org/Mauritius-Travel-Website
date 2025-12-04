@@ -187,13 +187,38 @@ const AdminActivityDetail = () => {
               {/* Basic Details */}
               <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-3">
                 <div className="col-span-1">
-                  <dt className="text-sm font-medium text-gray-500">Price</dt>
+                  <dt className="text-sm font-medium text-gray-500">Base Price</dt>
                   <dd className="mt-1 text-sm text-gray-900">${activity.price}</dd>
                 </div>
                 <div className="col-span-1">
                   <dt className="text-sm font-medium text-gray-500">Duration</dt>
                   <dd className="mt-1 text-sm text-gray-900">{activity.duration} hours</dd>
                 </div>
+                <div className="col-span-1">
+                  <dt className="text-sm font-medium text-gray-500">Pricing Type</dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {activity.pricingType === 'half-full-day' ? 'Half/Full Day' : 'Single Price'}
+                  </dd>
+                </div>
+                
+                {/* Half/Full Day Pricing Fields */}
+                {activity.pricingType === 'half-full-day' && (
+                  <>
+                    <div className="col-span-1">
+                      <dt className="text-sm font-medium text-gray-500">Half Day Price</dt>
+                      <dd className="mt-1 text-sm text-gray-900">
+                        ${activity.halfDayPrice || activity.price || 'Not set'}
+                      </dd>
+                    </div>
+                    <div className="col-span-1">
+                      <dt className="text-sm font-medium text-gray-500">Full Day Price</dt>
+                      <dd className="mt-1 text-sm text-gray-900">
+                        ${activity.fullDayPrice || activity.price || 'Not set'}
+                      </dd>
+                    </div>
+                  </>
+                )}
+                
                 <div className="col-span-1">
                   <dt className="text-sm font-medium text-gray-500">Location</dt>
                   <dd className="mt-1 text-sm text-gray-900">{activity.location}</dd>

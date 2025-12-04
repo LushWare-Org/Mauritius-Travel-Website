@@ -38,6 +38,7 @@ const AdminBookings = () => {
         const sortedBookings = response.data.data.sort((a, b) => 
           new Date(b.date) - new Date(a.date)
         );
+        console.log('📊 Bookings data:', sortedBookings);
         setBookings(sortedBookings);
         setCurrentPage(1); // Reset to first page when new data is fetched
       } else {
@@ -139,6 +140,78 @@ const AdminBookings = () => {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
+  // Get duration type display text
+  const getDurationTypeDisplay = (booking) => {
+    // Check for durationType first (new field)
+    if (booking.durationType) {
+      return booking.durationType;
+    }
+    
+    // Check for duration field (old field)
+    if (booking.duration === 'halfDay') {
+      return 'Half Day';
+    } else if (booking.duration === 'fullDay') {
+      return 'Full Day';
+    }
+    
+    // Check activity pricing type
+    if (booking.activity?.pricingType === 'half-full-day') {
+      // If we have pricePerPerson, we can infer
+      if (booking.pricePerPerson && booking.activity) {
+        if (booking.pricePerPerson === booking.activity.halfDayPrice) {
+          return 'Half Day';
+        } else if (booking.pricePerPerson === booking.activity.fullDayPrice) {
+          return 'Full Day';
+        }
+      }
+      return 'Half/Full Day';
+    }
+    
+    return 'Standard';
+  };
+
+  // Get price per person
+  const getPricePerPerson = (booking) => {
+    if (booking.pricePerPerson) {
+      return booking.pricePerPerson;
+    }
+    
+    // Calculate from total price and guests
+    if (booking.totalPrice && booking.guests) {
+      return booking.totalPrice / booking.guests;
+    }
+    
+    return null;
+  };
+
+  // Duration badge component
+  const DurationBadge = ({ booking }) => {
+    const durationType = getDurationTypeDisplay(booking);
+    
+    if (durationType === 'Standard') {
+      return null;
+    }
+    
+    const styles = {
+      'Half Day': 'bg-purple-100 text-purple-800 border-purple-200',
+      'Full Day': 'bg-indigo-100 text-indigo-800 border-indigo-200',
+      'Half/Full Day': 'bg-blue-100 text-blue-800 border-blue-200'
+    };
+    
+    const iconStyles = {
+      'Half Day': 'bg-purple-600',
+      'Full Day': 'bg-indigo-600',
+      'Half/Full Day': 'bg-blue-600'
+    };
+    
+    return (
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${styles[durationType] || 'bg-gray-100 text-gray-800'}`}>
+        <span className={`h-1.5 w-1.5 rounded-full mr-1.5 ${iconStyles[durationType] || 'bg-gray-600'}`}></span>
+        {durationType}
+      </span>
+    );
+  };
+
   // Status badge component
   const StatusBadge = ({ status }) => {
     const styles = {
@@ -233,7 +306,7 @@ const AdminBookings = () => {
                 className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'}`}
               >
                 <span className="sr-only">Previous</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <svg className="h-5 w-5" xmlns="http://www.w3.org2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               </button>
@@ -413,13 +486,13 @@ const AdminBookings = () => {
                     Customer
                   </th>
                   <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
+                    Date & Duration
                   </th>
                   <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Guests
                   </th>
                   <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
+                    Price Details
                   </th>
                   <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -431,63 +504,107 @@ const AdminBookings = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {getCurrentPageBookings().length > 0 ? (
-                  getCurrentPageBookings().map((booking, index) => (
-                    <tr 
-                      key={booking._id} 
-                      className={`hover:bg-blue-50 transition-colors duration-150 cursor-pointer ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
-                      onClick={(e) => handleRowClick(booking._id, e)}
-                    >
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
-                        <Link to={`/admin/bookings/${booking._id}`} onClick={(e) => e.stopPropagation()} className="hover:underline">
-                          {booking.bookingReference}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {booking.activity?.title || "Unknown Activity"}
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{booking.fullName}</div>
-                        <div className="text-xs text-gray-500 truncate max-w-[200px]">{booking.email}</div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{formatDate(booking.date)}</div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900 text-center">{booking.guests}</div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-gray-900">${booking.totalPrice}</div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${
-                          booking.status === 'confirmed' 
-                            ? 'bg-green-100 text-green-800 border-green-200' 
-                            : booking.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                              : 'bg-red-100 text-red-800 border-red-200'
-                        }`}>
-                          <span className={`h-1.5 w-1.5 rounded-full mr-1.5 ${
-                            booking.status === 'confirmed' ? 'bg-green-600' : 
-                            booking.status === 'pending' ? 'bg-yellow-600' : 'bg-red-600'
-                          }`}></span>
-                          {booking.status ? booking.status.charAt(0).toUpperCase() + booking.status.slice(1) : ''}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        {booking.status === 'pending' && (
-                          <div className="flex justify-end space-x-1">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleStatusChange(booking._id, 'confirmed');
-                              }}
-                              className="inline-flex items-center px-2 py-1 rounded text-xs text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
-                            >
-                              <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                              Confirm
-                            </button>
+                  getCurrentPageBookings().map((booking, index) => {
+                    const durationType = getDurationTypeDisplay(booking);
+                    const pricePerPerson = getPricePerPerson(booking);
+                    
+                    return (
+                      <tr 
+                        key={booking._id} 
+                        className={`hover:bg-blue-50 transition-colors duration-150 cursor-pointer ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+                        onClick={(e) => handleRowClick(booking._id, e)}
+                      >
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-blue-600 font-medium">
+                            <Link to={`/admin/bookings/${booking._id}`} onClick={(e) => e.stopPropagation()} className="hover:underline">
+                              {booking.bookingReference}
+                            </Link>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="text-sm text-gray-900">{booking.activity?.title || "Unknown Activity"}</div>
+                          {booking.activity?.pricingType === 'half-full-day' && (
+                            <div className="mt-1">
+                              <DurationBadge booking={booking} />
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="text-sm font-medium text-gray-900">{booking.fullName}</div>
+                          <div className="text-xs text-gray-500 truncate max-w-[200px]">{booking.email}</div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="text-sm text-gray-900">{formatDate(booking.date)}</div>
+                          {durationType !== 'Standard' && (
+                            <div className="mt-1">
+                              <DurationBadge booking={booking} />
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900 text-center">
+                            {booking.guests}
+                            <div className="text-xs text-gray-500">guests</div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="space-y-1">
+                            <div className="text-sm font-semibold text-gray-900">${booking.totalPrice}</div>
+                            {pricePerPerson && (
+                              <div className="text-xs text-gray-500">
+                                ${pricePerPerson.toFixed(2)} per person
+                                {durationType !== 'Standard' && (
+                                  <span className="ml-1">({durationType})</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${
+                            booking.status === 'confirmed' 
+                              ? 'bg-green-100 text-green-800 border-green-200' 
+                              : booking.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                : 'bg-red-100 text-red-800 border-red-200'
+                          }`}>
+                            <span className={`h-1.5 w-1.5 rounded-full mr-1.5 ${
+                              booking.status === 'confirmed' ? 'bg-green-600' : 
+                              booking.status === 'pending' ? 'bg-yellow-600' : 'bg-red-600'
+                            }`}></span>
+                            {booking.status ? booking.status.charAt(0).toUpperCase() + booking.status.slice(1) : ''}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          {booking.status === 'pending' && (
+                            <div className="flex justify-end space-x-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusChange(booking._id, 'confirmed');
+                                }}
+                                className="inline-flex items-center px-2 py-1 rounded text-xs text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
+                              >
+                                <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Confirm
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusChange(booking._id, 'cancelled');
+                                }}
+                                className="inline-flex items-center px-2 py-1 rounded text-xs text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
+                              >
+                                <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Cancel
+                              </button>
+                            </div>
+                          )}
+                          {booking.status === 'confirmed' && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -500,39 +617,25 @@ const AdminBookings = () => {
                               </svg>
                               Cancel
                             </button>
-                          </div>
-                        )}
-                        {booking.status === 'confirmed' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusChange(booking._id, 'cancelled');
-                            }}
-                            className="inline-flex items-center px-2 py-1 rounded text-xs text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
-                          >
-                            <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            Cancel
-                          </button>
-                        )}
-                        {booking.status === 'cancelled' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusChange(booking._id, 'confirmed');
-                            }}
-                            className="inline-flex items-center px-2 py-1 rounded text-xs text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
-                          >
-                            <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            Reactivate
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                          )}
+                          {booking.status === 'cancelled' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStatusChange(booking._id, 'confirmed');
+                              }}
+                              className="inline-flex items-center px-2 py-1 rounded text-xs text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
+                            >
+                              <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                              Reactivate
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
                     <td colSpan="8" className="px-4 py-4 text-center text-sm text-gray-500">

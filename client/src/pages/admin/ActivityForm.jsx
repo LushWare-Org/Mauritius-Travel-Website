@@ -4,7 +4,6 @@ import { Formik, Form, Field, ErrorMessage, FieldArray } from 'formik';
 import * as Yup from 'yup';
 import AdminLayout from '../../components/admin/AdminLayout';
 import API from '../../utils/api';
-
 const ActivityForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -12,20 +11,21 @@ const ActivityForm = () => {
   const [loading, setLoading] = useState(id ? true : false);
   const [images, setImages] = useState([]);
   const [galleryImages, setGalleryImages] = useState([]);
-  const [uploading, setUploading] = useState(false);  const [error, setError] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
   const isNew = !id;
-
   useEffect(() => {
     // Fetch activity data if editing
     if (id) {
-      const fetchActivity = async () => {        try {
+      const fetchActivity = async () => {
+        try {
           setLoading(true);
           const response = await API.get(`/activities/${id}`);
-          
+         
           if (response.data.success) {
             const activityData = response.data.data;
             setActivity(activityData);
-            
+          
             // Set up main image
             if (activityData.image) {
               setImages([{
@@ -34,7 +34,7 @@ const ActivityForm = () => {
                 isUploaded: true
               }]);
             }
-            
+          
             // Set up gallery images if any
             if (activityData.galleryImages && activityData.galleryImages.length > 0) {
               setGalleryImages(activityData.galleryImages.map((url, index) => ({
@@ -43,184 +43,288 @@ const ActivityForm = () => {
                 isUploaded: true
               })));
             }
-            
+          
             setLoading(false);
           }
         } catch (error) {
           console.error('Error fetching activity:', error);
-          setError('Failed to load activity data');
+          setError('Failed to load excursion data');
           setLoading(false);
         }
       };
-
       fetchActivity();
     }
   }, [id]);
-
   // Validation schema
   const validationSchema = Yup.object({
     title: Yup.string().required('Title is required'),
     description: Yup.string().required('Description is required'),
     shortDescription: Yup.string().max(200, 'Short description cannot exceed 200 characters'),
+    // Keep price for backward compatibility
     price: Yup.number().required('Price is required').positive('Price must be positive'),
+    // New price fields
+    fullDayPrice: Yup.number().required('Full day price is required').positive('Price must be positive'),
+    halfDayPrice: Yup.number().required('Half day price is required').positive('Price must be positive'),
     duration: Yup.number().required('Duration is required').positive('Duration must be positive'),
     location: Yup.string().required('Location is required'),
-    type: Yup.string().required('Activity type is required'),
+    type: Yup.string().required('Excursion type is required'),
     maxParticipants: Yup.number().positive('Must be positive').integer('Must be a whole number'),
   });
   // Handle image upload for main image
   const handleImageUpload = async (event) => {
     const files = Array.from(event.target.files);
     if (!files.length) return;
-    
+   
     setUploading(true);
-    
+   
     try {
-      // Take just the first file for the main image
       const file = files[0];
+      console.log('Selected file:', {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        lastModified: file.lastModified
+      });
+      // Create a preview URL immediately for the user to see
+      const previewUrl = URL.createObjectURL(file);
+      const tempImage = {
+        id: Date.now(),
+        url: previewUrl,
+        isUploaded: false,
+        isTemp: true,
+        file: file
+      };
+     
+      setImages([...images, tempImage]);
+      // Try to upload to backend
       const formData = new FormData();
       formData.append('file', file);
-      
-      console.log('Uploading main image:', file.name);
-      
-      // Add retry logic for better reliability
+      formData.append('activityId', id || 'new');
+     
+      console.log('FormData entries:');
+      for (let [key, value] of formData.entries()) {
+        console.log(`${key}:`, value);
+      }
       let response;
       let retries = 0;
       const maxRetries = 2;
-      
-      while (retries <= maxRetries) {        try {
-          console.log(`Upload attempt ${retries + 1} of ${maxRetries + 1}`);
+     
+      try {
+        while (retries <= maxRetries) {
+          try {
+            console.log(`Upload attempt ${retries + 1} of ${maxRetries + 1}`);
           
-          response = await API.post('/upload', formData, {
-            // Don't set Content-Type header - let browser set it with boundary for FormData
-            timeout: 30000
-          });
+            response = await API.post('/upload', formData, {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+              timeout: 15000,
+              onUploadProgress: (progressEvent) => {
+                if (progressEvent.total) {
+                  const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                  console.log(`Upload progress: ${progress}%`);
+                }
+              }
+            });
           
-          // If we get here, the request was successful
-          break;
-        } catch (err) {
-          retries++;
-          if (retries > maxRetries) {
-            throw err; // Give up after max retries
+            break;
+          } catch (err) {
+            retries++;
+            if (retries > maxRetries) {
+              throw err;
+            }
+            console.log(`Upload failed, retrying (${retries}/${maxRetries})...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
-          console.log(`Upload failed, retrying (${retries}/${maxRetries})...`);
-          // Wait a bit before retrying
-          await new Promise(resolve => setTimeout(resolve, 1000));
         }
-      }
-      
-      console.log('Upload response:', response.data);
-      
-      if (response.data.success) {
-        const newImage = {
-          id: Date.now(),
-          url: response.data.data.url,
-          isUploaded: true,
-          // Store these for debugging purposes
-          isPlaceholder: response.data.data.isPlaceholder,
-          isFallback: response.data.data.isFallback
+      } catch (uploadError) {
+        console.error('Upload failed:', uploadError);
+       
+        alert('Upload service is currently unavailable. Using local image storage for now. Note: This image will only work in this browser session.');
+       
+        setImages(prev => prev.filter(img => img.id !== tempImage.id));
+       
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const dataUrl = reader.result;
+          const permanentImage = {
+            id: Date.now(),
+            url: dataUrl,
+            isUploaded: true,
+            isLocal: true,
+            fileName: file.name
+          };
+          setImages(prev => [...prev, permanentImage]);
         };
-        
-        setImages([...images, newImage]);
-        
-        // Show warnings if using placeholder/fallback
+        reader.readAsDataURL(file);
+       
+        setUploading(false);
+        return;
+      }
+     
+      console.log('Upload response:', response.data);
+     
+      if (response.data.success) {
+        setImages(prev => {
+          const filtered = prev.filter(img => img.id !== tempImage.id);
+          const newImage = {
+            id: Date.now(),
+            url: response.data.data.url,
+            isUploaded: true,
+            isPlaceholder: response.data.data.isPlaceholder,
+            isFallback: response.data.data.isFallback
+          };
+          return [...filtered, newImage];
+        });
+       
+        URL.revokeObjectURL(previewUrl);
+       
         if (response.data.data.isPlaceholder || response.data.data.isFallback) {
-          console.warn('Using fallback/placeholder image due to upload issues');
-          alert('Note: Using a placeholder image because the image upload service is currently unavailable. Your activity will still be saved.');
+          console.warn('Using fallback/placeholder image');
+          alert('Note: Using a placeholder image because the image upload service is currently unavailable.');
         }
       } else {
         throw new Error(response.data.error || 'Upload failed with unknown error');
       }
     } catch (error) {
-      console.error('Error uploading image:', error);
-      console.log('Error details:', error.response ? error.response.data : 'No response data');
-      
-      // Fallback to placeholder if everything fails
+      console.error('Error in image upload process:', error);
+      console.log('Error details:', error.response ? error.response.data : error.message);
+     
       const placeholderUrl = `https://picsum.photos/seed/${Date.now()}/800/600`;
       const newImage = {
         id: Date.now(),
         url: placeholderUrl,
         isUploaded: true,
-        isPlaceholder: true
+        isPlaceholder: true,
+        isFallback: true
       };
-      
-      setImages([...images, newImage]);
-      
-      alert(`Note: Using a placeholder image because the upload failed. Your activity will still be saved.`);
+     
+      setImages([...images.filter(img => !img.isTemp), newImage]);
+     
+      alert(`Note: Using a placeholder image because the upload failed. Your excursion will still be saved.`);
     } finally {
       setUploading(false);
     }
   };
-    // Handle gallery image upload with improved error handling
+  // Handle gallery image upload
   const handleGalleryImageUpload = async (event) => {
     const files = Array.from(event.target.files);
     if (!files.length) return;
-    
+   
     setUploading(true);
-    
-    // Track successful and failed uploads
+   
     const uploadResults = {
       success: 0,
       failed: 0,
       total: files.length
     };
-    
+   
     try {
-      // Process files one at a time with improved error handling
       for (const file of files) {
         try {
+          const previewUrl = URL.createObjectURL(file);
+          const tempImage = {
+            id: Date.now() + Math.random(),
+            url: previewUrl,
+            isUploaded: false,
+            isTemp: true,
+            file: file
+          };
+         
+          setGalleryImages(prev => [...prev, tempImage]);
+         
           const formData = new FormData();
           formData.append('file', file);
-          
+          formData.append('activityId', id || 'new');
+         
           console.log('Uploading gallery image:', file.name);
-          
-          // Add retry logic for better reliability
+         
           let response;
           let retries = 0;
           const maxRetries = 2;
-          
-          while (retries <= maxRetries) {            try {
-              console.log(`Gallery upload attempt ${retries + 1} of ${maxRetries + 1}`);
+         
+          try {
+            while (retries <= maxRetries) {
+              try {
+                console.log(`Gallery upload attempt ${retries + 1} of ${maxRetries + 1}`);
               
-              response = await API.post('/upload', formData, {
-                // Don't set Content-Type header - let browser set it with boundary for FormData
-                timeout: 30000
-              });
+                response = await API.post('/upload', formData, {
+                  headers: {
+                    'Content-Type': 'multipart/form-data',
+                  },
+                  timeout: 15000
+                });
               
-              // If we get here, the request was successful
-              break;
-            } catch (err) {
-              retries++;
-              if (retries > maxRetries) {
-                throw err; // Give up after max retries
+                break;
+              } catch (err) {
+                retries++;
+                if (retries > maxRetries) {
+                  throw err;
+                }
+                console.log(`Gallery upload failed, retrying (${retries}/${maxRetries})...`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
               }
-              console.log(`Gallery upload failed, retrying (${retries}/${maxRetries})...`);
-              // Wait a bit before retrying
-              await new Promise(resolve => setTimeout(resolve, 1000));
             }
-          }
+          } catch (uploadError) {
+            console.error(`Gallery image upload failed for ${file.name}:`, uploadError);
+            uploadResults.failed++;
           
-          if (response.data.success) {
-            const newImage = {
-              id: Date.now() + Math.random(),
-              url: response.data.data.url,
-              isUploaded: true,
-              // Store these for debugging purposes
-              isPlaceholder: response.data.data.isPlaceholder,
-              isFallback: response.data.data.isFallback
+            setGalleryImages(prev => prev.filter(img => img.id !== tempImage.id));
+          
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const dataUrl = reader.result;
+              const permanentImage = {
+                id: Date.now() + Math.random(),
+                url: dataUrl,
+                isUploaded: true,
+                isLocal: true,
+                fileName: file.name
+              };
+              setGalleryImages(prev => [...prev, permanentImage]);
             };
-            
-            setGalleryImages(prev => [...prev, newImage]);
+            reader.readAsDataURL(file);
+            continue;
+          }
+         
+          if (response.data.success) {
+            setGalleryImages(prev => {
+              const filtered = prev.filter(img => img.id !== tempImage.id);
+              const newImage = {
+                id: Date.now() + Math.random(),
+                url: response.data.data.url,
+                isUploaded: true,
+                isPlaceholder: response.data.data.isPlaceholder,
+                isFallback: response.data.data.isFallback
+              };
+              return [...filtered, newImage];
+            });
+          
+            URL.revokeObjectURL(previewUrl);
             uploadResults.success++;
           } else {
             console.error('Upload failed:', response.data.error);
             uploadResults.failed++;
+          
+            setGalleryImages(prev => prev.filter(img => img.id !== tempImage.id));
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const dataUrl = reader.result;
+              const permanentImage = {
+                id: Date.now() + Math.random(),
+                url: dataUrl,
+                isUploaded: true,
+                isLocal: true,
+                fileName: file.name
+              };
+              setGalleryImages(prev => [...prev, permanentImage]);
+            };
+            reader.readAsDataURL(file);
           }
         } catch (individualError) {
           console.error(`Error uploading gallery image ${file.name}:`, individualError);
           uploadResults.failed++;
-          
-          // Add a placeholder image instead
+         
           const placeholderUrl = `https://picsum.photos/seed/${Date.now() + Math.random()}/800/600`;
           const newImage = {
             id: Date.now() + Math.random(),
@@ -228,18 +332,17 @@ const ActivityForm = () => {
             isUploaded: true,
             isPlaceholder: true
           };
-          
+         
           setGalleryImages(prev => [...prev, newImage]);
         }
       }
-      
-      // Report upload summary
+     
       if (uploadResults.failed > 0) {
         alert(`Uploaded ${uploadResults.success} of ${uploadResults.total} gallery images. ${uploadResults.failed} failed and were replaced with placeholders.`);
       } else if (uploadResults.success > 0) {
         console.log(`Successfully uploaded all ${uploadResults.success} gallery images`);
       }
-      
+     
     } catch (error) {
       console.error('Error in gallery image upload process:', error);
       alert(`There were issues uploading some gallery images. Some may have been replaced with placeholders.`);
@@ -247,17 +350,14 @@ const ActivityForm = () => {
       setUploading(false);
     }
   };
-
   // Remove main image
   const removeImage = (imageId) => {
     setImages(images.filter(image => image.id !== imageId));
   };
-
   // Remove gallery image
   const removeGalleryImage = (imageId) => {
     setGalleryImages(galleryImages.filter(image => image.id !== imageId));
   };
-
   // Handle form submission
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
@@ -266,50 +366,63 @@ const ActivityForm = () => {
         setSubmitting(false);
         return;
       }
-      
+     
       // Use the first image as the main image
       const mainImage = images[0].url;
-      
+     
       // Get all gallery image URLs
       const galleryImageUrls = galleryImages.map(img => img.url);
-      
+     
       // Prepare activity data
       const activityData = {
         ...values,
         image: mainImage,
         galleryImages: galleryImageUrls,
-        // Parse arrays from form inputs if they're not already arrays
-        included: Array.isArray(values.included) ? values.included : 
+        // Ensure price is set from fullDayPrice for backward compatibility
+        price: values.fullDayPrice, // Set price to fullDayPrice
+        // Parse arrays from form inputs
+        included: Array.isArray(values.included) ? values.included :
                   values.included ? values.included.split(',').map(item => item.trim()) : [],
-        notIncluded: Array.isArray(values.notIncluded) ? values.notIncluded : 
+        notIncluded: Array.isArray(values.notIncluded) ? values.notIncluded :
                     values.notIncluded ? values.notIncluded.split(',').map(item => item.trim()) : [],
-        requirements: Array.isArray(values.requirements) ? values.requirements : 
+        requirements: Array.isArray(values.requirements) ? values.requirements :
                       values.requirements ? values.requirements.split(',').map(item => item.trim()) : [],
       };
-      
+     
+      console.log('Submitting activity data:', activityData);
+     
       let response;
-        if (isNew) {
-        // Create new activity
+      if (isNew) {
         response = await API.post('/activities', activityData);
       } else {
-        // Update existing activity
         response = await API.put(`/activities/${id}`, activityData);
       }
-      
+     
       if (response.data.success) {
-        // Redirect back to activities list after save
+        // ✅ CRITICAL: Set multiple refresh flags
+        localStorage.setItem('REFRESH_ACTIVITIES', 'true');
+        sessionStorage.setItem('REFRESH_ACTIVITIES', 'true');
+       
+        // Force dispatch storage event
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'REFRESH_ACTIVITIES',
+          newValue: 'true'
+        }));
+       
+        console.log('✅ Excursion saved, refresh flags set');
+       
+        // Navigate back
         navigate('/admin/activities');
       } else {
-        throw new Error(response.data.error || 'Failed to save activity');
+        throw new Error(response.data.error || 'Failed to save excursion');
       }
     } catch (error) {
       console.error('Error saving activity:', error);
-      alert(error.response?.data?.error || error.message || 'Failed to save activity');
+      alert(error.response?.data?.error || error.message || 'Failed to save excursion');
     } finally {
       setSubmitting(false);
     }
   };
-
   if (error) {
     return (
       <AdminLayout>
@@ -327,18 +440,17 @@ const ActivityForm = () => {
           onClick={() => navigate('/admin/activities')}
           className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
         >
-          Back to Activities
+          Back to Excursions
         </button>
       </AdminLayout>
     );
   }
-
   return (
     <AdminLayout>
       <div className="pb-5 border-b border-gray-200 mb-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-800">
-            {isNew ? 'Add New Activity' : 'Edit Activity'}
+            {isNew ? 'Add New Excursion' : 'Edit Excursion'}
           </h1>
           <button
             type="button"
@@ -349,7 +461,7 @@ const ActivityForm = () => {
           </button>
         </div>
       </div>
-      
+     
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -361,12 +473,14 @@ const ActivityForm = () => {
               title: activity?.title || '',
               description: activity?.description || '',
               shortDescription: activity?.shortDescription || '',
-              price: activity?.price || '',
+              // Set price from fullDayPrice for backward compatibility
+              price: activity?.price || activity?.fullDayPrice || '',
+              fullDayPrice: activity?.fullDayPrice || activity?.price || '',
+              halfDayPrice: activity?.halfDayPrice || '',
               duration: activity?.duration || '',
               location: activity?.location || '',
               type: activity?.type || '',
               maxParticipants: activity?.maxParticipants || 10,
-              // Rating will still be included in the data but not editable
               rating: activity?.rating || 5,
               reviewCount: activity?.reviewCount || 0,
               included: activity?.included || [],
@@ -384,23 +498,23 @@ const ActivityForm = () => {
                   {/* Basic Info */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium text-gray-900">Basic Information</h3>
-                    
+                  
                     <div>
                       <label htmlFor="title" className="block text-base font-medium text-gray-700">
-                        Activity Title <span className="text-red-500">*</span>
+                        Excursion Title <span className="text-red-500">*</span>
                       </label>
                       <Field
                         type="text"
                         name="title"
                         id="title"
-                        className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md 
+                        className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md
                           text-base py-3 px-4 ${
                           errors.title && touched.title ? 'border-red-300' : ''
                         }`}
                       />
                       <ErrorMessage name="title" component="div" className="mt-1 text-sm text-red-600" />
                     </div>
-                    
+                  
                     <div>
                       <label htmlFor="shortDescription" className="block text-base font-medium text-gray-700">
                         Short Description (for listings)
@@ -410,15 +524,15 @@ const ActivityForm = () => {
                         name="shortDescription"
                         id="shortDescription"
                         rows={2}
-                        className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md 
+                        className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md
                           text-base py-3 px-4 ${
                           errors.shortDescription && touched.shortDescription ? 'border-red-300' : ''
                         }`}
-                        placeholder="Brief description for activity listings (max 200 chars)"
+                        placeholder="Brief description for excursion listings (max 200 chars)"
                       />
                       <ErrorMessage name="shortDescription" component="div" className="mt-1 text-sm text-red-600" />
                     </div>
-                    
+                  
                     <div>
                       <label htmlFor="description" className="block text-base font-medium text-gray-700">
                         Full Description <span className="text-red-500">*</span>
@@ -428,52 +542,101 @@ const ActivityForm = () => {
                         name="description"
                         id="description"
                         rows={6}
-                        className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md 
+                        className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md
                           text-base py-3 px-4 ${
                           errors.description && touched.description ? 'border-red-300' : ''
                         }`}
                       />
                       <ErrorMessage name="description" component="div" className="mt-1 text-sm text-red-600" />
                     </div>
-                    
+                  
+                    <div>
+                      <label htmlFor="price" className="block text-base font-medium text-gray-700">
+                        Base Price (USD) <span className="text-red-500">*</span>
+                        <span className="text-gray-500 text-sm font-normal ml-2">(For backward compatibility)</span>
+                      </label>
+                      <Field
+                        type="number"
+                        name="price"
+                        id="price"
+                        className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md
+                          text-base py-3 px-4 ${
+                          errors.price && touched.price ? 'border-red-300' : ''
+                        }`}
+                        placeholder="e.g., 299"
+                        onChange={(e) => {
+                          const price = e.target.value;
+                          setFieldValue('price', price);
+                          setFieldValue('fullDayPrice', price);
+                        }}
+                      />
+                      <ErrorMessage name="price" component="div" className="mt-1 text-sm text-red-600" />
+                      <p className="text-xs text-gray-500 mt-1">
+                        This will automatically set the Full Day Price to match
+                      </p>
+                    </div>
+                  
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label htmlFor="price" className="block text-base font-medium text-gray-700">
-                          Price (USD) <span className="text-red-500">*</span>
+                        <label htmlFor="fullDayPrice" className="block text-base font-medium text-gray-700">
+                          Full Day Price (USD) <span className="text-red-500">*</span>
                         </label>
                         <Field
                           type="number"
-                          name="price"
-                          id="price"
-                          className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md 
+                          name="fullDayPrice"
+                          id="fullDayPrice"
+                          className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md
                             text-base py-3 px-4 ${
-                            errors.price && touched.price ? 'border-red-300' : ''
+                            errors.fullDayPrice && touched.fullDayPrice ? 'border-red-300' : ''
                           }`}
+                          placeholder="e.g., 299"
+                          onChange={(e) => {
+                            const price = e.target.value;
+                            setFieldValue('fullDayPrice', price);
+                            setFieldValue('price', price);
+                          }}
                         />
-                        <ErrorMessage name="price" component="div" className="mt-1 text-sm text-red-600" />
+                        <ErrorMessage name="fullDayPrice" component="div" className="mt-1 text-sm text-red-600" />
                       </div>
                       <div>
-                        <label htmlFor="duration" className="block text-base font-medium text-gray-700">
-                          Duration (hours) <span className="text-red-500">*</span>
+                        <label htmlFor="halfDayPrice" className="block text-base font-medium text-gray-700">
+                          Half Day Price (USD) <span className="text-red-500">*</span>
                         </label>
                         <Field
                           type="number"
-                          name="duration"
-                          id="duration"
-                          className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md 
+                          name="halfDayPrice"
+                          id="halfDayPrice"
+                          className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md
                             text-base py-3 px-4 ${
-                            errors.duration && touched.duration ? 'border-red-300' : ''
+                            errors.halfDayPrice && touched.halfDayPrice ? 'border-red-300' : ''
                           }`}
+                          placeholder="e.g., 199"
                         />
-                        <ErrorMessage name="duration" component="div" className="mt-1 text-sm text-red-600" />
+                        <ErrorMessage name="halfDayPrice" component="div" className="mt-1 text-sm text-red-600" />
                       </div>
                     </div>
-                  </div>
                   
+                    <div>
+                      <label htmlFor="duration" className="block text-base font-medium text-gray-700">
+                        Duration (hours) <span className="text-red-500">*</span>
+                      </label>
+                      <Field
+                        type="number"
+                        name="duration"
+                        id="duration"
+                        className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md
+                          text-base py-3 px-4 ${
+                          errors.duration && touched.duration ? 'border-red-300' : ''
+                        }`}
+                      />
+                      <ErrorMessage name="duration" component="div" className="mt-1 text-sm text-red-600" />
+                    </div>
+                  </div>
+                 
                   {/* Additional Info */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-medium text-gray-900">Additional Information</h3>
-                    
+                  
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label htmlFor="location" className="block text-base font-medium text-gray-700">
@@ -483,7 +646,7 @@ const ActivityForm = () => {
                           type="text"
                           name="location"
                           id="location"
-                          className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md 
+                          className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md
                             text-base py-3 px-4 ${
                             errors.location && touched.location ? 'border-red-300' : ''
                           }`}
@@ -498,7 +661,7 @@ const ActivityForm = () => {
                           as="select"
                           name="type"
                           id="type"
-                          className={`mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-md shadow-sm 
+                          className={`mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-md shadow-sm
                             focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-base ${
                             errors.type && touched.type ? 'border-red-300' : ''
                           }`}
@@ -515,7 +678,7 @@ const ActivityForm = () => {
                         <ErrorMessage name="type" component="div" className="mt-1 text-sm text-red-600" />
                       </div>
                     </div>
-                    
+                  
                     <div>
                       <label htmlFor="maxParticipants" className="block text-base font-medium text-gray-700">
                         Max Participants
@@ -524,14 +687,14 @@ const ActivityForm = () => {
                         type="number"
                         name="maxParticipants"
                         id="maxParticipants"
-                        className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md 
+                        className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md
                           text-base py-3 px-4 ${
                           errors.maxParticipants && touched.maxParticipants ? 'border-red-300' : ''
                         }`}
                       />
                       <ErrorMessage name="maxParticipants" component="div" className="mt-1 text-sm text-red-600" />
                     </div>
-                    
+                  
                     <div>
                       <label className="block text-base font-medium text-gray-700 mb-2">
                         What's Included
@@ -570,7 +733,7 @@ const ActivityForm = () => {
                         )}
                       </FieldArray>
                     </div>
-                    
+                  
                     <div>
                       <label className="block text-base font-medium text-gray-700 mb-2">
                         Not Included
@@ -609,7 +772,7 @@ const ActivityForm = () => {
                         )}
                       </FieldArray>
                     </div>
-                    
+                  
                     <div>
                       <label className="block text-base font-medium text-gray-700 mb-2">
                         Requirements
@@ -648,7 +811,7 @@ const ActivityForm = () => {
                         )}
                       </FieldArray>
                     </div>
-                    
+                  
                     <div className="flex items-start mt-5">
                       <div className="flex items-center h-5">
                         <Field
@@ -660,12 +823,12 @@ const ActivityForm = () => {
                       </div>
                       <div className="ml-3 text-sm">
                         <label htmlFor="featured" className="font-medium text-gray-700">
-                          Featured Activity
+                          Featured Excursion
                         </label>
-                        <p className="text-gray-500">Display this activity prominently on the homepage</p>
+                        <p className="text-gray-500">Display this excursion prominently on the homepage</p>
                       </div>
                     </div>
-                    
+                  
                     <div>
                       <label htmlFor="status" className="block text-sm font-medium text-gray-700">
                         Status
@@ -680,22 +843,22 @@ const ActivityForm = () => {
                         <option value="inactive">Inactive</option>
                       </Field>
                       <div className="mt-1 text-sm text-gray-500">
-                        Inactive activities will not be shown on the website
+                        Inactive excursions will not be shown on the website
                       </div>
                     </div>
                   </div>
                 </div>
-                
+              
                 {/* Main Image Section */}
                 <div className="border-t border-gray-200 pt-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Main Activity Image</h3>
-                  
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Main Excursion Image</h3>
+               
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                     {images.map((image) => (
                       <div key={image.id} className="relative">
-                        <img 
-                          src={image.url} 
-                          alt="Activity" 
+                        <img
+                          src={image.url}
+                          alt="Excursion"
                           className="h-32 w-full object-cover rounded-lg"
                         />
                         <button
@@ -705,12 +868,18 @@ const ActivityForm = () => {
                         >
                           <i className="fas fa-times"></i>
                         </button>
+                        {image.isLocal && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-yellow-500 text-white text-xs p-1 text-center">
+                            Local Image
+                          </div>
+                        )}
                       </div>
                     ))}
-                    
+                  
                     {/* Upload button */}
                     {images.length === 0 && (
-                      <div className="h-32 border-2 border-gray-300 border-dashed rounded-lg flex items-center justify-center">                        <label htmlFor="mainImage" className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
+                      <div className="h-32 border-2 border-gray-300 border-dashed rounded-lg flex items-center justify-center">
+                        <label htmlFor="mainImage" className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
                           {uploading ? (
                             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
                           ) : (
@@ -720,7 +889,8 @@ const ActivityForm = () => {
                                 Add Main Image
                               </span>
                             </>
-                          )}<input
+                          )}
+                          <input
                             type="file"
                             id="mainImage"
                             name="mainImage"
@@ -733,22 +903,25 @@ const ActivityForm = () => {
                       </div>
                     )}
                   </div>
-                  
+               
                   <p className="text-sm text-gray-500">
-                    This image will be used as the main image for the activity in listings and the detail page.
+                    This image will be used as the main image for the excursion in listings and the detail page.
+                  </p>
+                  <p className="text-sm text-yellow-600 mt-1">
+                    Note: If you see "Local Image" label, the image is stored locally and may not work on other devices or sessions.
                   </p>
                 </div>
-                
+              
                 {/* Gallery Images Section */}
                 <div className="border-t border-gray-200 pt-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Gallery Images</h3>
-                  
+               
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                     {galleryImages.map((image) => (
                       <div key={image.id} className="relative">
-                        <img 
-                          src={image.url} 
-                          alt="Gallery" 
+                        <img
+                          src={image.url}
+                          alt="Gallery"
                           className="h-32 w-full object-cover rounded-lg"
                         />
                         <button
@@ -758,11 +931,17 @@ const ActivityForm = () => {
                         >
                           <i className="fas fa-times"></i>
                         </button>
+                        {image.isLocal && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-yellow-500 text-white text-xs p-1 text-center">
+                            Local Image
+                          </div>
+                        )}
                       </div>
                     ))}
-                    
+                  
                     {/* Upload button */}
-                    <div className="h-32 border-2 border-gray-300 border-dashed rounded-lg flex items-center justify-center">                      <label htmlFor="galleryImages" className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
+                    <div className="h-32 border-2 border-gray-300 border-dashed rounded-lg flex items-center justify-center">
+                      <label htmlFor="galleryImages" className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
                         {uploading ? (
                           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
                         ) : (
@@ -772,7 +951,8 @@ const ActivityForm = () => {
                               Add Gallery Images
                             </span>
                           </>
-                        )}<input
+                        )}
+                        <input
                           type="file"
                           id="galleryImages"
                           name="galleryImages"
@@ -785,12 +965,12 @@ const ActivityForm = () => {
                       </label>
                     </div>
                   </div>
-                  
+               
                   <p className="text-sm text-gray-500">
-                    Add additional images for the activity gallery on the detail page. You can upload multiple images at once.
+                    Add additional images for the excursion gallery on the detail page. You can upload multiple images at once.
                   </p>
                 </div>
-                
+              
                 {/* Submit Button */}
                 <div className="border-t border-gray-200 pt-6 flex justify-end">
                   <button
@@ -806,7 +986,7 @@ const ActivityForm = () => {
                     ) : (
                       <>
                         <i className="fas fa-save mr-2"></i>
-                        Save Activity
+                        Save Excursion
                       </>
                     )}
                   </button>
@@ -819,5 +999,4 @@ const ActivityForm = () => {
     </AdminLayout>
   );
 };
-
 export default ActivityForm;

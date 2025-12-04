@@ -17,6 +17,7 @@ const BookingDetail = () => {
       try {
         const response = await bookingsAPI.getById(id);
         if (response.data.success) {
+          console.log('📊 Booking data:', response.data.data);
           setBooking(response.data.data);
         } else {
           setError('Failed to load booking details');
@@ -52,6 +53,51 @@ const BookingDetail = () => {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
+  // Get duration type display text
+  const getDurationTypeDisplay = () => {
+    if (!booking) return '';
+    
+    // Check for durationType first (new field)
+    if (booking.durationType) {
+      return booking.durationType;
+    }
+    
+    // Check for duration field (old field)
+    if (booking.duration === 'halfDay') {
+      return 'Half Day';
+    } else if (booking.duration === 'fullDay') {
+      return 'Full Day';
+    }
+    
+    // Check activity pricing type
+    if (booking.activity?.pricingType === 'half-full-day') {
+      // If we have pricePerPerson, we can infer
+      if (booking.pricePerPerson && booking.activity) {
+        if (booking.pricePerPerson === booking.activity.halfDayPrice) {
+          return 'Half Day';
+        } else if (booking.pricePerPerson === booking.activity.fullDayPrice) {
+          return 'Full Day';
+        }
+      }
+    }
+    
+    return 'Standard';
+  };
+
+  // Get price per person display
+  const getPricePerPersonDisplay = () => {
+    if (booking?.pricePerPerson) {
+      return `$${booking.pricePerPerson}`;
+    }
+    
+    // Calculate from total price and guests
+    if (booking?.totalPrice && booking?.guests) {
+      return `$${(booking.totalPrice / booking.guests).toFixed(2)}`;
+    }
+    
+    return 'N/A';
+  };
+
   const handleStatusChange = async (newStatus) => {
     setUpdating(true);
     try {
@@ -77,6 +123,7 @@ const BookingDetail = () => {
       confirmed: 'bg-green-100 text-green-800',
       pending: 'bg-yellow-100 text-yellow-800',
       cancelled: 'bg-red-100 text-red-800',
+      completed: 'bg-blue-100 text-blue-800',
     };
 
     return (
@@ -137,6 +184,9 @@ const BookingDetail = () => {
     );
   }
 
+  const durationType = getDurationTypeDisplay();
+  const pricePerPerson = getPricePerPersonDisplay();
+
   return (
     <AdminLayout>
       {/* Header */}
@@ -172,6 +222,11 @@ const BookingDetail = () => {
                 <dt className="text-sm font-medium text-gray-500">Activity</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                   {booking.activity ? booking.activity.title : 'Unknown Activity'}
+                  {booking.activity?.pricingType === 'half-full-day' && (
+                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                      Half/Full Day Pricing
+                    </span>
+                  )}
                 </dd>
               </div>
               <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
@@ -180,12 +235,53 @@ const BookingDetail = () => {
                   {formatDate(booking.date)}
                 </dd>
               </div>
+              
+              {/* Duration Type (Half Day / Full Day) */}
               <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Duration Type</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  <div className="flex items-center">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      durationType === 'Half Day' 
+                        ? 'bg-purple-100 text-purple-800' 
+                        : durationType === 'Full Day'
+                          ? 'bg-indigo-100 text-indigo-800'
+                          : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {durationType === 'Half Day' && (
+                        <svg className="mr-1.5 h-2 w-2 text-purple-600" fill="currentColor" viewBox="0 0 8 8">
+                          <circle cx="4" cy="4" r="3" />
+                        </svg>
+                      )}
+                      {durationType === 'Full Day' && (
+                        <svg className="mr-1.5 h-2 w-2 text-indigo-600" fill="currentColor" viewBox="0 0 8 8">
+                          <circle cx="4" cy="4" r="3" />
+                        </svg>
+                      )}
+                      {durationType}
+                    </span>
+                  </div>
+                </dd>
+              </div>
+              
+              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500">Number of Guests</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                   {booking.guests} {booking.guests === 1 ? 'person' : 'people'}
                 </dd>
               </div>
+              
+              {/* Price Per Person */}
+              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Price Per Person</dt>
+                <dd className="mt-1 text-sm font-medium text-green-700 sm:mt-0 sm:col-span-2">
+                  {pricePerPerson}
+                  {durationType !== 'Standard' && (
+                    <span className="ml-2 text-xs text-gray-500">({durationType})</span>
+                  )}
+                </dd>
+              </div>
+              
               <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500">Total Price</dt>
                 <dd className="mt-1 text-sm font-medium text-blue-700 sm:mt-0 sm:col-span-2">
@@ -224,6 +320,61 @@ const BookingDetail = () => {
               </div>
             </dl>
           </div>
+        </div>
+      </div>
+
+      {/* Additional Booking Details */}
+      <div className="mt-6 bg-white shadow overflow-hidden sm:rounded-lg">
+        <div className="px-4 py-5 sm:px-6">
+          <h3 className="text-lg leading-6 font-medium text-gray-900">Additional Details</h3>
+        </div>
+        <div className="border-t border-gray-200">
+          <dl>
+            {/* Activity Pricing Information */}
+            {booking.activity && (
+              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Activity Pricing</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <span className="font-medium">Base Price:</span> ${booking.activity.price}
+                    </div>
+                    {booking.activity.halfDayPrice && (
+                      <div>
+                        <span className="font-medium">Half Day:</span> ${booking.activity.halfDayPrice}
+                      </div>
+                    )}
+                    {booking.activity.fullDayPrice && (
+                      <div>
+                        <span className="font-medium">Full Day:</span> ${booking.activity.fullDayPrice}
+                      </div>
+                    )}
+                  </div>
+                </dd>
+              </div>
+            )}
+            
+            {/* Booking Calculation Details */}
+            <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <dt className="text-sm font-medium text-gray-500">Price Calculation</dt>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span>Price per person:</span>
+                    <span>{pricePerPerson}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Number of guests:</span>
+                    <span>{booking.guests}</span>
+                  </div>
+                  <div className="flex justify-between font-medium pt-2 border-t">
+                    <span>Total:</span>
+                    <span className="text-blue-700">${booking.totalPrice}</span>
+                  </div>
+                </div>
+              </dd>
+            </div>
+          </dl>
         </div>
       </div>
 
