@@ -492,7 +492,7 @@ const ActivityForm = () => {
                       </div>
                       <div>
                         <label htmlFor="type" className="block text-base font-medium text-gray-700">
-                          Activity Type <span className="text-red-500">*</span>
+                          Excursion Type <span className="text-red-500">*</span>
                         </label>
                         <Field
                           as="select"

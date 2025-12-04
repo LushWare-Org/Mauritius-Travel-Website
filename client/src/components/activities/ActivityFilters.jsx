@@ -139,7 +139,7 @@ const ActivityFilters = ({ filters, onFilterChange }) => {
 
             {/* Activity Types */}
             <div className="mb-6">
-                <h3 className="font-medium mb-3 text-gray-800">Activity Type</h3>
+                <h3 className="font-medium mb-3 text-gray-800">Excursion Type</h3>
                 <div className="space-y-2">
                     {activityTypes.map((type) => (
                         <div key={type.id} className="flex items-center">

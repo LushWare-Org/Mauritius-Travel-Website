@@ -6,7 +6,7 @@ const ActivityList = ({ activities }) => {
     if (!activities || activities.length === 0) {
         return (
             <div className="bg-white p-8 rounded-lg shadow text-center">
-                <p className="text-lg text-gray-600">No activities match your current filters.</p>
+                <p className="text-lg text-gray-600">No excursion match your current filters.</p>
                 <p className="mt-2 text-blue-600">Try adjusting your filters to see more results.</p>
             </div>
         );

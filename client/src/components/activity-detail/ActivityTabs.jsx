@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 
 const ActivityTabs = ({ activity }) => {
     const [activeTab, setActiveTab] = useState('description');
-      // Use included and requirements from the database or fallback to defaults
+    
+    // Use included from the database or fallback to defaults
     const inclusions = activity.included && activity.included.length > 0 ? 
         activity.included : 
         [
@@ -14,6 +15,19 @@ const ActivityTabs = ({ activity }) => {
             "Insurance"
         ];
     
+    // Use notIncluded from the database (matching your form field) or fallback to defaults
+    const exclusions = activity.notIncluded && activity.notIncluded.length > 0 ? 
+        activity.notIncluded : 
+        [
+            "Personal expenses",
+            "Gratuities (optional)",
+            "Meals not specified",
+            "Alcoholic beverages",
+            "Additional activities not mentioned",
+            "Souvenirs and personal shopping"
+        ];
+    
+    // Use requirements from the database or fallback to defaults
     const requirements = activity.requirements && activity.requirements.length > 0 ? 
         activity.requirements : 
         [
@@ -47,6 +61,12 @@ const ActivityTabs = ({ activity }) => {
                     Inclusions
                 </button>
                 <button 
+                    className={`px-4 py-3 text-sm font-medium ${activeTab === 'exclusions' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-blue-500'}`}
+                    onClick={() => setActiveTab('exclusions')}
+                >
+                    Exclusions
+                </button>
+                <button 
                     className={`px-4 py-3 text-sm font-medium ${activeTab === 'requirements' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-blue-500'}`}
                     onClick={() => setActiveTab('requirements')}
                 >
@@ -64,12 +84,12 @@ const ActivityTabs = ({ activity }) => {
             <div className="p-6">
                 {activeTab === 'description' && (
                     <div className="space-y-4">
-                        <h3 className="text-xl font-semibold text-gray-800">About This Activity</h3>
+                        <h3 className="text-xl font-semibold text-gray-800">About This Excursion</h3>
                         <p className="text-gray-700 leading-relaxed">
                             {activity.description}
                         </p>
                         <p className="text-gray-700 leading-relaxed">
-                            Experience the beauty of the Maldives with this amazing {activity.type.replace('-', ' ')} activity. 
+                            Experience the beauty of the Maldives with this amazing {activity.type.replace('-', ' ')} excursion. 
                             Perfect for travelers looking to make unforgettable memories in one of the world's most beautiful destinations.
                         </p>
                         <p className="text-gray-700 leading-relaxed">
@@ -87,6 +107,22 @@ const ActivityTabs = ({ activity }) => {
                                 <li key={index} className="flex items-start">
                                     <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    <span className="text-gray-700">{item}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+                
+                {activeTab === 'exclusions' && (
+                    <div className="space-y-4">
+                        <h3 className="text-xl font-semibold text-gray-800">What's Not Included</h3>
+                        <ul className="space-y-2">
+                            {exclusions.map((item, index) => (
+                                <li key={index} className="flex items-start">
+                                    <svg className="h-5 w-5 text-red-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
                                     </svg>
                                     <span className="text-gray-700">{item}</span>
                                 </li>
@@ -113,9 +149,9 @@ const ActivityTabs = ({ activity }) => {
                 
                 {activeTab === 'location' && (
                     <div className="space-y-4">
-                        <h3 className="text-xl font-semibold text-gray-800">Activity Location</h3>
+                        <h3 className="text-xl font-semibold text-gray-800">Excursion Location</h3>
                         <p className="text-gray-700 mb-4">
-                            This activity takes place in {activity.location}, known for its stunning beaches and crystal clear waters.
+                            This excursion takes place in {activity.location}, known for its stunning beaches and crystal clear waters.
                         </p>
                         
                         {/* Map Placeholder - In a real app, you'd use react-leaflet */}
@@ -132,7 +168,7 @@ const ActivityTabs = ({ activity }) => {
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-red-500" viewBox="0 0 20 20" fill="currentColor">
                                         <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                                     </svg>
-                                    Activity starting point
+                                    Excursion starting point
                                 </div>
                             </div>
                         </div>
