@@ -4,7 +4,6 @@ import { airportTransferAPI, airportTransferBookingAPI } from '../utils/airportT
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from './common/LoadingSpinner';
 
-
 const AirportTransferBookingForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -15,7 +14,7 @@ const AirportTransferBookingForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   
-  // Form state
+  // Form state - removed passengers but backend might still expect it
   const [formData, setFormData] = useState({
     transfer: id || '',
     guestName: '',
@@ -28,7 +27,7 @@ const AirportTransferBookingForm = () => {
     departureTime: '',
     tripType: 'one-way',
     transferType: 'airport-to-hotel',
-    passengers: 1,
+    passengers: 1, // Keep for backend but don't show in form
     specialRequests: ''
   });
 
@@ -96,11 +95,14 @@ const AirportTransferBookingForm = () => {
   const calculateTotal = () => {
     if (!transfer) return 0;
     
-    const basePrice = formData.tripType === 'one-way' 
-      ? transfer.oneWayPrice 
-      : transfer.roundTripPrice;
+    // Airport transfer is a flat rate regardless of number of passengers
+    // Convert to number to avoid NaN issues
+    const oneWayPrice = parseFloat(transfer.oneWayPrice) || 0;
+    const roundTripPrice = parseFloat(transfer.roundTripPrice) || 0;
     
-    return basePrice * formData.passengers;
+    return formData.tripType === 'one-way' 
+      ? oneWayPrice 
+      : roundTripPrice;
   };
 
   const validateForm = () => {
@@ -144,8 +146,10 @@ const AirportTransferBookingForm = () => {
       return false;
     }
     
-    if (formData.passengers < 1) {
-      setError('Please enter valid number of passengers');
+    // Ensure passengers is a valid number (backend requires it)
+    const passengers = parseInt(formData.passengers) || 1;
+    if (passengers < 1) {
+      setError('Invalid passenger count');
       return false;
     }
     
@@ -161,12 +165,28 @@ const AirportTransferBookingForm = () => {
     setError('');
     
     try {
+      const totalPrice = calculateTotal();
+      
+      // Ensure totalPrice is a valid number
+      if (isNaN(totalPrice) || totalPrice <= 0) {
+        setError('Invalid transfer pricing. Please try again.');
+        setSubmitting(false);
+        return;
+      }
+      
       const bookingData = {
         ...formData,
-        totalPrice: calculateTotal(),
+        totalPrice: totalPrice,
+        // Ensure passengers is sent as number (even though it's flat rate)
+        passengers: parseInt(formData.passengers) || 1,
         arrivalDate: new Date(formData.arrivalDate),
-        departureDate: formData.departureDate ? new Date(formData.departureDate) : null
+        departureDate: formData.departureDate ? new Date(formData.departureDate) : null,
+        // Ensure price fields are numbers
+        oneWayPrice: parseFloat(transfer.oneWayPrice) || 0,
+        roundTripPrice: parseFloat(transfer.roundTripPrice) || 0,
       };
+      
+      console.log('Submitting booking data:', bookingData);
       
       const response = await airportTransferBookingAPI.createBooking(bookingData);
       
@@ -183,7 +203,13 @@ const AirportTransferBookingForm = () => {
       }
     } catch (err) {
       console.error('Error creating booking:', err);
-      setError(err.response?.data?.error || 'Failed to create booking. Please try again.');
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Failed to create booking. Please try again.';
+      setError(errorMessage);
+      
+      // Log more details for debugging
+      if (err.response?.data?.errors) {
+        console.error('Validation errors:', err.response.data.errors);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -286,7 +312,7 @@ const AirportTransferBookingForm = () => {
             {/* Personal Information */}
             <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
               <h2 className="text-xl font-semibold text-gray-700 mb-4">Personal Information</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-gray-600 mb-2">Full Name *</label>
                   <input
@@ -323,19 +349,16 @@ const AirportTransferBookingForm = () => {
                     placeholder="+960 XXX XXXX"
                   />
                 </div>
-                <div>
-                  <label className="block text-gray-600 mb-2">Number of Passengers *</label>
-                  <input
-                    type="number"
-                    name="passengers"
-                    min="1"
-                    max="20"
-                    value={formData.passengers}
-                    onChange={handleInputChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg"
-                    required
-                  />
-                </div>
+              </div>
+              {/* Hidden passengers field - backend requires it but we don't show it */}
+              <input
+                type="hidden"
+                name="passengers"
+                value={formData.passengers}
+              />
+              <div className="mt-4 text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
+                <i className="fas fa-info-circle mr-2"></i>
+                Note: Airport transfer price is a flat rate for any number of passengers
               </div>
             </div>
 
@@ -434,7 +457,7 @@ const AirportTransferBookingForm = () => {
               ) : (
                 <>
                   <i className="fas fa-check-circle mr-2"></i>
-                  Confirm Booking - ${calculateTotal()}
+                  Confirm Booking - ${calculateTotal().toFixed(2)}
                 </>
               )}
             </button>
@@ -473,28 +496,26 @@ const AirportTransferBookingForm = () => {
                       {formData.transferType === 'both' && 'Both Directions'}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Passengers:</span>
-                    <span className="font-semibold">{formData.passengers}</span>
-                  </div>
                   
                   <div className="pt-4 border-t border-gray-200">
                     <div className="flex justify-between mb-2">
-                      <span className="text-gray-700">Base Price:</span>
+                      <span className="text-gray-700">Price:</span>
                       <span className="font-semibold">
-                        ${formData.tripType === 'one-way' ? transfer.oneWayPrice : transfer.roundTripPrice}
+                        ${formData.tripType === 'one-way' ? 
+                          (parseFloat(transfer.oneWayPrice) || 0).toFixed(2) : 
+                          (parseFloat(transfer.roundTripPrice) || 0).toFixed(2)}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-700">Passengers:</span>
-                      <span className="font-semibold">× {formData.passengers}</span>
+                    <div className="text-sm text-blue-600 mb-2">
+                      <i className="fas fa-info-circle mr-1"></i>
+                      Flat rate for any number of passengers
                     </div>
                   </div>
                   
                   <div className="pt-4 border-t border-gray-200">
                     <div className="flex justify-between text-xl">
                       <span className="text-gray-800 font-bold">Total Amount:</span>
-                      <span className="text-blue-600 font-bold">${calculateTotal()}</span>
+                      <span className="text-blue-600 font-bold">${calculateTotal().toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -530,9 +551,13 @@ const AirportTransferBookingForm = () => {
                     <i className="fas fa-info-circle mr-1"></i>
                     Free cancellation up to 24 hours before pickup
                   </p>
-                  <p>
+                  <p className="mb-2">
                     <i className="fas fa-info-circle mr-1"></i>
                     Confirmation will be sent to your email
+                  </p>
+                  <p>
+                    <i className="fas fa-info-circle mr-1"></i>
+                    Price includes all passengers - no per person charge
                   </p>
                 </div>
               </>

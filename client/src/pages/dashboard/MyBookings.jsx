@@ -4,7 +4,7 @@ import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { useAuth } from '../../contexts/AuthContext';
 import BookingStatusBadge from '../../components/dashboard/BookingStatusBadge';
 import DashboardDebugger from '../../components/dashboard/DashboardDebugger';
-import { userBookingsAPI } from '../../utils/api';
+import { userBookingsAPI, airportTransferBookingAPI } from '../../utils/api';
 
 const MyBookings = () => {
   const { currentUser } = useAuth();
@@ -23,18 +23,84 @@ const MyBookings = () => {
   const fetchBookings = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No authentication token found when trying to fetch bookings');
-      } else {
-        console.log('Token exists, attempting to fetch bookings data');
-      }
-      
+      // Fetch activity bookings for the current user
       const response = await userBookingsAPI.getUpcoming();
       
       if (response.data.success) {
         console.log('Fetched bookings:', response.data.data);
-        setBookings(response.data.data);
+        let bookingsWithTransfers = response.data.data;
+        
+        // Try to fetch airport transfer bookings for the current user
+        if (currentUser?.email) {
+          try {
+            // Try to use a user-specific endpoint first
+            let airportTransfers = [];
+            try {
+              // If you have a user-specific endpoint for airport transfers
+              const userTransfersResponse = await airportTransferBookingAPI.getUserBookings();
+              if (userTransfersResponse.data.success) {
+                airportTransfers = userTransfersResponse.data.data;
+                console.log('User airport transfers:', airportTransfers);
+              }
+            } catch (userEndpointErr) {
+              console.log('No user-specific airport transfer endpoint, trying fallback:', userEndpointErr.message);
+              // Fallback: try to filter by user email if we can get all bookings
+              try {
+                const allTransfersResponse = await airportTransferBookingAPI.getAllBookings();
+                if (allTransfersResponse.data.success) {
+                  // Filter transfers by user email
+                  airportTransfers = allTransfersResponse.data.data.filter(
+                    transfer => transfer.email === currentUser.email
+                  );
+                  console.log('Filtered airport transfers by email:', airportTransfers);
+                }
+              } catch (allTransfersErr) {
+                console.log('Cannot fetch all airport transfers:', allTransfersErr.message);
+              }
+            }
+            
+            // Link airport transfer bookings to activity bookings
+            if (airportTransfers.length > 0) {
+              bookingsWithTransfers = bookingsWithTransfers.map(booking => {
+                // Look for airport transfer booking linked to this activity booking
+                // Check both specialRequests and direct booking reference match
+                const linkedTransfer = airportTransfers.find(
+                  transfer => 
+                    (transfer.specialRequests && transfer.specialRequests.includes(booking.bookingReference)) ||
+                    transfer.activityBookingReference === booking.bookingReference ||
+                    transfer.activityBookingId === booking._id
+                );
+                
+                if (linkedTransfer) {
+                  console.log('Found linked airport transfer for booking', booking.bookingReference, ':', linkedTransfer);
+                  return {
+                    ...booking,
+                    airportTransfer: {
+                      selected: true,
+                      price: linkedTransfer.totalPrice || linkedTransfer.price || 0,
+                      type: linkedTransfer.tripType === 'one-way' ? 'One Way' : 
+                            linkedTransfer.tripType === 'round-trip' ? 'Round Trip' : 
+                            linkedTransfer.tripType || 'Transfer',
+                      details: linkedTransfer.transferType === 'airport-to-hotel' ? 'Airport to Hotel' :
+                              linkedTransfer.transferType === 'hotel-to-airport' ? 'Hotel to Airport' :
+                              linkedTransfer.transferType || 'Airport Transfer',
+                      bookingReference: linkedTransfer.bookingReference,
+                      status: linkedTransfer.status,
+                      transferType: linkedTransfer.transferType,
+                      tripType: linkedTransfer.tripType
+                    }
+                  };
+                }
+                
+                return booking;
+              });
+            }
+          } catch (transferErr) {
+            console.log('Error fetching airport transfers:', transferErr.message);
+          }
+        }
+        
+        setBookings(bookingsWithTransfers);
         setError('');
       } else {
         setError('Failed to fetch bookings');
@@ -135,6 +201,18 @@ const MyBookings = () => {
       month: 'short', 
       day: 'numeric'
     });
+  };
+
+  // Calculate total price including airport transfer if available
+  const calculateTotalPrice = (booking) => {
+    let total = parseFloat(booking.totalPrice) || 0;
+    
+    // Add airport transfer price if available
+    if (booking.airportTransfer && booking.airportTransfer.price) {
+      total += parseFloat(booking.airportTransfer.price);
+    }
+    
+    return total;
   };
 
   return (
@@ -284,7 +362,7 @@ const MyBookings = () => {
                       <BookingStatusBadge status={booking.status} />
                     </div>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                       <div>
                         <p className="text-sm text-gray-500">Date</p>
                         <p className="font-medium">{formatDate(booking.date)}</p>
@@ -294,14 +372,56 @@ const MyBookings = () => {
                         <p className="font-medium">{booking.bookingReference}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Guests</p>
-                        <p className="font-medium">{booking.guests} {booking.guests === 1 ? 'person' : 'people'}</p>
-                      </div>
-                      <div>
                         <p className="text-sm text-gray-500">Total Price</p>
-                        <p className="font-medium">${booking.totalPrice}</p>
+                        <div className="font-medium">
+                          ${calculateTotalPrice(booking).toFixed(2)}
+                          {booking.airportTransfer && booking.airportTransfer.price && (
+                            <span className="text-xs text-green-600 ml-2">
+                              (includes airport transfer)
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
+                    
+                    {/* Airport Transfer Info (if applicable) */}
+                    {booking.airportTransfer && booking.airportTransfer.selected && (
+                      <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-100">
+                        <div className="flex items-center">
+                          <i className="fas fa-plane text-blue-500 mr-2"></i>
+                          <span className="font-medium text-blue-700 mr-2">Airport Transfer Included:</span>
+                          <span className="text-blue-600">${parseFloat(booking.airportTransfer.price).toFixed(2)}</span>
+                          {booking.airportTransfer.type && (
+                            <span className="ml-2 text-sm text-blue-500">
+                              ({booking.airportTransfer.type})
+                            </span>
+                          )}
+                          {booking.airportTransfer.bookingReference && (
+                            <span className="ml-2 text-xs text-gray-500">
+                              (Ref: {booking.airportTransfer.bookingReference})
+                            </span>
+                          )}
+                        </div>
+                        {booking.airportTransfer.details && (
+                          <p className="text-sm text-blue-600 mt-1 ml-6">
+                            {booking.airportTransfer.details}
+                          </p>
+                        )}
+                        {booking.airportTransfer.status && (
+                          <div className="mt-1 ml-6">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                              booking.airportTransfer.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                              booking.airportTransfer.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              booking.airportTransfer.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                              booking.airportTransfer.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              Transfer Status: {booking.airportTransfer.status}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     
                     <div className="mt-auto flex justify-between items-center">
                       <div className="text-sm text-gray-500">
@@ -326,13 +446,7 @@ const MyBookings = () => {
                             Request Cancellation
                           </button>
                         )}
-                        <button 
-                          onClick={() => window.location.href = `/dashboard/booking/${booking._id}`}
-                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center"
-                        >
-                          <i className="fas fa-eye mr-2"></i>
-                          View Details
-                        </button>
+                       
                       </div>
                     </div>
                   </div>
