@@ -24,7 +24,6 @@ const DashboardLayout = ({ children, title }) => {
   const menuItems = [
     { path: '/dashboard', icon: 'fas fa-tachometer-alt', label: 'Dashboard' },
     { path: '/dashboard/bookings', icon: 'fas fa-calendar-check', label: 'My Bookings' },
-    { path: '/dashboard/history', icon: 'fas fa-history', label: 'Booking History' },
     { path: '/contacthistory', icon: 'fas fa-envelope', label: 'Contact History' },
     { path: '/dashboard/profile', icon: 'fas fa-user-edit', label: 'Edit Profile' },
     { path: '/dashboard/airport-transfers', icon: 'fas fa-plane', label: 'Airport Transfers' },

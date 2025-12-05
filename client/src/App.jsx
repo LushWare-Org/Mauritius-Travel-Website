@@ -55,7 +55,6 @@ import ResetPassword from './pages/auth/ResetPassword';
 import Profile from './pages/auth/Profile';
 import Dashboard from './pages/dashboard/Dashboard';
 import MyBookings from './pages/dashboard/MyBookings';
-import BookingHistory from './pages/dashboard/BookingHistory';
 import EditProfile from './pages/dashboard/EditProfile';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminRoute from './components/auth/AdminRoute';
@@ -130,14 +129,6 @@ const AppContent = () => {
             element={
               <ProtectedRoute>
                 <MyBookings />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/history"
-            element={
-              <ProtectedRoute>
-                <BookingHistory />
               </ProtectedRoute>
             }
           />
