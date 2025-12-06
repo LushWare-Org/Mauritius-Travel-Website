@@ -8,11 +8,11 @@ const Header = () => {
                 <div className="flex items-center space-x-4">
                     <div className="flex items-center group">
                         <i className="fas fa-phone-alt mr-2 text-yellow-400 group-hover:text-yellow-300 transition-colors"></i>
-                        <span className="group-hover:text-yellow-100 transition-colors">+960 123 4567</span>
+                        <span className="group-hover:text-yellow-100 transition-colors">+12345</span>
                     </div>
                     <div className="hidden md:flex items-center group">
                         <i className="fas fa-envelope mr-2 text-yellow-400 group-hover:text-yellow-300 transition-colors"></i>
-                        <span className="group-hover:text-yellow-100 transition-colors">info@maldivesactivities.com</span>
+                        <span className="group-hover:text-yellow-100 transition-colors">info@mauritiusactivities.com</span>
                     </div>
                 </div>
                 

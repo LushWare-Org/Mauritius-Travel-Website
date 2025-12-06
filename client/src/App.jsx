@@ -66,6 +66,7 @@ import Footer from './components/common/Footer';
 import Navbar from './components/common/Navbar';
 import ContactHistory from './pages/UserContactHistory';
 import DashboardLayout from './components/dashboard/DashboardLayout';
+import HelpCenter from './pages/HelpCenter';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -106,6 +107,7 @@ const AppContent = () => {
           <Route path="/activities/:id" element={<ActivityDetail />} />
           <Route path="/booking/:id" element={<BookingRequest />} />
           <Route path="/airport-transfers" element={<AirportTransferList />} />
+             <Route path="/help" element={<HelpCenter />} />
           <Route
             path="/airport-transfer/book/:id?"
             element={<AirportTransferBookingForm />}
