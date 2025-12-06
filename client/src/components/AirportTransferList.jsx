@@ -30,96 +30,77 @@ const AirportTransferList = () => {
     }
   };
 
-  const getVehicleIcon = (type) => {
-    switch(type) {
-      case 'car': return 'fas fa-car';
-      case 'van': return 'fas fa-shuttle-van';
-      case 'bus': return 'fas fa-bus';
-      case 'speedboat': return 'fas fa-ship';
-      case 'seaplane': return 'fas fa-plane';
-      default: return 'fas fa-car';
-    }
-  };
-
   if (loading) return <LoadingSpinner />;
-  if (error) return <div className="text-red-500 text-center py-8">{error}</div>;
+  if (error) return <div className="text-red-600 text-center py-8">{error}</div>;
 
   return (
-    <div className="py-8">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-800 mb-4">
-          Airport Transfer Services
-        </h1>
-        <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-          Enjoy comfortable and reliable transfers between Velana International Airport (MLE) and our resort
-        </p>
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      {/* Header */}
+      <div className="mb-10">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Airport Transfers</h1>
+        <p className="text-gray-600">Choose your preferred airport transfer option</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {/* Grid with proper container */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {transfers.map((transfer) => (
           <div
             key={transfer._id}
-            className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100"
+            className="bg-white border border-gray-200 rounded-lg overflow-hidden"
           >
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="bg-blue-100 p-3 rounded-full mr-4">
-                  <i className="fas fa-plane-departure text-blue-600 text-xl"></i>
-                </div>
+            {/* Header */}
+            <div className="bg-blue-800 text-white p-4">
+              <div className="flex items-center">
+                <span className="text-xl mr-3">✈️</span>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-800">
-                    {transfer.airportName}
-                  </h3>
-                  <p className="text-gray-500 text-sm">{transfer.airportCode}</p>
+                  <h3 className="font-bold">{transfer.airportName}</h3>
+                  <p className="text-sm opacity-90">{transfer.airportCode}</p>
                 </div>
               </div>
-              
-              <div className="mb-6">
-                <p className="text-gray-600 mb-4">{transfer.description || 'Comfortable transfer service'}</p>
-                
-                <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                  <div className="flex items-center">
-                    <i className="fas fa-clock mr-2"></i>
-                    <span>{transfer.estimatedTime}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <i className={getVehicleIcon(transfer.vehicleType) + ' mr-2'}></i>
-                    <span className="capitalize">{transfer.vehicleType}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <i className="fas fa-users mr-2"></i>
-                    <span>Up to {transfer.capacity}</span>
-                  </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-4">
+              {/* Details */}
+              <div className="flex justify-between text-sm text-gray-600 mb-4">
+                <div className="flex items-center">
+                  <span className="mr-2">👥</span>
+                  <span>Up to {transfer.capacity}</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="mr-2">⏱️</span>
+                  <span>{transfer.estimatedTime}</span>
                 </div>
               </div>
-              
-              <div className="space-y-4 mb-6">
-                <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg border border-gray-100">
+
+              {/* Prices */}
+              <div className="mb-5 space-y-3">
+                <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-gray-600 font-medium">One Way</p>
-                    <p className="text-sm text-gray-500">Per vehicle</p>
+                    <p className="text-gray-800">One Way</p>
+                    <p className="text-xs text-gray-500">Per vehicle</p>
                   </div>
-                  <span className="text-2xl font-bold text-blue-600">
+                  <span className="text-lg font-bold text-blue-800">
                     ${transfer.oneWayPrice}
                   </span>
                 </div>
-                <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                   <div>
-                    <p className="text-blue-700 font-medium">Round Trip</p>
-                    <p className="text-sm text-blue-600">Save with return</p>
+                    <p className="text-green-700">Round Trip</p>
+                    <p className="text-xs text-green-600">Return included</p>
                   </div>
-                  <span className="text-2xl font-bold text-blue-700">
+                  <span className="text-lg font-bold text-green-700">
                     ${transfer.roundTripPrice}
                   </span>
                 </div>
               </div>
 
+              {/* Button */}
               <Link
                 to={`/airport-transfer/book/${transfer._id}`}
-                className="block w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white text-center py-3 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-300 font-medium shadow-md hover:shadow-lg"
+                className="block w-full bg-blue-800 text-white text-center py-2.5 rounded text-sm font-medium hover:bg-blue-900"
               >
-                <i className="fas fa-calendar-plus mr-2"></i>
-                Book Transfer
+                Book Now
               </Link>
             </div>
           </div>
@@ -127,18 +108,11 @@ const AirportTransferList = () => {
       </div>
 
       {transfers.length === 0 && (
-        <div className="text-center py-12">
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 max-w-md mx-auto">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <i className="fas fa-exclamation-triangle text-yellow-400 text-xl"></i>
-              </div>
-              <div className="ml-3">
-                <p className="text-yellow-700">No airport transfers available at the moment.</p>
-                <p className="text-yellow-600 text-sm mt-1">Please check back later.</p>
-              </div>
-            </div>
+        <div className="text-center py-10">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-gray-100 rounded-full mb-3">
+            <span className="text-xl">✈️</span>
           </div>
+          <p className="text-gray-700">No airport transfers available</p>
         </div>
       )}
     </div>

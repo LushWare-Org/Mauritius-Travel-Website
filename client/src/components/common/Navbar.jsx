@@ -71,10 +71,10 @@ const Navbar = () => {
                 <i className="fas fa-umbrella-beach drop-shadow-md"></i>
               </span>
               <span className="hidden sm:inline group-hover:text-yellow-100 transition-colors">
-                Maldives
+                Mauritius
               </span>
               <span className="text-yellow-400 ml-1 group-hover:scale-105 transition-transform duration-300">
-                Activities
+                Excursions
               </span>
             </div>
           </Link>
@@ -104,7 +104,7 @@ const Navbar = () => {
                   : 'hover:scale-105 transform'
               }`}
             >
-              Activities
+              Excursions
               {location.pathname === '/activities' && (
                 <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-yellow-400"></span>
               )}
@@ -234,7 +234,7 @@ const Navbar = () => {
                             className="block px-4 py-2 text-gray-800 hover:bg-blue-100/80 hover:text-blue-900 transition-colors"
                           >
                             <i className="fas fa-water mr-2 text-purple-600"></i>{' '}
-                            Manage Activities
+                            Manage Excursions
                           </Link>
                           <Link
                             to="/admin/bookings"
@@ -348,7 +348,7 @@ const Navbar = () => {
                   : ''
               }`}
             >
-              <i className="fas fa-water mr-2"></i> Activities
+              <i className="fas fa-water mr-2"></i> Excursions
               {location.pathname === '/activities' && (
                 <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
               )}
@@ -422,7 +422,7 @@ const Navbar = () => {
                       to="/admin/activities"
                       className="text-white hover:text-yellow-300 transition-colors flex items-center"
                     >
-                      <i className="fas fa-water mr-2"></i> Manage Activities
+                      <i className="fas fa-water mr-2"></i> Manage Excursions
                     </Link>
                     <Link
                       to="/admin/bookings"

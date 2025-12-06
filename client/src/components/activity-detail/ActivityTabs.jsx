@@ -10,9 +10,8 @@ const ActivityTabs = ({ activity }) => {
             "Professional English-speaking guide",
             "Hotel pickup and drop-off",
             "All equipment needed for the activity",
-            "Bottled water and refreshments",
             "Safety briefing",
-            "Insurance"
+           
         ];
     
     // Use notIncluded from the database (matching your form field) or fallback to defaults
@@ -31,7 +30,7 @@ const ActivityTabs = ({ activity }) => {
     const requirements = activity.requirements && activity.requirements.length > 0 ? 
         activity.requirements : 
         [
-            "Minimum age: 8 years",
+            
             "Good physical condition",
             "Swimwear and towel",
             "Sunscreen and sunglasses",
@@ -89,7 +88,7 @@ const ActivityTabs = ({ activity }) => {
                             {activity.description}
                         </p>
                         <p className="text-gray-700 leading-relaxed">
-                            Experience the beauty of the Maldives with this amazing {activity.type.replace('-', ' ')} excursion. 
+                            Experience the beauty of the Mauritius with this amazing {activity.type.replace('-', ' ')} excursion. 
                             Perfect for travelers looking to make unforgettable memories in one of the world's most beautiful destinations.
                         </p>
                         <p className="text-gray-700 leading-relaxed">

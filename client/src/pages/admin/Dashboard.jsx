@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { dashboardAPI } from '../../utils/api';
 import AdminContacts from './AdminContacts.jsx';
@@ -24,7 +24,13 @@ const AdminDashboard = () => {
   const [error, setError] = useState('');
   const [recentBookings, setRecentBookings] = useState([]);
   const [recentAirportBookings, setRecentAirportBookings] = useState([]);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Get active tab from URL parameters
+  const params = new URLSearchParams(location.search);
+  const activeTab = params.get('tab') || 'dashboard';
 
   useEffect(() => {
     fetchDashboardData();
@@ -91,6 +97,11 @@ const AdminDashboard = () => {
     }
   };
 
+  // Change tab function that updates URL
+  const changeTab = (tabName) => {
+    navigate(`/admin/dashboard?tab=${tabName}`);
+  };
+
   // Format date
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -138,7 +149,7 @@ const AdminDashboard = () => {
       <div className="mb-6 border-b border-gray-200">
         <nav className="-mb-px flex space-x-8" aria-label="Tabs">
           <button
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => changeTab('dashboard')}
             className={`${
               activeTab === 'dashboard'
                 ? 'border-blue-500 text-blue-600'
@@ -149,7 +160,7 @@ const AdminDashboard = () => {
             Dashboard Overview
           </button>
           <button
-            onClick={() => setActiveTab('contacts')}
+            onClick={() => changeTab('contacts')}
             className={`${
               activeTab === 'contacts'
                 ? 'border-blue-500 text-blue-600'
@@ -165,7 +176,7 @@ const AdminDashboard = () => {
             )}
           </button>
           <button
-            onClick={() => setActiveTab('airport-transfers')}
+            onClick={() => changeTab('airport-transfers')}
             className={`${
               activeTab === 'airport-transfers'
                 ? 'border-blue-500 text-blue-600'
@@ -231,15 +242,15 @@ const AdminDashboard = () => {
                       <div className="bg-blue-100 p-3 rounded-full">
                         <i className="fas fa-hiking text-blue-600 text-xl"></i>
                       </div>
-                      <span className="text-xs font-medium text-gray-500 bg-blue-50 py-1 px-2 rounded-md">Activities</span>
+                      <span className="text-xs font-medium text-gray-500 bg-blue-50 py-1 px-2 rounded-md">Excursions</span>
                     </div>
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Total Activities</dt>
+                      <dt className="text-sm font-medium text-gray-500 truncate">Total Excursions</dt>
                       <dd className="mt-2 text-3xl font-extrabold text-blue-600">{stats.totalActivities}</dd>
                     </dl>
                     <div className="mt-5">
                       <Link to="/admin/activities" className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center">
-                        View all activities 
+                        View all excursions 
                         <svg className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
                         </svg>
@@ -340,7 +351,7 @@ const AdminDashboard = () => {
                     </div>
                     <div className="mt-5">
                       <button
-                        onClick={() => setActiveTab('contacts')}
+                        onClick={() => changeTab('contacts')}
                         className="text-sm text-pink-600 hover:text-pink-800 font-medium flex items-center cursor-pointer"
                       >
                         View inquiries 
@@ -374,7 +385,7 @@ const AdminDashboard = () => {
                     </div>
                     <div className="mt-5">
                       <button
-                        onClick={() => setActiveTab('airport-transfers')}
+                        onClick={() => changeTab('airport-transfers')}
                         className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center cursor-pointer"
                       >
                         View transfers 
@@ -391,8 +402,8 @@ const AdminDashboard = () => {
               <div className="bg-white shadow-md rounded-lg mb-8 border border-gray-100">
                 <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-white to-blue-50">
                   <div>
-                    <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Activity Bookings</h3>
-                    <p className="text-sm text-gray-500 mt-1">Latest activity bookings on your platform</p>
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Excursions Bookings</h3>
+                    <p className="text-sm text-gray-500 mt-1">Latest excursions bookings on your platform</p>
                   </div>
                   <Link to="/admin/bookings" className="text-sm bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md transition-colors duration-200 flex items-center">
                     View all 
@@ -455,7 +466,7 @@ const AdminDashboard = () => {
                     <div className="mx-auto h-16 w-16 rounded-full bg-blue-50 flex items-center justify-center mb-4">
                       <i className="fas fa-calendar-day text-blue-500 text-xl"></i>
                     </div>
-                    <p className="text-gray-500 font-medium">No recent activity bookings found.</p>
+                    <p className="text-gray-500 font-medium">No recent excursion bookings found.</p>
                     <p className="text-gray-400 text-sm mt-1">New bookings will appear here when created.</p>
                   </div>
                 )}
@@ -470,7 +481,7 @@ const AdminDashboard = () => {
                       <p className="text-sm text-gray-500 mt-1">Latest airport transfer bookings</p>
                     </div>
                     <button
-                      onClick={() => setActiveTab('airport-transfers')}
+                      onClick={() => changeTab('airport-transfers')}
                       className="text-sm bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded-md transition-colors duration-200 flex items-center cursor-pointer"
                     >
                       View all 
@@ -548,8 +559,8 @@ const AdminDashboard = () => {
                       <div className="bg-blue-100 text-blue-600 rounded-full p-4 mb-4 group-hover:scale-110 transition-transform duration-200">
                         <i className="fas fa-plus-circle text-2xl"></i>
                       </div>
-                      <h4 className="text-gray-900 font-semibold mb-2">Add New Activity</h4>
-                      <p className="text-gray-500 text-sm">Create a new activity listing for your customers</p>
+                      <h4 className="text-gray-900 font-semibold mb-2">Add New Excursion</h4>
+                      <p className="text-gray-500 text-sm">Create a new excursion listing for your customers</p>
                     </Link>
                     
                     <Link 
@@ -564,7 +575,7 @@ const AdminDashboard = () => {
                     </Link>
                     
                     <div 
-                      onClick={() => setActiveTab('contacts')}
+                      onClick={() => changeTab('contacts')}
                       className="group bg-gradient-to-br from-purple-50 to-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-300 flex flex-col items-center justify-center text-center cursor-pointer"
                     >
                       <div className="bg-purple-100 text-purple-600 rounded-full p-4 mb-4 group-hover:scale-110 transition-transform duration-200">

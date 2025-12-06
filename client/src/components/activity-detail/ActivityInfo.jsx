@@ -82,7 +82,7 @@ const ActivityInfo = ({ activity }) => {
                     
                     <div className="text-gray-700 mb-2">
                         <span className="font-medium">Price:</span> 
-                        <span className="ml-1 text-blue-700 font-bold">${getCurrentPrice()} per person</span>
+                        <span className="ml-1 text-blue-700 font-bold">${getCurrentPrice()} per package</span>
                     </div>
                     <div className="text-gray-700 mb-2">
                         <span className="font-medium">Duration:</span> 

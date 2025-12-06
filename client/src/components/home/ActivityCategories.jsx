@@ -16,12 +16,12 @@ const ActivityCategories = () => {
                 const mockData = [
                     { slug: 'water-sports', title: 'Water Sports', icon: '🏄‍♂️', description: 'Experience jet skiing, parasailing and more', count: 15 },
                     { slug: 'cruises', title: 'Cruises', icon: '🚢', description: 'Enjoy scenic boat tours and sunset cruises', count: 8 },
-                    { slug: 'island-tours', title: 'Island Tours', icon: '🏝️', description: 'Discover multiple islands and their unique cultures', count: 12 },
+                    { slug: 'island-tours', title: 'Tours', icon: '🏝️', description: 'Discover multiple islands and their unique cultures', count: 12 },
                     { slug: 'diving', title: 'Diving', icon: '🤿', description: 'Explore vibrant coral reefs and underwater wonders', count: 20 },
                     { slug: 'adventure', title: 'Adventure', icon: '🧗‍♂️', description: 'Thrilling land and water based adventures', count: 18 },
-                    { slug: 'cultural', title: 'Cultural', icon: '🎭', description: 'Immerse in Maldivian traditions and experiences', count: 10 },
+                    { slug: 'cultural', title: 'Cultural', icon: '🎭', description: 'Immerse in Mauritius traditions and experiences', count: 10 },
                     { slug: 'wellness', title: 'Wellness', icon: '💆‍♀️', description: 'Relax with spa treatments overlooking the ocean', count: 9 },
-                    { slug: 'fishing', title: 'Fishing', icon: '🎣', description: 'Traditional and sport fishing experiences', count: 7 }
+                    { slug: 'fishing', title: 'other', icon: '🎣', description: 'Traditional and sport experiences', count: 7 }
                 ];
               
                 setCategories(mockData);

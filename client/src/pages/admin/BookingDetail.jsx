@@ -288,7 +288,7 @@ const BookingDetail = () => {
         <div className="bg-white shadow overflow-hidden sm:rounded-lg">
           <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
             <div>
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Activity Booking Summary</h3>
+              <h3 className="text-lg leading-6 font-medium text-gray-900">Excursions Booking Summary</h3>
               <p className="mt-1 max-w-2xl text-sm text-gray-500">Created on {formatTimestamp(booking.createdAt)}</p>
             </div>
             <StatusBadge status={booking.status} />
@@ -296,7 +296,7 @@ const BookingDetail = () => {
           <div className="border-t border-gray-200">
             <dl>
               <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Activity</dt>
+                <dt className="text-sm font-medium text-gray-500">Excursions</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                   {booking.activity ? booking.activity.title : 'Unknown Activity'}
                   {booking.activity?.pricingType === 'half-full-day' && (
@@ -360,7 +360,7 @@ const BookingDetail = () => {
               </div>
               
               <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Activity Total</dt>
+                <dt className="text-sm font-medium text-gray-500">Excursions Total</dt>
                 <dd className="mt-1 text-sm font-medium text-blue-700 sm:mt-0 sm:col-span-2">
                   ${booking.totalPrice}
                 </dd>
@@ -407,7 +407,7 @@ const BookingDetail = () => {
             <div>
               <h3 className="text-lg leading-6 font-medium text-gray-900">Airport Transfer Booking</h3>
               <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                Linked to activity booking #{booking.bookingReference}
+                Linked to excursion booking #{booking.bookingReference}
               </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -490,7 +490,7 @@ const BookingDetail = () => {
             {/* Activity Pricing Information */}
             {booking.activity && (
               <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Activity Pricing</dt>
+                <dt className="text-sm font-medium text-gray-500">Excursion Pricing</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
@@ -517,7 +517,7 @@ const BookingDetail = () => {
               <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                 <div className="space-y-1">
                   <div className="flex justify-between">
-                    <span>Activity price per person:</span>
+                    <span>Excursions price per person:</span>
                     <span>{pricePerPerson}</span>
                   </div>
                   <div className="flex justify-between">
@@ -525,7 +525,7 @@ const BookingDetail = () => {
                     <span>{booking.guests}</span>
                   </div>
                   <div className="flex justify-between font-medium pt-2 border-t">
-                    <span>Activity Subtotal:</span>
+                    <span>Excursions Subtotal:</span>
                     <span className="text-blue-700">${booking.totalPrice}</span>
                   </div>
                   
@@ -564,7 +564,7 @@ const BookingDetail = () => {
           <div className="space-y-4">
             {/* Activity Booking Actions */}
             <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Activity Booking Status</h4>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Excursions Booking Status</h4>
               <div className="flex flex-wrap gap-2">
                 {booking.status === 'pending' && (
                   <>

@@ -23,7 +23,7 @@ const AdminActivities = () => {
       }
     } catch (error) {
       console.error('Error fetching activities:', error);
-      setError('Failed to load activities. Please try again later.');
+      setError('Failed to load excursions. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -60,7 +60,7 @@ const AdminActivities = () => {
 
   // ✅ Optimistic Delete (Instant UI)
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this activity?'))
+    if (!window.confirm('Are you sure you want to delete this excursion?'))
       return;
 
     // Instantly remove item UI (FAST)
@@ -74,11 +74,11 @@ const AdminActivities = () => {
         throw new Error('Failed to delete activity');
       }
 
-      alert('Activity deleted successfully');
+      alert('Excursion deleted successfully');
     } catch (error) {
       console.error('Error deleting activity:', error);
       alert(
-        'Failed to delete activity: ' +
+        'Failed to delete excursion: ' +
           (error.response?.data?.error || error.message)
       );
 
@@ -113,13 +113,13 @@ const AdminActivities = () => {
   return (
     <AdminLayout>
       <div className="pb-5 border-b border-gray-200 sm:flex sm:items-center sm:justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Manage Activities</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Manage Excursions</h1>
         <div className="mt-3 sm:mt-0 sm:ml-4">
           <Link
             to="/admin/activities/new"
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
           >
-            <i className="fas fa-plus mr-2"></i> Add New Activity
+            <i className="fas fa-plus mr-2"></i> Add New Excursion
           </Link>
         </div>
       </div>
@@ -136,7 +136,7 @@ const AdminActivities = () => {
                 <input
                   type="text"
                   className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-3 py-2.5 border-gray-300 rounded-lg h-12"
-                  placeholder="Search activities by name or location"
+                  placeholder="Search excursions by name or location"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -149,7 +149,7 @@ const AdminActivities = () => {
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
               >
-                <option value="all">All Activities</option>
+                <option value="all">All Excursions</option>
                 <option value="featured">Featured Only</option>
                 <option value="active">Active Only</option>
                 <option value="inactive">Inactive Only</option>
@@ -167,7 +167,7 @@ const AdminActivities = () => {
         </div>
       </div>
 
-      {/* Activities List */}
+      {/* Excursions List */}
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -179,7 +179,7 @@ const AdminActivities = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Activity
+                    Excursion
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Type
@@ -236,7 +236,7 @@ const AdminActivities = () => {
 
                       <td className="px-4 py-4 text-sm">
                         ${activity.price}
-                        <span className="text-xs text-gray-500">/person</span>
+                        <span className="text-xs text-gray-500">/package</span>
                       </td>
 
                       <td className="px-4 py-4">
@@ -281,7 +281,7 @@ const AdminActivities = () => {
                       colSpan="5"
                       className="px-4 py-4 text-center text-sm text-gray-500"
                     >
-                      No activities found.
+                      No excursions found.
                     </td>
                   </tr>
                 )}
@@ -290,7 +290,7 @@ const AdminActivities = () => {
 
             <div className="px-6 py-3 bg-gray-50 text-xs text-gray-500">
               Showing {filteredActivities.length} of {activities.length}{' '}
-              activities
+              excursions
             </div>
           </div>
         </div>
