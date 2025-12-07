@@ -1,29 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+
 const ActivityCategories = () => {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
-    // Mock data - replace with actual API call
+    const [hoveredCard, setHoveredCard] = useState(null);
+
     useEffect(() => {
-        // Simulating API call
         const fetchCategories = async () => {
             try {
-                // Replace with your actual API endpoint
-                // const response = await fetch('/api/activity-categories');
-                // const data = await response.json();
-              
-                // Mock data - this should come from your database
                 const mockData = [
-                    { slug: 'water-sports', title: 'Water Sports', icon: '🏄‍♂️', description: 'Experience jet skiing, parasailing and more', count: 15 },
-                    { slug: 'cruises', title: 'Cruises', icon: '🚢', description: 'Enjoy scenic boat tours and sunset cruises', count: 8 },
-                    { slug: 'island-tours', title: 'Tours', icon: '🏝️', description: 'Discover multiple islands and their unique cultures', count: 12 },
-                    { slug: 'diving', title: 'Diving', icon: '🤿', description: 'Explore vibrant coral reefs and underwater wonders', count: 20 },
-                    { slug: 'adventure', title: 'Adventure', icon: '🧗‍♂️', description: 'Thrilling land and water based adventures', count: 18 },
-                    { slug: 'cultural', title: 'Cultural', icon: '🎭', description: 'Immerse in Mauritius traditions and experiences', count: 10 },
-                    { slug: 'wellness', title: 'Wellness', icon: '💆‍♀️', description: 'Relax with spa treatments overlooking the ocean', count: 9 },
-                    { slug: 'fishing', title: 'other', icon: '🎣', description: 'Traditional and sport experiences', count: 7 }
+                    { slug: 'water-sports', title: 'Water Sports', icon: '🌊', description: 'Jet skiing, parasailing & more', count: 15, gradient: 'from-blue-400 to-cyan-400' },
+                    { slug: 'cruises', title: 'Cruises', icon: '🚢', description: 'Sunset cruises & scenic tours', count: 8, gradient: 'from-purple-400 to-pink-400' },
+                    { slug: 'island-tours', title: 'Island Tours', icon: '🏝️', description: 'Discover unique cultures', count: 12, gradient: 'from-orange-400 to-yellow-400' },
+                    { slug: 'diving', title: 'Diving', icon: '🤿', description: 'Vibrant coral reefs', count: 20, gradient: 'from-cyan-400 to-blue-400' },
+                    { slug: 'adventure', title: 'Adventure', icon: '⚡', description: 'Thrilling experiences', count: 18, gradient: 'from-red-400 to-orange-400' },
+                    { slug: 'cultural', title: 'Cultural', icon: '🎭', description: 'Mauritius traditions', count: 10, gradient: 'from-green-400 to-emerald-400' },
+                    { slug: 'wellness', title: 'Wellness', icon: '💆', description: 'Relaxing spa treatments', count: 9, gradient: 'from-pink-400 to-purple-400' },
+                    { slug: 'other', title: 'Other', icon: '🎣', description: 'Traditional experiences', count: 7, gradient: 'from-indigo-400 to-purple-400' }
                 ];
-              
                 setCategories(mockData);
                 setLoading(false);
             } catch (error) {
@@ -33,121 +28,174 @@ const ActivityCategories = () => {
         };
         fetchCategories();
     }, []);
+
     if (loading) {
         return (
-            <section className="py-20 bg-gradient-to-b from-blue-50 to-white">
-                <div className="container mx-auto px-4">
-                    <div className="text-center mb-12">
-                        <h2 className="text-4xl font-bold text-blue-900 mb-4">Loading Categories...</h2>
-                        <div className="flex justify-center">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                        </div>
+            <section className="py-24 bg-gradient-to-b from-white via-blue-50/30 to-white">
+                <div className="max-w-7xl mx-auto px-4">
+                    <div className="text-center mb-16">
+                        <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-cyan-400 rounded-2xl mx-auto mb-6 animate-pulse"></div>
+                        <div className="h-12 bg-gradient-to-r from-blue-100 to-cyan-100 rounded-xl max-w-md mx-auto mb-4 animate-pulse"></div>
+                        <div className="h-6 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg max-w-lg mx-auto animate-pulse"></div>
                     </div>
                 </div>
             </section>
         );
     }
+
     return (
-        <section className="py-20 bg-gradient-to-b from-blue-50 to-white">
-            <div className="container mx-auto px-4">
+        <section className="relative py-24 bg-gradient-to-b from-white via-blue-50/20 to-white overflow-hidden">
+            {/* Background Elements */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-20 left-10 w-96 h-96 bg-blue-100/20 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-20 right-10 w-96 h-96 bg-cyan-100/20 rounded-full blur-3xl"></div>
+            </div>
+
+            <div className="max-w-7xl mx-auto px-4 relative z-10">
                 {/* Header */}
-                <div className="text-center mb-16">
-                    <span className="inline-block px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold mb-4">
-                        Explore Excursions
-                    </span>
-                    <h2 className="text-4xl md:text-5xl font-bold text-blue-900 mb-6">
-                        Discover Amazing <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-teal-500">Experiences</span>
-                    </h2>
-                    <p className="text-gray-600 text-lg max-w-3xl mx-auto">
-                        Choose from our curated collection of Maldivian adventures. From underwater marvels to cultural wonders, find your perfect excursion.
+                <div className="text-center mb-20">
+                    <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-100 to-cyan-100 rounded-full mb-6">
+                        <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full mr-2"></div>
+                        <span className="text-sm font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-cyan-500">
+                            Explore Categories
+                        </span>
+                    </div>
+                    
+                    <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 tracking-tight">
+                        Discover <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500">Amazing</span> Adventures
+                    </h1>
+                    
+                    <div className="w-24 h-1.5 bg-gradient-to-r from-blue-400 via-blue-300 to-cyan-400 mx-auto mb-8 rounded-full shadow-lg"></div>
+                    
+                    <p className="text-gray-600 text-xl max-w-2xl mx-auto leading-relaxed font-light">
+                        Curated experiences showcasing the best of Mauritius. From underwater wonders to cultural treasures.
                     </p>
                 </div>
-              
+
                 {/* Categories Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-                    {categories.map(category => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
+                    {categories.map((category, index) => (
                         <Link
                             to={`/activities?category=${category.slug}`}
                             key={category.slug}
-                            className="group relative overflow-hidden rounded-2xl bg-white shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2"
+                            className="group relative"
+                            onMouseEnter={() => setHoveredCard(index)}
+                            onMouseLeave={() => setHoveredCard(null)}
                         >
-                            {/* Gradient Background */}
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-teal-400"></div>
-                        
-                            {/* Icon Container */}
-                            <div className="p-8 pb-6 text-center">
-                                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-100 to-teal-50 group-hover:from-blue-200 group-hover:to-teal-100 transition-all duration-300 mb-6">
-                                    <span className="text-4xl">{category.icon}</span>
+                            {/* Card Container */}
+                            <div className={`relative h-full bg-white/90 backdrop-blur-sm rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500 ${
+                                hoveredCard === index ? 'scale-105 -translate-y-2' : ''
+                            }`}>
+                                {/* Gradient Border */}
+                                <div className="absolute inset-0 rounded-3xl p-[1px] bg-gradient-to-br from-gray-200/50 to-gray-100/50 -z-10">
+                                    <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white to-gray-50"></div>
                                 </div>
-                              
-                                {/* Title */}
-                                <h3 className="text-2xl font-bold text-gray-800 mb-3 group-hover:text-blue-700 transition-colors">
-                                    {category.title}
-                                </h3>
-                              
-                                {/* Description */}
-                                <p className="text-gray-600 mb-4 line-clamp-2">
-                                    {category.description}
-                                </p>
-                              
-                                {/* Activity Count */}
-                                <div className="inline-flex items-center px-4 py-2 bg-blue-50 rounded-full">
-                                    <span className="text-sm font-semibold text-blue-700">
-                                        {category.count} excursions
-                                    </span>
+
+                                {/* Content */}
+                                <div className="relative z-10">
+                                    {/* Icon with Gradient */}
+                                    <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${category.gradient} flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500 shadow-lg shadow-blue-200/50 mx-auto`}>
+                                        <span className="text-4xl">{category.icon}</span>
+                                    </div>
+
+                                    {/* Title */}
+                                    <h3 className="text-2xl font-bold text-gray-900 text-center mb-4 group-hover:bg-clip-text group-hover:text-transparent group-hover:bg-gradient-to-r from-gray-900 to-gray-700 transition-all">
+                                        {category.title}
+                                    </h3>
+
+                                    {/* Description */}
+                                    <p className="text-gray-600 text-center mb-6 font-light leading-relaxed">
+                                        {category.description}
+                                    </p>
+
+                                    {/* Activity Count */}
+                                    <div className="inline-flex items-center justify-center w-full px-4 py-3 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-100 group-hover:border-gray-200 transition-colors">
+                                        <div className="w-2 h-2 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full mr-3 animate-pulse"></div>
+                                        <span className="font-semibold text-gray-900">{category.count}</span>
+                                        <span className="text-gray-500 ml-2">activities</span>
+                                    </div>
+
+                                    {/* Explore Button - Visible on Hover */}
+                                    <div className={`absolute bottom-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 ${
+                                        hoveredCard === index ? 'translate-y-0' : 'translate-y-4'
+                                    }`}>
+                                        <div className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-xl font-medium shadow-lg">
+                                            <span>Explore</span>
+                                            <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Background Pattern */}
+                                <div className="absolute inset-0 rounded-3xl overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-100/20 to-cyan-100/20 rounded-full -translate-y-16 translate-x-16"></div>
+                                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-blue-100/20 to-cyan-100/20 rounded-full translate-y-12 -translate-x-12"></div>
                                 </div>
                             </div>
-                        
-                            {/* Hover Effect */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-blue-900/90 via-blue-700/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-8">
-                                <p className="text-white text-lg font-semibold mb-4">{category.description}</p>
-                                <div className="inline-flex items-center text-white">
-                                    <span className="text-sm font-medium mr-2">Explore Now</span>
-                                    <svg className="w-5 h-5 transform group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                                    </svg>
-                                </div>
-                            </div>
+
+                            {/* Glow Effect */}
+                            <div className={`absolute -inset-1 rounded-3xl bg-gradient-to-br ${category.gradient} opacity-0 group-hover:opacity-10 blur-xl transition-opacity duration-500 -z-10 ${
+                                hoveredCard === index ? 'animate-pulse' : ''
+                            }`}></div>
                         </Link>
                     ))}
                 </div>
-              
-                {/* CTA Button */}
-                <div className="text-center">
+
+                {/* CTA Section */}
+                <div className="text-center mb-20">
                     <Link
                         to="/activities"
-                        className="group inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300"
+                        className="group inline-flex items-center justify-center px-12 py-5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold rounded-2xl hover:from-blue-700 hover:to-cyan-600 transition-all duration-300 shadow-xl hover:shadow-2xl hover:-translate-y-1 transform"
                     >
-                        <span className="mr-3">View All Excursions</span>
-                        <svg className="w-6 h-6 transform group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                        <span className="text-lg">Browse All Activities</span>
+                        <svg className="w-6 h-6 ml-4 transform group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                         </svg>
                     </Link>
-                  
-                    {/* Additional Info */}
-                    <p className="mt-6 text-gray-500 text-sm">
-                        Over 100+ excursions available • Best price guarantee • 24/7 support
+                    <p className="mt-6 text-gray-500 font-light">
+                        <span className="text-blue-600 font-medium">100+</span> curated experiences • <span className="text-green-600 font-medium">Best Price</span> guarantee • <span className="text-purple-600 font-medium">24/7</span> support
                     </p>
                 </div>
-              
-                {/* Decorative Elements */}
-                <div className="mt-20 relative">
-                    <div className="absolute -top-10 -left-10 w-20 h-20 bg-blue-200 rounded-full opacity-20"></div>
-                    <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-teal-200 rounded-full opacity-20"></div>
-                    <div className="flex justify-center items-center space-x-8 text-gray-400">
-                        <div className="text-center">
-                            <div className="text-3xl font-bold text-blue-600">100+</div>
-                            <div className="text-sm">Excursions</div>
+
+                {/* Stats */}
+                <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-cyan-50/50 rounded-3xl blur-3xl"></div>
+                    <div className="relative bg-white/80 backdrop-blur-sm rounded-3xl p-12 border border-gray-100 shadow-xl">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div className="text-center group">
+                                <div className="text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400 mb-4">
+                                    100+
+                                </div>
+                                <div className="text-xl font-semibold text-gray-900 mb-2">Activities</div>
+                                <div className="w-16 h-1 bg-gradient-to-r from-blue-400 to-cyan-400 mx-auto rounded-full group-hover:w-24 transition-all duration-300"></div>
+                            </div>
+                            
+                            <div className="text-center group">
+                                <div className="text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-600 to-cyan-400 mb-4">
+                                    5★
+                                </div>
+                                <div className="text-xl font-semibold text-gray-900 mb-2">Rating</div>
+                                <div className="w-16 h-1 bg-gradient-to-r from-cyan-400 to-blue-400 mx-auto rounded-full group-hover:w-24 transition-all duration-300"></div>
+                            </div>
+                            
+                            <div className="text-center group">
+                                <div className="text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-cyan-500 mb-4">
+                                    24/7
+                                </div>
+                                <div className="text-xl font-semibold text-gray-900 mb-2">Support</div>
+                                <div className="w-16 h-1 bg-gradient-to-r from-blue-400 to-cyan-400 mx-auto rounded-full group-hover:w-24 transition-all duration-300"></div>
+                            </div>
                         </div>
-                        <div className="w-1 h-12 bg-gradient-to-b from-blue-300 to-teal-300"></div>
-                        <div className="text-center">
-                            <div className="text-3xl font-bold text-blue-600">24/7</div>
-                            <div className="text-sm">Support</div>
-                        </div>
-                        <div className="w-1 h-12 bg-gradient-to-b from-blue-300 to-teal-300"></div>
-                        <div className="text-center">
-                            <div className="text-3xl font-bold text-blue-600">5★</div>
-                            <div className="text-sm">Rating</div>
+                        
+                        <div className="mt-12 pt-12 border-t border-gray-100 text-center">
+                            <div className="inline-flex items-center text-gray-600">
+                                <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                <span className="font-light">Trusted by thousands of travelers</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -155,4 +203,5 @@ const ActivityCategories = () => {
         </section>
     );
 };
+
 export default ActivityCategories;

@@ -166,7 +166,7 @@ const Activities = () => {
             <div className="container mx-auto px-4">
                 {/* Page Header */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-blue-700 font-display">Mauritius Hotel</h1>
+                    <h1 className="text-3xl font-bold text-blue-700 font-display">Mauritius Paradise</h1>
                     <p className="text-gray-600 mt-2">Discover and book the best experiences in the Mauritius</p>
                 </div>
                 

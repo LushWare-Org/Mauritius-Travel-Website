@@ -9,7 +9,6 @@ const BookingForm = ({ activity }) => {
   const [showCalendar, setShowCalendar] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // Airport Transfer State
   const [includeAirportTransfer, setIncludeAirportTransfer] = useState(false);
   const [selectedAirportTransfer, setSelectedAirportTransfer] = useState('');
   const [airportTransfers, setAirportTransfers] = useState([]);
@@ -17,7 +16,6 @@ const BookingForm = ({ activity }) => {
   const [airportTransferPrice, setAirportTransferPrice] = useState(0);
   const [tripType, setTripType] = useState('one-way');
 
-  // Check if we should show duration selection
   const showDurationSelection = () => {
     return (
       activity.pricingType === 'half-full-day' ||
@@ -26,7 +24,6 @@ const BookingForm = ({ activity }) => {
     );
   };
 
-  // Calculate price based on selection
   const getCurrentPrice = () => {
     if (showDurationSelection()) {
       return selectedDuration === 'halfDay'
@@ -36,49 +33,28 @@ const BookingForm = ({ activity }) => {
     return activity.price;
   };
 
-  // Fetch airport transfers from database when checkbox is checked
   useEffect(() => {
     const fetchAirportTransfers = async () => {
-      if (!includeAirportTransfer) {
-        return;
-      }
+      if (!includeAirportTransfer) return;
 
       try {
         setAirportTransferLoading(true);
-
-        const baseUrl =
-          import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
-        const url = `${baseUrl}/airport-transfers/active`;
-
-        const response = await fetch(url, {
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(
-            `Failed to fetch airport transfers: ${response.status}`
-          );
-        }
-
-        const data = await response.json();
-
-        if (data.success && data.data.length > 0) {
-          setAirportTransfers(data.data);
-          setSelectedAirportTransfer(data.data[0]._id);
-          const initialPrice =
-            tripType === 'one-way'
-              ? data.data[0].oneWayPrice
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+        const response = await fetch(`${baseUrl}/airport-transfers/active`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data.length > 0) {
+            setAirportTransfers(data.data);
+            setSelectedAirportTransfer(data.data[0]._id);
+            const initialPrice = tripType === 'one-way' 
+              ? data.data[0].oneWayPrice 
               : data.data[0].roundTripPrice;
-          setAirportTransferPrice(initialPrice);
-        } else {
-          setAirportTransfers([]);
+            setAirportTransferPrice(initialPrice);
+          }
         }
       } catch (error) {
-        console.error('Error fetching airport transfers:', error);
-        setAirportTransfers([]);
+        console.error('Error:', error);
       } finally {
         setAirportTransferLoading(false);
       }
@@ -87,65 +63,51 @@ const BookingForm = ({ activity }) => {
     fetchAirportTransfers();
   }, [includeAirportTransfer, tripType]);
 
-  // Handle airport transfer selection change
   const handleAirportTransferChange = (e) => {
     const transferId = e.target.value;
     setSelectedAirportTransfer(transferId);
-
-    const selectedTransfer = airportTransfers.find((t) => t._id === transferId);
+    
+    const selectedTransfer = airportTransfers.find(t => t._id === transferId);
     if (selectedTransfer) {
-      const price =
-        tripType === 'one-way'
-          ? selectedTransfer.oneWayPrice
-          : selectedTransfer.roundTripPrice;
+      const price = tripType === 'one-way' 
+        ? selectedTransfer.oneWayPrice 
+        : selectedTransfer.roundTripPrice;
       setAirportTransferPrice(price);
     }
   };
 
-  // Handle trip type change
   const handleTripTypeChange = (newTripType) => {
     setTripType(newTripType);
-
+    
     if (selectedAirportTransfer && airportTransfers.length > 0) {
-      const selectedTransfer = airportTransfers.find(
-        (t) => t._id === selectedAirportTransfer
-      );
+      const selectedTransfer = airportTransfers.find(t => t._id === selectedAirportTransfer);
       if (selectedTransfer) {
-        const price =
-          newTripType === 'one-way'
-            ? selectedTransfer.oneWayPrice
-            : selectedTransfer.roundTripPrice;
+        const price = newTripType === 'one-way' 
+          ? selectedTransfer.oneWayPrice 
+          : selectedTransfer.roundTripPrice;
         setAirportTransferPrice(price);
       }
     }
   };
 
-  // Update total price calculation
   useEffect(() => {
     const pricePerPerson = getCurrentPrice();
     let total = pricePerPerson;
-
+    
     if (includeAirportTransfer && airportTransferPrice > 0) {
       total += airportTransferPrice;
     }
-
+    
     setTotalPrice(total);
-  }, [
-    activity,
-    selectedDuration,
-    includeAirportTransfer,
-    airportTransferPrice,
-    tripType,
-  ]);
+  }, [activity, selectedDuration, includeAirportTransfer, airportTransferPrice, tripType]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
     if (!selectedDate) {
       alert('Please select a date');
       return;
     }
-
+    
     navigate(`/booking/${activity._id || activity.id}`, {
       state: {
         selectedDate,
@@ -162,7 +124,6 @@ const BookingForm = ({ activity }) => {
     });
   };
 
-  // Calendar functions
   const generateCalendarDays = () => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
@@ -176,39 +137,20 @@ const BookingForm = ({ activity }) => {
     const prevMonthLastDay = new Date(year, month, 0).getDate();
     for (let i = startDay - 1; i >= 0; i--) {
       const date = new Date(year, month - 1, prevMonthLastDay - i);
-      days.push({
-        date,
-        isCurrentMonth: false,
-        isPast: date < today,
-        isToday: date.toDateString() === today.toDateString(),
-        formatted: date.toISOString().split('T')[0],
-      });
+      days.push({ date, isCurrentMonth: false, isPast: date < today, isToday: date.toDateString() === today.toDateString(), formatted: date.toISOString().split('T')[0] });
     }
 
     for (let i = 1; i <= daysInMonth; i++) {
       const date = new Date(year, month, i);
-      const isPast =
-        date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      days.push({
-        date,
-        isCurrentMonth: true,
-        isPast: isPast,
-        isToday: date.toDateString() === today.toDateString(),
-        formatted: date.toISOString().split('T')[0],
-      });
+      const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      days.push({ date, isCurrentMonth: true, isPast, isToday: date.toDateString() === today.toDateString(), formatted: date.toISOString().split('T')[0] });
     }
 
     const totalCells = 42;
     const nextMonthDays = totalCells - days.length;
     for (let i = 1; i <= nextMonthDays; i++) {
       const date = new Date(year, month + 1, i);
-      days.push({
-        date,
-        isCurrentMonth: false,
-        isPast: false,
-        isToday: false,
-        formatted: date.toISOString().split('T')[0],
-      });
+      days.push({ date, isCurrentMonth: false, isPast: false, isToday: false, formatted: date.toISOString().split('T')[0] });
     }
 
     return days;
@@ -222,92 +164,107 @@ const BookingForm = ({ activity }) => {
   };
 
   const prevMonth = () => {
-    setCurrentMonth(
-      (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
-    );
+    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
   };
 
   const nextMonth = () => {
-    setCurrentMonth(
-      (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
-    );
+    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
   };
 
   const formatDateDisplay = (dateString) => {
     if (!dateString) return 'Select a date';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
-
-  // Function to format airport transfer display with airport code
-  const formatAirportTransferOption = (transfer) => {
-    const airportCode = transfer.airportCode || transfer.airportIATA || '';
-    const airportName = transfer.airportName || 'Airport Transfer';
-    const price =
-      tripType === 'one-way' ? transfer.oneWayPrice : transfer.roundTripPrice;
-
-    if (airportCode) {
-      return `${airportName} (${airportCode}) - $${price}`;
-    }
-    return `${airportName} - $${price}`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-5 sticky top-24">
+    <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 sticky top-24">
       {/* Price Header */}
-      <div className="bg-blue-800 text-white p-5 rounded-t-lg mb-5">
+      <div className="bg-gradient-to-r from-blue-600 to-cyan-500 rounded-2xl p-6 text-white mb-8 shadow-lg">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-3xl font-bold">${getCurrentPrice()}</div>
-            <div className="text-sm opacity-90">per person</div>
+            <div className="text-4xl font-bold">${getCurrentPrice()}</div>
+            <div className="text-sm opacity-90 mt-1">per person</div>
           </div>
           {showDurationSelection() && (
-            <div className="bg-white/10 px-3 py-1 rounded-full text-sm">
+            <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-medium">
               {selectedDuration === 'halfDay' ? 'Half Day' : 'Full Day'}
             </div>
           )}
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Duration Selection */}
         {showDurationSelection() && (
           <div>
-            <label className="block text-gray-700 font-medium mb-3">
+            <label className="block text-sm font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               Select Duration
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
-                className={`p-4 rounded-lg border transition-colors ${
-                  selectedDuration === 'halfDay'
-                    ? 'bg-blue-800 text-white border-blue-800'
-                    : 'border-gray-300 text-gray-700 hover:border-blue-800'
-                }`}
                 onClick={() => setSelectedDuration('halfDay')}
+                className={`group relative p-5 rounded-xl border-2 transition-all duration-300 ${
+                  selectedDuration === 'halfDay'
+                    ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 shadow-lg'
+                    : 'border-gray-200 hover:border-blue-300 hover:shadow-md'
+                }`}
               >
-                <div className="font-medium">Half Day</div>
-                <div className="text-sm mt-1">
-                  ${activity.halfDayPrice || activity.price}
+                <div className="text-left">
+                  <div className={`font-bold text-lg mb-1 ${
+                    selectedDuration === 'halfDay' ? 'text-blue-700' : 'text-gray-900'
+                  }`}>
+                    Half Day
+                  </div>
+                  <div className={`text-2xl font-bold ${
+                    selectedDuration === 'halfDay' ? 'text-blue-600' : 'text-gray-600'
+                  }`}>
+                    ${activity.halfDayPrice || activity.price}
+                  </div>
+                  <div className="text-sm text-gray-500 mt-2">4-5 hours</div>
                 </div>
+                {selectedDuration === 'halfDay' && (
+                  <div className="absolute top-3 right-3 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )}
               </button>
+              
               <button
                 type="button"
-                className={`p-4 rounded-lg border transition-colors ${
-                  selectedDuration === 'fullDay'
-                    ? 'bg-blue-800 text-white border-blue-800'
-                    : 'border-gray-300 text-gray-700 hover:border-blue-800'
-                }`}
                 onClick={() => setSelectedDuration('fullDay')}
+                className={`group relative p-5 rounded-xl border-2 transition-all duration-300 ${
+                  selectedDuration === 'fullDay'
+                    ? 'border-cyan-500 bg-gradient-to-r from-cyan-50 to-cyan-100 shadow-lg'
+                    : 'border-gray-200 hover:border-cyan-300 hover:shadow-md'
+                }`}
               >
-                <div className="font-medium">Full Day</div>
-                <div className="text-sm mt-1">
-                  ${activity.fullDayPrice || activity.price}
+                <div className="text-left">
+                  <div className={`font-bold text-lg mb-1 ${
+                    selectedDuration === 'fullDay' ? 'text-cyan-700' : 'text-gray-900'
+                  }`}>
+                    Full Day
+                  </div>
+                  <div className={`text-2xl font-bold ${
+                    selectedDuration === 'fullDay' ? 'text-cyan-600' : 'text-gray-600'
+                  }`}>
+                    ${activity.fullDayPrice || activity.price}
+                  </div>
+                  <div className="text-sm text-gray-500 mt-2">8-9 hours</div>
                 </div>
+                {selectedDuration === 'fullDay' && (
+                  <div className="absolute top-3 right-3 w-6 h-6 bg-cyan-500 rounded-full flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )}
               </button>
             </div>
           </div>
@@ -315,152 +272,113 @@ const BookingForm = ({ activity }) => {
 
         {/* Date Picker */}
         <div>
-          <label className="block text-gray-700 font-medium mb-3">
+          <label className="block text-sm font-semibold text-gray-900 mb-4 flex items-center">
+            <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
             Select Date
           </label>
 
-          <div
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg flex items-center justify-between cursor-pointer hover:border-blue-800 transition-colors"
-            onClick={() => setShowCalendar(!showCalendar)}
-          >
-            <div className="flex items-center">
-              <svg
-                className="w-5 h-5 text-gray-500 mr-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-              <span
-                className={selectedDate ? 'text-gray-900' : 'text-gray-500'}
-              >
-                {formatDateDisplay(selectedDate)}
-              </span>
-            </div>
-            <svg
-              className={`w-5 h-5 text-gray-500 transition-transform ${
-                showCalendar ? 'rotate-180' : ''
-              }`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div className="relative">
+            <div
+              className="w-full px-5 py-4 bg-gradient-to-r from-gray-50 to-white border-2 border-gray-200 rounded-xl flex items-center justify-between cursor-pointer hover:border-blue-400 transition-all duration-300 group"
+              onClick={() => setShowCalendar(!showCalendar)}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </div>
-
-          {showCalendar && (
-            <div className="absolute z-10 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
-              <div className="flex items-center justify-between mb-4">
-                <button
-                  type="button"
-                  onClick={prevMonth}
-                  className="p-1 hover:bg-gray-100 rounded"
-                >
-                  <svg
-                    className="w-5 h-5 text-gray-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M15 19l-7-7 7-7"
-                    />
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-50 rounded-lg flex items-center justify-center mr-4">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                </button>
-                <div className="font-medium text-gray-800">
-                  {currentMonth.toLocaleDateString('en-US', {
-                    month: 'long',
-                    year: 'numeric',
-                  })}
                 </div>
-                <button
-                  type="button"
-                  onClick={nextMonth}
-                  className="p-1 hover:bg-gray-100 rounded"
-                >
-                  <svg
-                    className="w-5 h-5 text-gray-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-7 gap-1 mb-2">
-                {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
-                  <div
-                    key={day}
-                    className="text-center text-xs text-gray-500 py-1"
-                  >
-                    {day}
+                <div>
+                  <div className={`font-medium ${selectedDate ? 'text-gray-900' : 'text-gray-500'}`}>
+                    {selectedDate ? formatDateDisplay(selectedDate) : 'Choose your date'}
                   </div>
-                ))}
+                  <div className="text-sm text-gray-500">Click to select</div>
+                </div>
               </div>
-
-              <div className="grid grid-cols-7 gap-1">
-                {generateCalendarDays().map((day, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => handleDateSelect(day)}
-                    disabled={day.isPast}
-                    className={`
-                      h-8 rounded text-sm
-                      ${day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}
-                      ${
-                        day.isPast
-                          ? 'text-gray-300 cursor-not-allowed'
-                          : 'hover:bg-blue-50'
-                      }
-                      ${
-                        selectedDate === day.formatted
-                          ? 'bg-blue-800 text-white hover:bg-blue-900'
-                          : ''
-                      }
-                      ${
-                        day.isToday && !selectedDate
-                          ? 'border border-blue-800 text-blue-800'
-                          : ''
-                      }
-                    `}
-                  >
-                    {day.date.getDate()}
-                  </button>
-                ))}
-              </div>
+              <svg className={`w-6 h-6 text-gray-400 transition-transform duration-300 ${showCalendar ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
             </div>
-          )}
+
+            {showCalendar && (
+              <div className="absolute z-50 mt-2 w-full bg-white border border-gray-200 rounded-2xl shadow-2xl p-6 animate-fadeIn">
+                <div className="flex items-center justify-between mb-6">
+                  <button
+                    type="button"
+                    onClick={prevMonth}
+                    className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                  >
+                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <div className="text-lg font-bold text-gray-900">
+                    {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={nextMonth}
+                    className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                  >
+                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-7 gap-2 mb-4">
+                  {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                    <div key={day} className="text-center text-sm text-gray-500 font-medium py-2">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-7 gap-2">
+                  {generateCalendarDays().map((day, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => handleDateSelect(day)}
+                      disabled={day.isPast}
+                      className={`
+                        h-10 rounded-lg text-sm font-medium transition-all duration-200
+                        ${day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}
+                        ${day.isPast ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-blue-50'}
+                        ${selectedDate === day.formatted 
+                          ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transform scale-105' 
+                          : ''}
+                        ${day.isToday && !selectedDate 
+                          ? 'border-2 border-blue-400 text-blue-600 bg-blue-50' 
+                          : ''}
+                        ${!day.isCurrentMonth ? 'opacity-50' : ''}
+                      `}
+                    >
+                      {day.date.getDate()}
+                      {day.isToday && !selectedDate && (
+                        <div className="w-1 h-1 bg-blue-400 rounded-full mx-auto mt-1"></div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Airport Transfer */}
-        <div className="border-t border-gray-200 pt-5">
-          <div className="flex items-center justify-between mb-4">
+        <div className="pt-6 border-t border-gray-200">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="font-medium text-gray-800">Airport Transfer</h3>
-              <p className="text-sm text-gray-600">Optional add-on service</p>
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <h3 className="text-lg font-semibold text-gray-900">Add Airport Transfer</h3>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">Seamless transportation to your activity</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -469,153 +387,133 @@ const BookingForm = ({ activity }) => {
                 onChange={(e) => setIncludeAirportTransfer(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-800"></div>
+              <div className="w-14 h-7 bg-gray-300 peer-checked:bg-gradient-to-r peer-checked:from-blue-600 peer-checked:to-cyan-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all"></div>
             </label>
           </div>
 
           {includeAirportTransfer && (
-            <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+            <div className="space-y-6 bg-gradient-to-br from-blue-50 to-cyan-50 p-6 rounded-2xl border border-blue-100">
               {airportTransferLoading ? (
-                <div className="text-center py-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-800 mx-auto mb-2"></div>
-                  <span className="text-gray-600">Loading transfers...</span>
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <span className="text-gray-600">Loading airport transfers...</span>
                 </div>
               ) : airportTransfers.length === 0 ? (
-                <div className="text-center py-4 text-gray-600">
-                  No airport transfers available
+                <div className="text-center py-8 text-gray-600">
+                  <svg className="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p>No transfers available at the moment</p>
                 </div>
               ) : (
                 <>
                   {/* Trip Type */}
                   <div>
-                    <label className="block text-sm text-gray-700 mb-2">
-                      Trip Type
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <label className="block text-sm font-medium text-gray-900 mb-3">Trip Type</label>
+                    <div className="grid grid-cols-2 gap-4">
                       <button
                         type="button"
                         onClick={() => handleTripTypeChange('one-way')}
-                        className={`py-2 rounded border ${
+                        className={`group p-4 rounded-xl border-2 transition-all duration-300 ${
                           tripType === 'one-way'
-                            ? 'bg-blue-800 text-white border-blue-800'
-                            : 'border-gray-300 text-gray-700 hover:border-blue-800'
+                            ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 shadow-lg'
+                            : 'border-gray-200 hover:border-blue-300 hover:shadow-md'
                         }`}
                       >
-                        One Way
+                        <div className="text-center">
+                          <div className={`font-bold text-lg mb-1 ${
+                            tripType === 'one-way' ? 'text-blue-700' : 'text-gray-900'
+                          }`}>
+                            One Way
+                          </div>
+                          <div className="text-sm text-gray-600">Airport to hotel</div>
+                        </div>
                       </button>
+                      
                       <button
                         type="button"
                         onClick={() => handleTripTypeChange('round-trip')}
-                        className={`py-2 rounded border ${
+                        className={`group p-4 rounded-xl border-2 transition-all duration-300 ${
                           tripType === 'round-trip'
-                            ? 'bg-blue-800 text-white border-blue-800'
-                            : 'border-gray-300 text-gray-700 hover:border-blue-800'
+                            ? 'border-cyan-500 bg-gradient-to-r from-cyan-50 to-cyan-100 shadow-lg'
+                            : 'border-gray-200 hover:border-cyan-300 hover:shadow-md'
                         }`}
                       >
-                        Round Trip
+                        <div className="text-center">
+                          <div className={`font-bold text-lg mb-1 ${
+                            tripType === 'round-trip' ? 'text-cyan-700' : 'text-gray-900'
+                          }`}>
+                            Round Trip
+                          </div>
+                          <div className="text-sm text-gray-600">Return included</div>
+                        </div>
                       </button>
                     </div>
                   </div>
 
                   {/* Airport Selection */}
                   <div>
-                    <label className="block text-sm text-gray-700 mb-2">
-                      Select Airport Transfer
-                    </label>
-                    <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-900 mb-3">Select Transfer</label>
+                    <div className="space-y-3">
                       {airportTransfers.map((transfer) => (
                         <label
                           key={transfer._id}
-                          className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:border-blue-800 transition-colors ${
+                          className={`flex items-center justify-between p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-md ${
                             selectedAirportTransfer === transfer._id
-                              ? 'border-blue-800 bg-blue-50'
-                              : 'border-gray-300'
+                              ? 'border-blue-400 bg-gradient-to-r from-blue-50 to-white shadow-md'
+                              : 'border-gray-200 hover:border-blue-300'
                           }`}
                         >
                           <div className="flex items-center">
-                            <input
-                              type="radio"
-                              name="airportTransfer"
-                              value={transfer._id}
-                              checked={selectedAirportTransfer === transfer._id}
-                              onChange={handleAirportTransferChange}
-                              className="mr-3"
-                            />
+                            <div className={`w-6 h-6 rounded-full border-2 mr-4 flex items-center justify-center ${
+                              selectedAirportTransfer === transfer._id
+                                ? 'border-blue-500 bg-blue-500'
+                                : 'border-gray-300'
+                            }`}>
+                              {selectedAirportTransfer === transfer._id && (
+                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                              )}
+                            </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Airport to Hotel 
-                              </label>
-                              <div className="font-medium text-gray-800">
+                              <div className="font-semibold text-gray-900">
                                 {transfer.airportName}
                                 {transfer.airportCode && (
-                                  <span className="ml-2 text-sm font-normal text-gray-600">
-                                    ({transfer.airportCode})
+                                  <span className="ml-2 text-sm font-normal text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                                    {transfer.airportCode}
                                   </span>
                                 )}
                               </div>
                               {transfer.location && (
-                                <div className="text-sm text-gray-600">
-                                  <i className="fas fa-map-marker-alt mr-1"></i>
+                                <div className="text-sm text-gray-600 flex items-center mt-1">
+                                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  </svg>
                                   {transfer.location}
                                 </div>
                               )}
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="font-bold text-blue-800">
-                              $
-                              {tripType === 'one-way'
-                                ? transfer.oneWayPrice
-                                : transfer.roundTripPrice}
+                            <div className="text-xl font-bold text-blue-600">
+                              ${tripType === 'one-way' ? transfer.oneWayPrice : transfer.roundTripPrice}
                             </div>
-                            <div className="text-xs text-gray-500">
-                              {tripType === 'one-way'
-                                ? 'One Way'
-                                : 'Round Trip'}
+                            <div className="text-xs text-gray-500 mt-1">
+                              {transfer.capacity} people • {transfer.estimatedTime}
                             </div>
                           </div>
+                          <input
+                            type="radio"
+                            name="airportTransfer"
+                            value={transfer._id}
+                            checked={selectedAirportTransfer === transfer._id}
+                            onChange={handleAirportTransferChange}
+                            className="hidden"
+                          />
                         </label>
                       ))}
                     </div>
                   </div>
-
-                  {/* Selected Transfer Details */}
-                  {selectedAirportTransfer && airportTransfers.length > 0 && (
-                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <div className="font-medium text-gray-800">
-                            Selected:{' '}
-                            {
-                              airportTransfers.find(
-                                (t) => t._id === selectedAirportTransfer
-                              )?.airportName
-                            }
-                          </div>
-                          {airportTransfers.find(
-                            (t) => t._id === selectedAirportTransfer
-                          )?.airportCode && (
-                            <div className="text-sm text-gray-600">
-                              Hotel name:{' '}
-                              {
-                                airportTransfers.find(
-                                  (t) => t._id === selectedAirportTransfer
-                                )?.airportCode
-                              }
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold text-blue-800">
-                            ${airportTransferPrice}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            {tripType === 'one-way' ? 'One Way' : 'Round Trip'}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </>
               )}
             </div>
@@ -623,57 +521,44 @@ const BookingForm = ({ activity }) => {
         </div>
 
         {/* Price Summary */}
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-700">Activity</span>
-              <span className="font-medium">${getCurrentPrice()}</span>
+        <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+          <h4 className="font-bold text-gray-900 text-lg mb-6">Price Summary</h4>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+              <div>
+                <div className="font-medium text-gray-900">{activity.title}</div>
+                {showDurationSelection() && (
+                  <div className="text-sm text-gray-600 mt-1">
+                    {selectedDuration === 'halfDay' ? 'Half Day' : 'Full Day'} Package
+                  </div>
+                )}
+              </div>
+              <div className="font-bold text-lg text-gray-900">${getCurrentPrice()}</div>
             </div>
 
             {includeAirportTransfer && airportTransferPrice > 0 && (
-              <>
-                <div className="flex justify-between items-center border-t border-gray-200 pt-3">
-                  <div>
-                    <span className="text-gray-700">Airport Transfer</span>
-                    {selectedAirportTransfer && airportTransfers.length > 0 && (
-                      <div className="text-xs text-gray-500">
-                        {
-                          airportTransfers.find(
-                            (t) => t._id === selectedAirportTransfer
-                          )?.airportName
-                        }
-                        {airportTransfers.find(
-                          (t) => t._id === selectedAirportTransfer
-                        )?.airportCode && (
-                          <span>
-                            {' '}
-                            (
-                            {
-                              airportTransfers.find(
-                                (t) => t._id === selectedAirportTransfer
-                              )?.airportCode
-                            }
-                            )
-                          </span>
-                        )}
-                        {' - '}
-                        {tripType === 'one-way' ? 'One Way' : 'Round Trip'}
-                      </div>
-                    )}
-                  </div>
-                  <span className="font-medium text-blue-800">
-                    ${airportTransferPrice}
-                  </span>
+              <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+                <div>
+                  <div className="font-medium text-gray-900">Airport Transfer</div>
+                  {selectedAirportTransfer && airportTransfers.length > 0 && (
+                    <div className="text-sm text-gray-600 mt-1">
+                      {airportTransfers.find(t => t._id === selectedAirportTransfer)?.airportName}
+                      {' • '}
+                      {tripType === 'one-way' ? 'One Way' : 'Round Trip'}
+                    </div>
+                  )}
                 </div>
-              </>
+                <div className="font-bold text-lg text-blue-600">+${airportTransferPrice}</div>
+              </div>
             )}
 
-            <div className="flex justify-between items-center border-t border-gray-300 pt-3">
-              <span className="font-bold text-gray-900">Total</span>
+            <div className="flex justify-between items-center pt-4">
+              <div className="font-bold text-xl text-gray-900">Total Amount</div>
               <div className="text-right">
-                <div className="text-xl font-bold text-blue-800">
+                <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">
                   ${totalPrice}
                 </div>
+                <div className="text-sm text-gray-600 mt-1">Inclusive of all fees</div>
               </div>
             </div>
           </div>
@@ -684,25 +569,59 @@ const BookingForm = ({ activity }) => {
           type="submit"
           disabled={!selectedDate}
           className={`
-            w-full py-3 rounded-lg font-medium transition-colors
-            ${
-              selectedDate
-                ? 'bg-blue-800 text-white hover:bg-blue-900'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            group w-full py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:-translate-y-1
+            ${selectedDate
+              ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-xl hover:shadow-2xl hover:from-blue-700 hover:to-cyan-600'
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-md'
             }
           `}
         >
-          {selectedDate ? 'Continue to Booking' : 'Select a Date First'}
+          <div className="flex items-center justify-center">
+            {selectedDate ? (
+              <>
+                <span>Continue to Booking</span>
+                <svg className="w-6 h-6 ml-3 transform group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </>
+            ) : (
+              'Select a Date First'
+            )}
+          </div>
         </button>
 
-        {/* Info */}
-        <div className="text-center text-sm text-gray-600 space-y-1">
-          <p>✓ Free cancellation 24h before</p>
-          <p>✓ Secure payment</p>
+        {/* Trust Badges */}
+        <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-200">
+          <div className="text-center p-3 bg-green-50 rounded-lg border border-green-100">
+            <div className="font-medium text-green-700 mb-1">Flexible Cancellation</div>
+            <div className="text-xs text-green-600">Free 24h cancellation</div>
+          </div>
+          <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-100">
+            <div className="font-medium text-blue-700 mb-1">Secure Payment</div>
+            <div className="text-xs text-blue-600">100% protected</div>
+          </div>
         </div>
       </form>
     </div>
   );
 };
+
+// Add CSS animation
+const style = `
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+`;
 
 export default BookingForm;

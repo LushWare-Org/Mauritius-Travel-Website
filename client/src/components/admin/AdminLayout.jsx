@@ -121,7 +121,7 @@ const AdminLayout = ({ children }) => {
                     Mauritius
                   </span>
                   <span className="text-yellow-400 ml-1 group-hover:scale-105 transition-transform duration-300">
-                    Hotel
+                    Paradise
                   </span>
                 </div>
               </Link>
@@ -189,7 +189,7 @@ const AdminLayout = ({ children }) => {
                       Mauritius
                     </span>
                     <span className="text-yellow-400 ml-1 group-hover:scale-105 transition-transform duration-300">
-                      Hotel
+                      Paradise
                     </span>
                   </div>
                 </Link>

@@ -117,7 +117,7 @@ const HeroSection = () => {
             <div className="relative z-10 py-24 md:py-32 text-center px-4">
                 <div className="container mx-auto max-w-5xl">
                     <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 font-display leading-tight animate-fade-in text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                        Discover Paradise in <span className="text-yellow-400 inline-block hover:scale-105 transition-transform cursor-pointer drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]">Maldives</span>
+                        Discover Paradise in <span className="text-yellow-400 inline-block hover:scale-105 transition-transform cursor-pointer drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]">Mauritius</span>
                     </h1>
                     
                     <p className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto animate-fade-in-delay text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">

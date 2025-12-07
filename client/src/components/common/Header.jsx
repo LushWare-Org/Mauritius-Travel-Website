@@ -8,7 +8,7 @@ const Header = () => {
                 <div className="flex items-center space-x-4">
                     <div className="flex items-center group">
                         <i className="fas fa-phone-alt mr-2 text-yellow-400 group-hover:text-yellow-300 transition-colors"></i>
-                        <span className="group-hover:text-yellow-100 transition-colors">call us</span>
+                        <span className="group-hover:text-yellow-100 transition-colors">Call us</span>
                     </div>
                     <div className="hidden md:flex items-center group">
                         <i className="fas fa-envelope mr-2 text-yellow-400 group-hover:text-yellow-300 transition-colors"></i>

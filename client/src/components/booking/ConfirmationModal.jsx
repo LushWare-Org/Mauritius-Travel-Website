@@ -92,7 +92,7 @@ const ConfirmationModal = ({
                     </div>
                   </div>
                   <p className="text-sm text-gray-500 mt-3">
-                    A confirmation email has been sent to your email address with all the details.
+                  check your profile to view the status of your booking requests.
                   </p>
                 </div>
               </div>
