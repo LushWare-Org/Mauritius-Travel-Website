@@ -203,7 +203,7 @@ const AirportTransferForm = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Airport Code *
+                     Hotel Name*
                     </label>
                     <input
                       type="text"
@@ -212,8 +212,8 @@ const AirportTransferForm = () => {
                       onChange={handleInputChange}
                       className="w-full p-2 border border-gray-300 rounded-md uppercase"
                       required
-                      placeholder="MLE"
-                      maxLength="3"
+                      placeholder="hotel elegance"
+                     
                     />
                   </div>
                 </div>
