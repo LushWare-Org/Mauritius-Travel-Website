@@ -71,141 +71,89 @@ const ActivityForm = () => {
     maxParticipants: Yup.number().positive('Must be positive').integer('Must be a whole number'),
   });
   // Handle image upload for main image
-  const handleImageUpload = async (event) => {
-    const files = Array.from(event.target.files);
-    if (!files.length) return;
-   
-    setUploading(true);
-   
+  const handleImageUpload = async (event, isGallery = false) => {
+  const files = Array.from(event.target.files);
+  if (!files.length) return;
+  
+  setUploading(true);
+  
+  for (const file of files) {
     try {
-      const file = files[0];
-      console.log('Selected file:', {
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        lastModified: file.lastModified
-      });
-      // Create a preview URL immediately for the user to see
+      // 1. Create immediate preview
       const previewUrl = URL.createObjectURL(file);
+      const tempId = Date.now() + Math.random();
+      
+      // 2. Add temporary preview
       const tempImage = {
-        id: Date.now(),
+        id: tempId,
         url: previewUrl,
         isUploaded: false,
-        isTemp: true,
-        file: file
+        isTemp: true
       };
-     
-      setImages([...images, tempImage]);
-      // Try to upload to backend
+      
+      if (isGallery) {
+        setGalleryImages(prev => [...prev, tempImage]);
+      } else {
+        setImages(prev => [...prev, tempImage]);
+      }
+
+      // 3. Upload to server
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('activityId', id || 'new');
-     
-      console.log('FormData entries:');
-      for (let [key, value] of formData.entries()) {
-        console.log(`${key}:`, value);
-      }
-      let response;
-      let retries = 0;
-      const maxRetries = 2;
-     
-      try {
-        while (retries <= maxRetries) {
-          try {
-            console.log(`Upload attempt ${retries + 1} of ${maxRetries + 1}`);
-          
-            response = await API.post('/upload', formData, {
-              headers: {
-                'Content-Type': 'multipart/form-data',
-              },
-              timeout: 15000,
-              onUploadProgress: (progressEvent) => {
-                if (progressEvent.total) {
-                  const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                  console.log(`Upload progress: ${progress}%`);
-                }
-              }
-            });
-          
-            break;
-          } catch (err) {
-            retries++;
-            if (retries > maxRetries) {
-              throw err;
-            }
-            console.log(`Upload failed, retrying (${retries}/${maxRetries})...`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-      } catch (uploadError) {
-        console.error('Upload failed:', uploadError);
-       
-        alert('Upload service is currently unavailable. Using local image storage for now. Note: This image will only work in this browser session.');
-       
-        setImages(prev => prev.filter(img => img.id !== tempImage.id));
-       
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const dataUrl = reader.result;
-          const permanentImage = {
-            id: Date.now(),
-            url: dataUrl,
-            isUploaded: true,
-            isLocal: true,
-            fileName: file.name
-          };
-          setImages(prev => [...prev, permanentImage]);
-        };
-        reader.readAsDataURL(file);
-       
-        setUploading(false);
-        return;
-      }
-     
-      console.log('Upload response:', response.data);
-     
+      
+      console.log('📤 Uploading file:', file.name, `(${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+      
+      const response = await API.post('/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      console.log('📥 Upload response:', response.data);
+      
       if (response.data.success) {
-        setImages(prev => {
-          const filtered = prev.filter(img => img.id !== tempImage.id);
-          const newImage = {
-            id: Date.now(),
-            url: response.data.data.url,
-            isUploaded: true,
-            isPlaceholder: response.data.data.isPlaceholder,
-            isFallback: response.data.data.isFallback
-          };
-          return [...filtered, newImage];
-        });
-       
-        URL.revokeObjectURL(previewUrl);
-       
-        if (response.data.data.isPlaceholder || response.data.data.isFallback) {
-          console.warn('Using fallback/placeholder image');
-          alert('Note: Using a placeholder image because the image upload service is currently unavailable.');
+        // 4. Update with server URL (NOT data URL)
+        const uploadedImage = {
+          id: tempId,
+          url: response.data.data.url, // This is the actual file URL
+          isUploaded: true,
+          fileName: response.data.data.fileName
+        };
+        
+        if (isGallery) {
+          setGalleryImages(prev => prev.map(img => 
+            img.id === tempId ? uploadedImage : img
+          ));
+        } else {
+          setImages(prev => prev.map(img => 
+            img.id === tempId ? uploadedImage : img
+          ));
         }
+        
+        // Clean up preview URL
+        URL.revokeObjectURL(previewUrl);
+        
+        console.log('✅ Image saved to server:', response.data.data.url);
       } else {
-        throw new Error(response.data.error || 'Upload failed with unknown error');
+        throw new Error(response.data.error || 'Upload failed');
       }
-    } catch (error) {
-      console.error('Error in image upload process:', error);
-      console.log('Error details:', error.response ? error.response.data : error.message);
-     
-      const placeholderUrl = `https://picsum.photos/seed/${Date.now()}/800/600`;
-      const newImage = {
-        id: Date.now(),
-        url: placeholderUrl,
-        isUploaded: true,
-        isPlaceholder: true,
-        isFallback: true
-      };
-     
-      setImages([...images.filter(img => !img.isTemp), newImage]);
-     
-      alert(`Note: Using a placeholder image because the upload failed. Your excursion will still be saved.`);
-    } finally {
-      setUploading(false);
+    } catch (uploadError) {
+      console.error('❌ Upload error:', uploadError);
+      
+      // Don't fall back to data URL - show error
+      alert(`Failed to upload "${file.name}". Please try again or use a smaller image.`);
+      
+      // Remove the temporary preview
+      if (isGallery) {
+        setGalleryImages(prev => prev.filter(img => img.id !== tempId));
+      } else {
+        setImages(prev => prev.filter(img => img.id !== tempId));
+      }
     }
-  };
+  }
+  
+  setUploading(false);
+};
   // Handle gallery image upload
   const handleGalleryImageUpload = async (event) => {
     const files = Array.from(event.target.files);
