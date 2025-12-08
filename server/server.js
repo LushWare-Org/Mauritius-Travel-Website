@@ -23,6 +23,12 @@ const dashboardRoutes = require('./routes/dashboard.routes');
 const userBookingRoutes = require('./routes/userBooking.routes');
 const userContactRoutes = require('./routes/userContactRoutes');
 const contactRoutes = require('./routes/contactRoutes');
+const tourPackageBookingRoutes = require('./routes/tourPackageBooking.routes');
+const userTourPackageBookingRoutes = require('./routes/userTourPackageBooking.routes');
+const tourPackageRoutes = require('./routes/tourPackage.routes'); 
+const feedbackRoutes = require('./routes/feedback');
+
+
 
 const airportTransferRoutes = require('./routes/airportTransfer');
 const airportTransferBookingRoutes = require('./routes/airportTransferBooking');
@@ -244,6 +250,11 @@ app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/user/bookings', userBookingRoutes);
 app.use('/api/v1/contact', contactRoutes); // Public submit + admin routes
 app.use('/api/v1/user/contact', userContactRoutes); // User's own contacts
+app.use('/api/v1/tour-package-bookings', tourPackageBookingRoutes);
+app.use('/api/v1/user/tour-package-bookings', userTourPackageBookingRoutes);
+app.use('/api/v1/tour-packages', tourPackageRoutes);
+app.use('/api/v1/feedback', feedbackRoutes);
+
 
 app.use('/api/v1/airport-transfers', airportTransferRoutes);
 app.use('/api/v1/airport-transfer-bookings', airportTransferBookingRoutes);

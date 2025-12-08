@@ -1,8 +1,10 @@
 const Activity = require('../models/Activity');
 const User = require('../models/User');
 const Booking = require('../models/Booking');
-const Contact = require('../models/Contact'); // ADD THIS
-const AirportTransferBooking = require('../models/AirportTransferBooking'); // ADD THIS
+const Contact = require('../models/Contact');
+const AirportTransferBooking = require('../models/AirportTransferBooking');
+const TourPackage = require('../models/TourPackage');
+const TourPackageBooking = require('../models/TourPackageBooking');
 
 // @desc    Get dashboard statistics
 // @route   GET /api/v1/dashboard/stats
@@ -10,13 +12,23 @@ const AirportTransferBooking = require('../models/AirportTransferBooking'); // A
 exports.getStats = async (req, res) => {
   try {
     // Get counts of various entities
-    const [totalActivities, totalUsers, totalBookings, pendingBookings] =
-      await Promise.all([
-        Activity.countDocuments(),
-        User.countDocuments(),
-        Booking.countDocuments(),
-        Booking.countDocuments({ status: 'pending' }),
-      ]);
+    const [
+      totalActivities,
+      totalUsers,
+      totalBookings,
+      pendingBookings,
+      totalTourPackages,
+      totalTourPackagesBookings,
+      pendingTourPackagesBookings,
+    ] = await Promise.all([
+      Activity.countDocuments(),
+      User.countDocuments(),
+      Booking.countDocuments(),
+      Booking.countDocuments({ status: 'pending' }),
+      TourPackage.countDocuments(),
+      TourPackageBooking.countDocuments(),
+      TourPackageBooking.countDocuments({ status: 'pending' }),
+    ]);
 
     // Get contact stats
     const totalContacts = await Contact.countDocuments();
@@ -70,27 +82,50 @@ exports.getStats = async (req, res) => {
         totalUsers,
         totalBookings,
         pendingBookings,
-        
+
         // Contact stats
         totalContacts,
         unreadContacts,
-        
+
         // Airport transfer stats
         airportTransfers: {
           totalBookings: airportTransferStats[0]?.totalBookings[0]?.count || 0,
-          pendingBookings: airportTransferStats[0]?.pendingBookings[0]?.count || 0,
-          confirmedBookings: airportTransferStats[0]?.confirmedBookings[0]?.count || 0,
-          completedBookings: airportTransferStats[0]?.completedBookings[0]?.count || 0,
+          pendingBookings:
+            airportTransferStats[0]?.pendingBookings[0]?.count || 0,
+          confirmedBookings:
+            airportTransferStats[0]?.confirmedBookings[0]?.count || 0,
+          completedBookings:
+            airportTransferStats[0]?.completedBookings[0]?.count || 0,
           totalRevenue: airportTransferStats[0]?.totalRevenue[0]?.total || 0,
         },
-        
+
         // Recent data
         recentBookings,
         recentAirportBookings,
-        
+
         // Additional useful stats
         statsByMonth: await getMonthlyStats(),
         topActivities: await getTopActivities(),
+      },
+    });
+    const recentTourPackageBookings = await TourPackageBooking.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate('tourPackage', 'title images price')
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalActivities,
+        totalUsers,
+        totalBookings,
+        pendingBookings,
+        totalTourPackages,
+        totalTourPackagesBookings,
+        pendingTourPackagesBookings,
+        recentBookings,
+        recentTourPackageBookings,
       },
     });
   } catch (err) {
@@ -114,29 +149,29 @@ async function getMonthlyStats() {
     const monthlyStats = await Booking.aggregate([
       {
         $match: {
-          createdAt: { $gte: sixMonthsAgo, $lte: currentDate }
-        }
+          createdAt: { $gte: sixMonthsAgo, $lte: currentDate },
+        },
       },
       {
         $group: {
           _id: {
             year: { $year: '$createdAt' },
-            month: { $month: '$createdAt' }
+            month: { $month: '$createdAt' },
           },
           count: { $sum: 1 },
-          revenue: { $sum: '$totalPrice' }
-        }
+          revenue: { $sum: '$totalPrice' },
+        },
       },
       {
-        $sort: { '_id.year': 1, '_id.month': 1 }
-      }
+        $sort: { '_id.year': 1, '_id.month': 1 },
+      },
     ]);
 
     // Format the result
-    return monthlyStats.map(stat => ({
+    return monthlyStats.map((stat) => ({
       month: `${stat._id.year}-${String(stat._id.month).padStart(2, '0')}`,
       bookings: stat.count,
-      revenue: stat.revenue
+      revenue: stat.revenue,
     }));
   } catch (error) {
     console.error('Error fetching monthly stats:', error);
@@ -152,34 +187,34 @@ async function getTopActivities() {
         $group: {
           _id: '$activity',
           bookings: { $sum: 1 },
-          revenue: { $sum: '$totalPrice' }
-        }
+          revenue: { $sum: '$totalPrice' },
+        },
       },
       {
-        $sort: { bookings: -1 }
+        $sort: { bookings: -1 },
       },
       {
-        $limit: 5
+        $limit: 5,
       },
       {
         $lookup: {
           from: 'activities',
           localField: '_id',
           foreignField: '_id',
-          as: 'activityDetails'
-        }
+          as: 'activityDetails',
+        },
       },
       {
-        $unwind: '$activityDetails'
-      }
+        $unwind: '$activityDetails',
+      },
     ]);
 
-    return topActivities.map(activity => ({
+    return topActivities.map((activity) => ({
       id: activity._id,
       title: activity.activityDetails.title,
       bookings: activity.bookings,
       revenue: activity.revenue,
-      image: activity.activityDetails.image
+      image: activity.activityDetails.image,
     }));
   } catch (error) {
     console.error('Error fetching top activities:', error);

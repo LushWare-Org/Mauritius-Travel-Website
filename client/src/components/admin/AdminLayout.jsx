@@ -34,27 +34,44 @@ const AdminLayout = ({ children }) => {
     },
     { path: '/admin/bookings', icon: 'fa-calendar-check', text: 'Bookings' },
     { path: '/admin/users', icon: 'fa-users', text: 'Users' },
-    { path: '/admin/dashboard?tab=contacts', icon: 'fa-envelope', text: 'Contact Inquiries' },
-    { path: '/admin/dashboard?tab=airport-transfers', icon: 'fa-plane', text: 'Airport Transfers' },
+    {
+      path: '/admin/tour-packages',
+      icon: 'fa-umbrella-beach',
+      text: 'TourPackages',
+    },
+
+    {
+      path: '/admin/dashboard?tab=contacts',
+      icon: 'fa-envelope',
+      text: 'Contact Inquiries',
+    },
+    {
+      path: '/admin/dashboard?tab=airport-transfers',
+      icon: 'fa-plane',
+      text: 'Airport Transfers',
+    },
   ];
 
   // Check if link is active (including query parameters)
   const isActive = (path) => {
     // Extract path and query parameters
     const [pathPart, queryPart] = path.split('?');
-    
+
     // Check if the current location matches the path
-    if (location.pathname !== pathPart && location.pathname !== '/admin/dashboard') {
+    if (
+      location.pathname !== pathPart &&
+      location.pathname !== '/admin/dashboard'
+    ) {
       return false;
     }
-    
+
     // For paths with query parameters (dashboard tabs)
     if (queryPart) {
       const queryParams = new URLSearchParams(queryPart);
       const currentParams = new URLSearchParams(location.search);
       const tab = queryParams.get('tab');
       const currentTab = currentParams.get('tab');
-      
+
       // If we're on dashboard and the tab matches
       if (location.pathname === '/admin/dashboard') {
         if (tab && currentTab) {
@@ -64,7 +81,7 @@ const AdminLayout = ({ children }) => {
         return !tab && !currentTab;
       }
     }
-    
+
     // For exact path matches
     return location.pathname === path;
   };
@@ -79,9 +96,11 @@ const AdminLayout = ({ children }) => {
       if (tab === 'airport-transfers') return 'Airport Transfers';
       return 'Dashboard';
     }
-    
+
     // Check for other pages
-    const currentLink = navLinks.find((link) => location.pathname === link.path);
+    const currentLink = navLinks.find(
+      (link) => location.pathname === link.path
+    );
     return currentLink ? currentLink.text : 'Admin Panel';
   };
 

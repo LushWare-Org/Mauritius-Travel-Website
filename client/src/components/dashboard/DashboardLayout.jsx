@@ -27,6 +27,7 @@ const DashboardLayout = ({ children, title }) => {
     { path: '/contacthistory', icon: 'fas fa-envelope', label: 'Contact History' },
     { path: '/dashboard/profile', icon: 'fas fa-user-edit', label: 'Edit Profile' },
     { path: '/dashboard/airport-transfers', icon: 'fas fa-plane', label: 'Airport Transfers' },
+    { path: '/dashboard/tour-package-bookings', icon: 'fas fa-question-circle', label: 'Tour Packages' },
   ];
 
   return (
