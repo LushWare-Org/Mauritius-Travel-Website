@@ -475,23 +475,7 @@ const BookingRequest = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {/* Email */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Email Address
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      disabled={!!currentUser}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm ${
-                        currentUser 
-                          ? 'bg-blue-50 text-blue-700 border-blue-200' 
-                          : 'bg-gray-50 border-gray-200'
-                      }`}
-                      placeholder="your@email.com"
-                      required
-                    />
+                    
                     {currentUser && (
                       <div className="mt-1.5 text-xs text-blue-600 flex items-center">
                         <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">

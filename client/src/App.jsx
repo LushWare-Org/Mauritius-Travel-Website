@@ -9,6 +9,7 @@ import { useEffect } from 'react';
 import authDiagnostic from './utils/authDiagnostic';
 import AuthMonitor from './components/auth/AuthMonitor';
 import { wakeUpBackend, keepBackendAwake } from './utils/wakeUpBackend';
+import RouteDebugger from './components/debug/RouteDebugger';
 
 // Import environment checker for development debugging
 if (import.meta.env.DEV) {
@@ -67,13 +68,20 @@ import Navbar from './components/common/Navbar';
 import ContactHistory from './pages/UserContactHistory';
 import DashboardLayout from './components/dashboard/DashboardLayout';
 import HelpCenter from './pages/HelpCenter';
+import TourPackages from './pages/TourPackages';
+import TourPackageDetail from './pages/TourPackageDetail.jsx';
+import TourPackageBookingRequest from './pages/TourPackageBookingRequest';
+import MyTourPackageBookings from './pages/dashboard/MyTourPackageBookings.jsx';
+import UserTourPackageBookingDetail from './pages/dashboard/TourPackageBookingDetail';
+import TourPackageBookingConfirmation from './components/tour-detail/TourPackageBookingConfirmation';
+import BookingConfirmation from './pages/BookingConfirmation';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminActivities from './pages/admin/Activities';
 import ActivityForm from './pages/admin/ActivityForm';
 import AdminBookings from './pages/admin/Bookings';
-import AdminBookingDetail from './pages/admin/BookingDetail'; // Add this import
+import AdminBookingDetail from './pages/admin/BookingDetail';
 import AdminUsers from './pages/admin/Users';
 import AdminActivityView from './pages/admin/AdminActivityView';
 
@@ -83,6 +91,11 @@ import AirportTransfers from './pages/admin/AirportTransfers';
 import AirportTransferForm from './pages/admin/AirportTransferForm';
 import AirportTransferBookings from './pages/admin/AirportTransferBookings';
 import UserAirportTransfers from './pages/dashboard/UserAirportTransfers';
+import AdminTourPackages from './pages/admin/TourPackages';
+import AdminTourPackageView from './pages/admin/AdminTourPackageView.jsx';
+import TourPackageForm from './pages/admin/TourPackageForm';
+import AdminTourPackageBooking from './pages/admin/AdminTourPackageBooking';
+import AdminTourPackageBookingDetail from './pages/admin/TourPackageBookingDetail';
 
 // Wrapper component to conditionally render Header and Navbar
 const AppContent = () => {
@@ -107,7 +120,17 @@ const AppContent = () => {
           <Route path="/activities/:id" element={<ActivityDetail />} />
           <Route path="/booking/:id" element={<BookingRequest />} />
           <Route path="/airport-transfers" element={<AirportTransferList />} />
-             <Route path="/help" element={<HelpCenter />} />
+          <Route path="/help" element={<HelpCenter />} />
+          <Route path="/tour-packages" element={<TourPackages />} />
+          <Route path="/tour-packages/:id" element={<TourPackageDetail />} />
+          <Route
+            path="/tour-package-booking-request/:id"
+            element={<TourPackageBookingRequest />}
+          />
+          <Route
+            path="/booking-confirmation"
+            element={<BookingConfirmation />}
+          />
           <Route
             path="/airport-transfer/book/:id?"
             element={<AirportTransferBookingForm />}
@@ -118,6 +141,30 @@ const AppContent = () => {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           {/* User Dashboard Routes */}
+          <Route
+            path="/dashboard/tour-package-bookings"
+            element={
+              <ProtectedRoute>
+                <MyTourPackageBookings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/tour-package-bookings/:id"
+            element={
+              <ProtectedRoute>
+                <UserTourPackageBookingDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tour-package-booking-confirmation/:id"
+            element={
+              <ProtectedRoute>
+                <TourPackageBookingConfirmation />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/dashboard"
             element={
@@ -172,6 +219,54 @@ const AppContent = () => {
             }
           />
           {/* Admin Routes */}
+          <Route
+            path="/admin/tour-packages"
+            element={
+              <AdminRoute>
+                <AdminTourPackages />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/tour-packages/new"
+            element={
+              <AdminRoute>
+                <TourPackageForm />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/tour-packages/:id"
+            element={
+              <AdminRoute>
+                <TourPackageForm />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/tour-packages/view/:id"
+            element={
+              <AdminRoute>
+                <AdminTourPackageView />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/tour-package-bookings"
+            element={
+              <AdminRoute>
+                <AdminTourPackageBooking />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/tour-package-bookings/:id"
+            element={
+              <AdminRoute>
+                <AdminTourPackageBookingDetail />
+              </AdminRoute>
+            }
+          />
           <Route
             path="/admin/dashboard"
             element={
