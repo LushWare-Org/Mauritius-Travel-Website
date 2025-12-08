@@ -54,6 +54,7 @@ const Navbar = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [profileDropdownOpen]);
+
   return (
     <nav
       className={`sticky top-0 z-50 transition-all duration-300 backdrop-blur-sm ${
@@ -96,6 +97,23 @@ const Navbar = () => {
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-yellow-400 group-hover:w-full transition-all duration-300"></span>
               )}
             </Link>
+
+            <Link
+              to="/tour-packages"
+              className={`text-white hover:text-yellow-400 transition-colors relative ${
+                location.pathname === '/tour-packages'
+                  ? 'font-semibold text-yellow-400'
+                  : 'hover:scale-105 transform'
+              }`}
+            >
+              Tour Packages
+              {location.pathname === '/tour-packages' && (
+                <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-yellow-400"></span>
+              )}
+              {location.pathname !== '/tour-packages' && (
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-yellow-400 group-hover:w-full transition-all duration-300"></span>
+              )}
+            </Link>
             <Link
               to="/activities"
               className={`text-white hover:text-yellow-400 transition-colors relative ${
@@ -128,40 +146,6 @@ const Navbar = () => {
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-yellow-400 group-hover:w-full transition-all duration-300"></span>
               )}
             </Link>
-            {/*   <div className="relative group">
-              <button className="flex items-center text-white hover:text-yellow-400 transition-all hover:scale-105 transform">
-                Destinations{' '}
-                <i className="fas fa-chevron-down ml-1 text-xs group-hover:rotate-180 transition-transform duration-300"></i>
-              </button>
-              <div className="absolute left-0 mt-2 w-48 bg-white/95 backdrop-blur-md rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 border border-blue-200/20">
-                <div className="py-2">
-                  <Link
-                    to="/activities?location=male"
-                    className="block px-4 py-2 text-gray-800 hover:bg-blue-100/80 hover:text-blue-900"
-                  >
-                    Malé
-                  </Link>
-                  <Link
-                    to="/activities?location=ari-atoll"
-                    className="block px-4 py-2 text-gray-800 hover:bg-blue-100/80 hover:text-blue-900"
-                  >
-                    Ari Atoll
-                  </Link>
-                  <Link
-                    to="/activities?location=baa-atoll"
-                    className="block px-4 py-2 text-gray-800 hover:bg-blue-100/80 hover:text-blue-900"
-                  >
-                    Baa Atoll
-                  </Link>
-                  <Link
-                    to="/activities"
-                    className="block px-4 py-2 text-gray-800 hover:bg-blue-100/80 hover:text-blue-900"
-                  >
-                    All Destinations
-                  </Link>
-                </div>
-              </div>
-            </div>*/}
             <Link
               to="/about"
               className={`text-white hover:text-yellow-400 transition-colors relative ${
@@ -223,51 +207,211 @@ const Navbar = () => {
                         /* Admin specific links */
                         <>
                           {/* Menu Items Grid */}
+                           <div className="space-y-0.5 px-2">
+                            <Link
+                              to="/admin/dashboard"
+                              className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-purple-50 rounded-md transition-colors"
+                            >
+                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white text-xs shadow">
+                                <i className="fas fa-tachometer-alt"></i>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 text-sm group-hover:text-purple-700 truncate">
+                                  Dashboard
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  Overview & Analytics
+                                </div>
+                              </div>
+                            </Link>
+
+                            <Link
+                              to="/admin/activities"
+                              className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-blue-50 rounded-md transition-colors"
+                            >
+                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white text-xs shadow">
+                                <i className="fas fa-water"></i>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 text-sm group-hover:text-blue-700 truncate">
+                                  Excursions
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  Manage Activities
+                                </div>
+                              </div>
+                            </Link>
+
+                            <Link
+                              to="/admin/tour-packages"
+                              className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-amber-50 rounded-md transition-colors"
+                            >
+                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white text-xs shadow">
+                                <i className="fas fa-suitcase-rolling"></i>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 text-sm group-hover:text-amber-700 truncate">
+                                  Tour Packages
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  Manage Packages
+                                </div>
+                              </div>
+                            </Link>
+
+                            <Link
+                              to="/admin/bookings"
+                              className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-emerald-50 rounded-md transition-colors"
+                            >
+                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center text-white text-xs shadow">
+                                <i className="fas fa-calendar-check"></i>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 text-sm group-hover:text-emerald-700 truncate">
+                                  Bookings
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  Activity Reservations
+                                </div>
+                              </div>
+                            </Link>
+
+                            <Link
+                              to="/admin/tour-package-bookings"
+                              className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-violet-50 rounded-md transition-colors"
+                            >
+                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-white text-xs shadow">
+                                <i className="fas fa-ticket-alt"></i>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 text-sm group-hover:text-violet-700 truncate">
+                                  Tour Bookings
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  Package Reservations
+                                </div>
+                              </div>
+                            </Link>
+
+                            <Link
+                              to="/admin/users"
+                              className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-orange-50 rounded-md transition-colors"
+                            >
+                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white text-xs shadow">
+                                <i className="fas fa-users"></i>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 text-sm group-hover:text-orange-700 truncate">
+                                  Users
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  Manage Accounts
+                                </div>
+                              </div>
+                            </Link>
+                          </div>
+
+                          {/* Airport Services Section */}
+                          <div className="mt-2 border-t border-gray-100 pt-2">
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-2 py-2">
+                              Airport Services
+                            </div>
+
+                            <Link
+                              to="/admin/airport-transfers"
+                              className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-indigo-50 rounded-md transition-colors"
+                            >
+                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-white text-xs shadow">
+                                <i className="fas fa-plane"></i>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 text-sm group-hover:text-indigo-700 truncate">
+                                  Transfers
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  Transport Services
+                                </div>
+                              </div>
+                            </Link>
+
+                            <Link
+                              to="/admin/airport-transfer-bookings"
+                              className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-cyan-50 rounded-md transition-colors"
+                            >
+                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-white text-xs shadow">
+                                <i className="fas fa-ticket-alt"></i>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 text-sm group-hover:text-cyan-700 truncate">
+                                  Transfer Bookings
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  Reservation Management
+                                </div>
+                              </div>
+                            </Link>
+
+                            <Link
+                              to="/admin/dashboard?tab=contacts"
+                              className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-pink-50 rounded-md transition-colors"
+                            >
+                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-white text-xs shadow">
+                                <i className="fas fa-address-book"></i>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 text-sm group-hover:text-pink-700 truncate">
+                                  Contact Messages
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  Customer Support
+                                </div>
+                              </div>
+                            </Link>
+                          </div>
+                        </>
+                      ) : (
+                        /* Regular user links */
+                        <>
                           <div className="grid grid-cols-2 gap-2 px-3 py-2">
                             {/* Dashboard */}
                             <Link
-                              to="/admin/dashboard"
-                              className="group relative block p-3 text-gray-800 hover:bg-gradient-to-br hover:from-purple-50 hover:to-white rounded-lg transition-all duration-250 hover:shadow-md hover:-translate-y-0.5 border border-gray-100 hover:border-purple-200"
+                              to="/dashboard"
+                              className="group relative block p-3 text-gray-800 hover:bg-gradient-to-br hover:from-blue-50 hover:to-white rounded-lg transition-all duration-250 hover:shadow-md hover:-translate-y-0.5 border border-gray-100 hover:border-blue-200"
                             >
                               <div className="flex flex-col items-center text-center">
-                                <div className="relative mb-2">
-                                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform duration-250">
-                                    <i className="fas fa-user-shield text-base"></i>
-                                  </div>
-                                  <div className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-green-400 border-2 border-white flex items-center justify-center">
-                                    <i className="fas fa-circle text-[6px] text-white"></i>
-                                  </div>
+                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform duration-250 mb-2">
+                                  <i className="fas fa-tachometer-alt text-base"></i>
                                 </div>
-                                <div className="font-medium text-gray-900 group-hover:text-purple-700 transition-colors text-sm">
-                                  Admin Panel
+                                <div className="font-medium text-gray-900 group-hover:text-blue-700 transition-colors text-sm">
+                                  Dashboard
                                 </div>
-                                <div className="text-xs text-gray-500 group-hover:text-purple-500 transition-colors mt-0.5">
+                                <div className="text-xs text-gray-500 group-hover:text-blue-500 transition-colors mt-0.5">
                                   Overview
                                 </div>
                               </div>
                             </Link>
 
-                            {/* Activities */}
+                            {/* Profile */}
                             <Link
-                              to="/admin/activities"
-                              className="group relative block p-3 text-gray-800 hover:bg-gradient-to-br hover:from-blue-50 hover:to-white rounded-lg transition-all duration-250 hover:shadow-md hover:-translate-y-0.5 border border-gray-100 hover:border-blue-200"
+                              to="/profile"
+                              className="group relative block p-3 text-gray-800 hover:bg-gradient-to-br hover:from-purple-50 hover:to-white rounded-lg transition-all duration-250 hover:shadow-md hover:-translate-y-0.5 border border-gray-100 hover:border-purple-200"
                             >
                               <div className="flex flex-col items-center text-center">
-                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform duration-250 mb-2">
-                                  <i className="fas fa-water text-base"></i>
+                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform duration-250 mb-2">
+                                  <i className="fas fa-user text-base"></i>
                                 </div>
-                                <div className="font-medium text-gray-900 group-hover:text-blue-700 transition-colors text-sm">
-                                  Excursions
+                                <div className="font-medium text-gray-900 group-hover:text-purple-700 transition-colors text-sm">
+                                  Profile
                                 </div>
-                                <div className="text-xs text-gray-500 group-hover:text-blue-500 transition-colors mt-0.5">
-                                  Activities
+                                <div className="text-xs text-gray-500 group-hover:text-purple-500 transition-colors mt-0.5">
+                                  Account
                                 </div>
                               </div>
                             </Link>
 
                             {/* Bookings */}
                             <Link
-                              to="/admin/bookings"
+                              to="/dashboard/bookings"
                               className="group relative block p-3 text-gray-800 hover:bg-gradient-to-br hover:from-emerald-50 hover:to-white rounded-lg transition-all duration-250 hover:shadow-md hover:-translate-y-0.5 border border-gray-100 hover:border-emerald-200"
                             >
                               <div className="flex flex-col items-center text-center">
@@ -283,135 +427,44 @@ const Navbar = () => {
                               </div>
                             </Link>
 
-                            {/* Users */}
+                            {/* Tour Package Bookings */}
                             <Link
-                              to="/admin/users"
-                              className="group relative block p-3 text-gray-800 hover:bg-gradient-to-br hover:from-orange-50 hover:to-white rounded-lg transition-all duration-250 hover:shadow-md hover:-translate-y-0.5 border border-gray-100 hover:border-orange-200"
+                              to="/dashboard/tour-package-bookings"
+                              className="group relative block p-3 text-gray-800 hover:bg-gradient-to-br hover:from-amber-50 hover:to-white rounded-lg transition-all duration-250 hover:shadow-md hover:-translate-y-0.5 border border-gray-100 hover:border-amber-200"
                             >
                               <div className="flex flex-col items-center text-center">
-                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform duration-250 mb-2">
-                                  <i className="fas fa-users text-base"></i>
+                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform duration-250 mb-2">
+                                  <i className="fas fa-suitcase-rolling text-base"></i>
                                 </div>
-                                <div className="font-medium text-gray-900 group-hover:text-orange-700 transition-colors text-sm">
-                                  Users
+                                <div className="font-medium text-gray-900 group-hover:text-amber-700 transition-colors text-sm">
+                                  Tour Bookings
                                 </div>
-                                <div className="text-xs text-gray-500 group-hover:text-orange-500 transition-colors mt-0.5">
-                                  Accounts
+                                <div className="text-xs text-gray-500 group-hover:text-amber-500 transition-colors mt-0.5">
+                                  Package Reservations
                                 </div>
                               </div>
                             </Link>
                           </div>
-
-                          {/* Airport Services Header */}
-                          <div className="px-4 py-2.5 mt-2 mb-1 border-y border-gray-100">
-                            <div className="flex items-center">
-                              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center mr-3 shadow-sm">
-                                <i className="fas fa-plane-departure text-white text-xs"></i>
-                              </div>
-                              <div>
-                                <span className="text-sm font-bold text-gray-900">
-                                  Airport Services
-                                </span>
-                                <p className="text-xs text-gray-500 mt-0.5">
-                                  Transportation & bookings
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Airport Services Grid */}
-                          <div className="grid grid-cols-2 gap-2 px-3 py-2">
-                            {/* Airport Transfers */}
-                            <Link
-                              to="/admin/airport-transfers"
-                              className="group relative block p-3 text-gray-800 hover:bg-gradient-to-br hover:from-indigo-50 hover:to-white rounded-lg transition-all duration-250 hover:shadow-md hover:-translate-y-0.5 border border-gray-100 hover:border-indigo-200"
-                            >
-                              <div className="flex flex-col items-center text-center">
-                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform duration-250 mb-2">
-                                  <i className="fas fa-plane text-base"></i>
-                                </div>
-                                <div className="font-medium text-gray-900 group-hover:text-indigo-700 transition-colors text-sm">
-                                  Transfers
-                                </div>
-                                <div className="text-xs text-gray-500 group-hover:text-indigo-500 transition-colors mt-0.5">
-                                  Transport
-                                </div>
-                              </div>
-                            </Link>
-
-                            {/* Transfer Bookings */}
-                            <Link
-                              to="/admin/airport-transfer-bookings"
-                              className="group relative block p-3 text-gray-800 hover:bg-gradient-to-br hover:from-cyan-50 hover:to-white rounded-lg transition-all duration-250 hover:shadow-md hover:-translate-y-0.5 border border-gray-100 hover:border-cyan-200"
-                            >
-                              <div className="flex flex-col items-center text-center">
-                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform duration-250 mb-2">
-                                  <i className="fas fa-ticket-alt text-base"></i>
-                                </div>
-                                <div className="font-medium text-gray-900 group-hover:text-cyan-700 transition-colors text-sm">
-                                  Transfer Bookings
-                                </div>
-                                <div className="text-xs text-gray-500 group-hover:text-cyan-500 transition-colors mt-0.5">
-                                  Reservations
-                                </div>
-                              </div>
-                            </Link>
-
-                            {/* Contact Messages - Full Width */}
-                            <Link
-                              to="/admin/dashboard?tab=contacts"
-                              className="group relative col-span-2 block p-3 text-gray-800 hover:bg-gradient-to-r hover:from-pink-50 hover:via-white hover:to-pink-50 rounded-lg transition-all duration-250 hover:shadow-md hover:-translate-y-0.5 border border-gray-100 hover:border-pink-200"
-                            >
-                              <div className="flex items-center">
-                                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform duration-250 mr-3">
-                                  <i className="fas fa-address-book text-sm"></i>
-                                </div>
-                                <div className="flex-1 text-left">
-                                  <div className="font-medium text-gray-900 group-hover:text-pink-700 transition-colors text-sm">
-                                    Contact Messages
-                                  </div>
-                                  <div className="text-xs text-gray-500 group-hover:text-pink-500 transition-colors mt-0.5">
-                                    Customer inquiries & support
-                                  </div>
-                                </div>
-                                <i className="fas fa-chevron-right text-xs text-gray-300 group-hover:text-pink-400 group-hover:translate-x-1 transition-all ml-2"></i>
-                              </div>
-                            </Link>
-                          </div>
-                        </>
-                      ) : (
-                        /* Regular user links */
-                        <>
-                          <Link
-                            to="/dashboard"
-                            className="block px-4 py-2 text-gray-800 hover:bg-blue-100/80 hover:text-blue-900 transition-colors"
-                          >
-                            <i className="fas fa-tachometer-alt mr-2 text-blue-600"></i>{' '}
-                            Dashboard
-                          </Link>
-                          <Link
-                            to="/profile"
-                            className="block px-4 py-2 text-gray-800 hover:bg-blue-100/80 hover:text-blue-900 transition-colors"
-                          >
-                            <i className="fas fa-user mr-2 text-blue-600"></i>{' '}
-                            My Profile
-                          </Link>
-                          <Link
-                            to="/dashboard/bookings"
-                            className="block px-4 py-2 text-gray-800 hover:bg-blue-100/80 hover:text-blue-900 transition-colors"
-                          >
-                            <i className="fas fa-bookmark mr-2 text-blue-600"></i>{' '}
-                            My Bookings
-                          </Link>
                         </>
                       )}
                       <div className="border-t border-gray-100 my-1"></div>
                       <button
                         onClick={handleSignOut}
-                        className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-red-100 hover:text-red-800 transition-colors"
+                        className="group relative w-full text-left px-4 py-3 text-gray-800 hover:bg-gradient-to-r hover:from-red-50 hover:to-white transition-all duration-250 border-b border-gray-100 last:border-b-0"
                       >
-                        <i className="fas fa-sign-out-alt mr-2 text-red-600"></i>{' '}
-                        Sign Out
+                        <div className="flex items-center">
+                          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform duration-250 mr-3">
+                            <i className="fas fa-sign-out-alt text-sm"></i>
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900 group-hover:text-red-700 transition-colors text-sm">
+                              Sign Out
+                            </div>
+                            <div className="text-xs text-gray-500 group-hover:text-red-500 transition-colors mt-0.5">
+                              Logout from account
+                            </div>
+                          </div>
+                        </div>
                       </button>
                     </div>
                   </div>
@@ -469,6 +522,19 @@ const Navbar = () => {
               )}
             </Link>
             <Link
+              to="/tour-packages"
+              className={`text-white hover:text-yellow-400 transition-colors flex items-center ${
+                location.pathname === '/tour-packages'
+                  ? 'font-semibold text-yellow-400'
+                  : ''
+              }`}
+            >
+              <i className="fas fa-suitcase-rolling mr-2"></i> Tour Packages
+              {location.pathname === '/tour-packages' && (
+                <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
+              )}
+            </Link>
+            <Link
               to="/activities"
               className={`text-white hover:text-yellow-400 transition-colors flex items-center ${
                 location.pathname === '/activities'
@@ -491,19 +557,6 @@ const Navbar = () => {
             >
               <i className="fas fa-plane mr-2"></i> Airport Transfers
               {location.pathname === '/airport-transfers' && (
-                <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
-              )}
-            </Link>
-            <Link
-              to="/destinations"
-              className={`text-white hover:text-yellow-400 transition-colors flex items-center ${
-                location.pathname === '/destinations'
-                  ? 'font-semibold text-yellow-400'
-                  : ''
-              }`}
-            >
-              <i className="fas fa-map-marker-alt mr-2"></i> Destinations
-              {location.pathname === '/destinations' && (
                 <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
               )}
             </Link>
@@ -553,10 +606,24 @@ const Navbar = () => {
                       <i className="fas fa-water mr-2"></i> Manage Excursions
                     </Link>
                     <Link
+                      to="/admin/tour-packages"
+                      className="text-white hover:text-yellow-300 transition-colors flex items-center"
+                    >
+                      <i className="fas fa-suitcase-rolling mr-2"></i> Manage
+                      Tour Packages
+                    </Link>
+                    <Link
                       to="/admin/bookings"
                       className="text-white hover:text-yellow-300 transition-colors flex items-center"
                     >
                       <i className="fas fa-calendar-check mr-2"></i> Manage
+                      Bookings
+                    </Link>
+                    <Link
+                      to="/admin/tour-package-bookings"
+                      className="text-white hover:text-yellow-300 transition-colors flex items-center"
+                    >
+                      <i className="fas fa-ticket-alt mr-2"></i> Tour Package
                       Bookings
                     </Link>
                     <Link
@@ -590,9 +657,16 @@ const Navbar = () => {
                     </Link>
                     <Link
                       to="/dashboard/bookings"
-                      className="text-white hover:text-yellow-300 transition-colors"
+                      className="text-white hover:text-yellow-300 transition-colors flex items-center"
                     >
-                      My Bookings
+                      <i className="fas fa-calendar-check mr-2"></i> My Bookings
+                    </Link>
+                    <Link
+                      to="/dashboard/tour-package-bookings"
+                      className="text-white hover:text-yellow-300 transition-colors flex items-center"
+                    >
+                      <i className="fas fa-suitcase-rolling mr-2"></i> Tour
+                      Package Bookings
                     </Link>
                   </>
                 )}
@@ -607,19 +681,19 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
-                  className="text-white hover:text-yellow-300 transition-colors"
+                  className="text-white hover:text-yellow-300 transition-colors flex items-center"
                 >
-                  <i className="fas fa-user mr-1"></i> Login
+                  <i className="fas fa-user mr-2"></i> Login
                 </Link>
                 <Link
                   to="/signup"
-                  className="text-white hover:text-yellow-300 transition-colors"
+                  className="text-white hover:text-yellow-300 transition-colors flex items-center"
                 >
-                  <i className="fas fa-user-plus mr-1"></i> Sign Up
+                  <i className="fas fa-user-plus mr-2"></i> Sign Up
                 </Link>
                 <Link
                   to="/activities"
-                  className="bg-yellow-500 hover:bg-yellow-600 text-blue-900 px-4 py-2 rounded-full font-semibold transition-colors inline-block text-center"
+                  className="bg-yellow-500 hover:bg-yellow-600 text-blue-900 px-4 py-2 rounded-full font-semibold transition-colors inline-block text-center mt-2"
                 >
                   Book Now
                 </Link>
