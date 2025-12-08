@@ -192,6 +192,65 @@ export const activitiesAPI = {
   delete: (id) => API.delete(`/activities/${id}`)
 };
 
+// Tour Packages API
+export const tourPackagesAPI = {
+  baseUrl: API_URL,
+
+  getAll: async (params) => {
+    const response = await API.get('/tour-packages', { params });
+    return response;
+  },
+
+  getById: (id) => API.get(`/tour-packages/${id}`),
+  create: (data) => API.post('/tour-packages', data),
+  update: (id, data) => API.put(`/tour-packages/${id}`, data),
+  delete: (id) => API.delete(`/tour-packages/${id}`)
+};
+
+// Tour Packages Booking API
+export const tourPackageBookingsAPI = {
+  getAll: () => API.get('/tour-package-bookings'),
+  getUpcoming: () => API.get('/tour-package-bookings/upcoming'),
+  getHistory: () => API.get('/tour-package-bookings/history'),
+  getStats: () => API.get('/tour-package-bookings/stats'),
+
+  getById: async (id) => {
+    try {
+      console.log(`🔍 Fetching booking with ID: ${id}`);
+      console.log(`🔗 Full URL: ${API.defaults.baseURL}/tour-package-bookings/${id}`);
+      
+      const response = await API.get(`/tour-package-bookings/${id}`);
+      console.log('✅ Booking fetch successful:', {
+        success: response.data.success,
+        hasData: !!response.data.data,
+        bookingId: response.data.data?._id
+      });
+      return response;
+    } catch (error) {
+      console.error('❌ Error in getById:', {
+        id,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
+      
+      // Re-throw with more context
+      throw new Error(`Failed to fetch booking ${id}: ${error.response?.data?.message || error.message}`);
+    }
+  },
+
+  createWithTransfer: (data) => {
+    return API.post('/tour-package-bookings/with-transfer', data);
+  },
+  
+  create: (data) => API.post('/tour-package-bookings', data),
+  createWithActivities: (data) => API.post('/tour-package-bookings/with-activities', data),
+  cancel: (id) => API.put(`/tour-package-bookings/${id}/cancel`),
+  getAllAdmin: () => API.get('/tour-package-bookings/admin/all'),
+  updateStatus: (id, status) => API.put(`/tour-package-bookings/${id}/status`, { status }),
+};
+
 // Bookings API
 export const bookingsAPI = {
   create: (bookingData) => API.post('/bookings', bookingData),
@@ -222,7 +281,7 @@ export const userBookingsAPI = {
   cancelBooking: (id) => API.put(`/user/bookings/${id}/cancel`)
 };
 
-// ENHANCED: Function to upload image to Cloudinary with multiple fallbacks
+//Function to upload image to Cloudinary with multiple fallbacks
 export const uploadImage = async (file) => {
   console.log('📤 Starting image upload:', {
     fileName: file.name,
