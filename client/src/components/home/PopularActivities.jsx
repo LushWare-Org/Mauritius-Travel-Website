@@ -92,7 +92,7 @@ const PopularActivities = () => {
             <div className="container mx-auto px-4">
                 <div className="flex justify-between items-center mb-12">
                     <div>
-                        <h2 className="text-4xl font-bold text-blue-700 font-display mb-2">Most Popular Activities</h2>
+                        <h2 className="text-4xl font-bold text-blue-700 font-display mb-2">Most Popular Excursions</h2>
                         <p className="text-gray-600 text-lg">Discover what makes our guests come back for more</p>
                     </div>
                     <Link 
@@ -112,7 +112,7 @@ const PopularActivities = () => {
                         <svg className="w-16 h-16 mx-auto mb-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <h3 className="text-xl font-semibold mb-3">Unable to Load Activities</h3>
+                        <h3 className="text-xl font-semibold mb-3">Unable to Load Excursions</h3>
                         <p className="text-red-600 mb-4">{error}</p>
                         <div className="space-y-2 text-sm text-red-500 mb-6">
                             <p>Please check:</p>

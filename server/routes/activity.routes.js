@@ -1,20 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const activityController = require('../controllers/activityController');
+const {
+  getActivities,
+  getActivity,
+  createActivity,
+  updateActivity,
+  deleteActivity
+} = require('../controllers/activityController');
 
-// Route to get all activities
-router.get('/', activityController.getAllActivities);
+// Import middleware
+const { protect, authorize } = require('../middleware/auth');
 
-// Route to get a single activity by ID
-router.get('/:id', activityController.getActivityById);
+// Public routes
+router.route('/').get(getActivities);
+router.route('/:id').get(getActivity);
 
-// Route to create a new activity (admin only)
-router.post('/', activityController.createActivity);
-
-// Route to update an existing activity (admin only)
-router.put('/:id', activityController.updateActivity);
-
-// Route to delete an activity (admin only)
-router.delete('/:id', activityController.deleteActivity);
+// Protected routes (admin only)
+router.route('/').post(protect, authorize('admin'), createActivity);
+router.route('/:id')
+  .put(protect, authorize('admin'), updateActivity)
+  .delete(protect, authorize('admin'), deleteActivity);
 
 module.exports = router;

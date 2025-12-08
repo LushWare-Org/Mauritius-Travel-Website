@@ -166,8 +166,8 @@ const Activities = () => {
             <div className="container mx-auto px-4">
                 {/* Page Header */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-blue-700 font-display">Maldives Activities</h1>
-                    <p className="text-gray-600 mt-2">Discover and book the best experiences in the Maldives</p>
+                    <h1 className="text-3xl font-bold text-blue-700 font-display">Mauritius Paradise</h1>
+                    <p className="text-gray-600 mt-2">Discover and book the best experiences in the Mauritius</p>
                 </div>
                 
                 <div className="flex flex-col lg:flex-row gap-8">
@@ -213,7 +213,7 @@ const Activities = () => {
                         {isLoading ? (
                             <div className="flex flex-col items-center justify-center py-20">
                                 <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
-                                <p className="text-blue-600 font-medium animate-pulse">Finding perfect activities for you...</p>
+                                <p className="text-blue-600 font-medium animate-pulse">Finding perfect excursions for you...</p>
                                 {searchQuery && (
                                     <p className="text-gray-500 mt-2">Searching for "{searchQuery}"</p>
                                 )}

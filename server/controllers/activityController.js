@@ -1,242 +1,291 @@
 const Activity = require('../models/Activity');
 
-// @desc    Get all activities with filtering options
+// @desc    Get all activities
 // @route   GET /api/v1/activities
 // @access  Public
-exports.getAllActivities = async (req, res) => {
+exports.getActivities = async (req, res, next) => {
   try {
-    let query = {};
-    
-    // Filter by activity type
-    if (req.query.type) {
-      if (Array.isArray(req.query.type)) {
-        query.type = { $in: req.query.type };
-      } else {
-        query.type = req.query.type;
-      }
+    // Build query
+    const queryObj = { ...req.query };
+    const excludedFields = ['page', 'sort', 'limit', 'fields'];
+    excludedFields.forEach(el => delete queryObj[el]);
+
+    // Filter by status (only show active by default)
+    if (!queryObj.status) {
+      queryObj.status = 'active';
     }
-    
-    // Filter by price range
-    if (req.query.minPrice || req.query.maxPrice) {
-      query.price = {};
-      if (req.query.minPrice) query.price.$gte = Number(req.query.minPrice);
-      if (req.query.maxPrice) query.price.$lte = Number(req.query.maxPrice);
-    }
-    
-    // Filter by duration
-    if (req.query.minDuration || req.query.maxDuration) {
-      query.duration = {};
-      if (req.query.minDuration) query.duration.$gte = Number(req.query.minDuration);
-      if (req.query.maxDuration) query.duration.$lte = Number(req.query.maxDuration);
-    }
-    
-    // Filter by location
-    if (req.query.location) {
-      query.location = { $regex: req.query.location, $options: 'i' };
-    }
-    
-    // Search by title or description
-    if (req.query.search) {
-      const searchRegex = { $regex: req.query.search, $options: 'i' };
-      query.$or = [
-        { title: searchRegex },
-        { description: searchRegex },
-        { shortDescription: searchRegex },
-        { location: searchRegex }
-      ];
-    }
-    
-    // Filter by featured
-    if (req.query.featured) {
-      query.featured = req.query.featured === 'true';
-    }
-    
-    // Filter by status
-    if (req.query.status) {
-      query.status = req.query.status;
+
+    // Advanced filtering
+    let queryStr = JSON.stringify(queryObj);
+    queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`);
+
+    let query = Activity.find(JSON.parse(queryStr));
+
+    // Sorting
+    if (req.query.sort) {
+      const sortBy = req.query.sort.split(',').join(' ');
+      query = query.sort(sortBy);
     } else {
-      // By default, only show active activities
-      query.status = 'active';
+      query = query.sort('-createdAt');
     }
-    
-    // Sorting options
-    let sortOptions = {};
-    const sortBy = req.query.sortBy || 'popularity';
-    
-    switch (sortBy) {
-      case 'price-asc':
-        sortOptions.price = 1;
-        break;
-      case 'price-desc':
-        sortOptions.price = -1;
-        break;
-      case 'duration':
-        sortOptions.duration = 1;
-        break;
-      case 'popularity':
-      default:
-        sortOptions.rating = -1;
-        break;
+
+    // Field limiting
+    if (req.query.fields) {
+      const fields = req.query.fields.split(',').join(' ');
+      query = query.select(fields);
+    } else {
+      query = query.select('-__v');
     }
-    
-    const activities = await Activity.find(query).sort(sortOptions);
-    
+
+    // Pagination
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const total = await Activity.countDocuments(JSON.parse(queryStr));
+
+    query = query.skip(startIndex).limit(limit);
+
+    // Execute query
+    const activities = await query;
+
+    // Pagination result
+    const pagination = {};
+
+    if (endIndex < total) {
+      pagination.next = {
+        page: page + 1,
+        limit
+      };
+    }
+
+    if (startIndex > 0) {
+      pagination.prev = {
+        page: page - 1,
+        limit
+      };
+    }
+
+    // Ensure price is set properly based on pricingType
+    const activitiesWithPrice = activities.map(activity => {
+      const activityObj = activity.toObject();
+      
+      // For backward compatibility and proper price display
+      if (activityObj.pricingType === 'half-full-day') {
+        // If it's half-full-day pricing, ensure price is set from halfDayPrice
+        if (!activityObj.price && activityObj.halfDayPrice) {
+          activityObj.price = activityObj.halfDayPrice;
+        }
+      } else {
+        // For other pricing types, use fullDayPrice if price is not set
+        if (!activityObj.price && activityObj.fullDayPrice) {
+          activityObj.price = activityObj.fullDayPrice;
+        }
+      }
+      
+      return activityObj;
+    });
+
     res.status(200).json({
       success: true,
       count: activities.length,
-      data: activities
+      pagination,
+      data: activitiesWithPrice,
     });
   } catch (err) {
-    console.error('Error fetching activities:', err);
-    res.status(500).json({
+    res.status(400).json({
       success: false,
-      error: 'Server Error'
+      error: err.message,
     });
   }
 };
 
-// @desc    Get single activity by ID
+// @desc    Get single activity
 // @route   GET /api/v1/activities/:id
 // @access  Public
-exports.getActivityById = async (req, res) => {
+exports.getActivity = async (req, res, next) => {
   try {
     const activity = await Activity.findById(req.params.id);
-    
+
     if (!activity) {
       return res.status(404).json({
         success: false,
-        error: 'Activity not found'
+        error: 'Activity not found',
       });
     }
+
+    // Ensure price is set properly based on pricingType
+    const activityObj = activity.toObject();
     
+    if (activityObj.pricingType === 'half-full-day') {
+      // If it's half-full-day pricing, ensure price is set from halfDayPrice
+      if (!activityObj.price && activityObj.halfDayPrice) {
+        activityObj.price = activityObj.halfDayPrice;
+      }
+    } else {
+      // For other pricing types, use fullDayPrice if price is not set
+      if (!activityObj.price && activityObj.fullDayPrice) {
+        activityObj.price = activityObj.fullDayPrice;
+      }
+    }
+
     res.status(200).json({
       success: true,
-      data: activity
+      data: activityObj,
     });
   } catch (err) {
-    res.status(500).json({
+    res.status(400).json({
       success: false,
-      error: 'Server Error'
+      error: err.message,
     });
   }
 };
 
-// @desc    Create new activity
+// @desc    Create activity
 // @route   POST /api/v1/activities
-// @access  Private (Admin only)
-exports.createActivity = async (req, res) => {
+// @access  Private/Admin
+exports.createActivity = async (req, res, next) => {
   try {
-    console.log('📝 Creating new activity...');
-    console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
+    const activityData = { ...req.body };
     
-    // Check database connection
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      console.error('❌ Database not connected! Connection state:', mongoose.connection.readyState);
-      return res.status(500).json({
-        success: false,
-        error: 'Database connection not available'
-      });
+    // Handle pricing based on pricingType
+    if (activityData.pricingType === 'half-full-day') {
+      // For half-full-day pricing, set price from halfDayPrice
+      if (activityData.halfDayPrice && !activityData.price) {
+        activityData.price = activityData.halfDayPrice;
+      }
+      
+      // Ensure both halfDayPrice and fullDayPrice are provided
+      if (!activityData.halfDayPrice || !activityData.fullDayPrice) {
+        return res.status(400).json({
+          success: false,
+          error: 'Both halfDayPrice and fullDayPrice are required for half-full-day pricing'
+        });
+      }
+    } else if (activityData.pricingType === 'full-day') {
+      // For full-day pricing, set price from fullDayPrice
+      if (activityData.fullDayPrice && !activityData.price) {
+        activityData.price = activityData.fullDayPrice;
+      }
+      
+      // Ensure fullDayPrice is provided
+      if (!activityData.fullDayPrice) {
+        return res.status(400).json({
+          success: false,
+          error: 'fullDayPrice is required for full-day pricing'
+        });
+      }
+    } else {
+      // For other pricing types (like 'fixed'), ensure price is provided
+      if (!activityData.price && activityData.fullDayPrice) {
+        activityData.price = activityData.fullDayPrice;
+      }
     }
-    
-    console.log('✅ Database connection verified');
-    
-    const activity = await Activity.create(req.body);
-    
-    console.log('✅ Activity created successfully:', activity._id);
-    console.log('📊 Activity data:', {
-      _id: activity._id,
-      title: activity.title,
-      type: activity.type,
-      status: activity.status
-    });
-    
+
+    const activity = await Activity.create(activityData);
+
     res.status(201).json({
       success: true,
-      data: activity
+      data: activity,
     });
   } catch (err) {
-    console.error('❌ Error creating activity:', err);
-    console.error('❌ Error details:', {
-      message: err.message,
-      name: err.name,
-      code: err.code,
-      errors: err.errors
-    });
-    
-    // More detailed error response
-    let errorMessage = err.message;
-    if (err.errors) {
-      const validationErrors = Object.keys(err.errors).map(key => ({
-        field: key,
-        message: err.errors[key].message
-      }));
-      errorMessage = `Validation errors: ${JSON.stringify(validationErrors)}`;
-    }
-    
     res.status(400).json({
       success: false,
-      error: errorMessage,
-      details: err.errors || undefined
+      error: err.message,
     });
   }
 };
 
 // @desc    Update activity
 // @route   PUT /api/v1/activities/:id
-// @access  Private (Admin only)
-exports.updateActivity = async (req, res) => {
+// @access  Private/Admin
+exports.updateActivity = async (req, res, next) => {
   try {
-    const activity = await Activity.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      {
-        new: true,
-        runValidators: true
-      }
-    );
+    const activityData = { ...req.body };
     
+    // Handle pricing based on pricingType
+    if (activityData.pricingType === 'half-full-day') {
+      // For half-full-day pricing, set price from halfDayPrice
+      if (activityData.halfDayPrice && !activityData.price) {
+        activityData.price = activityData.halfDayPrice;
+      }
+      
+      // If updating to half-full-day, ensure both prices are provided
+      if (activityData.pricingType === 'half-full-day' && 
+          (!activityData.halfDayPrice || !activityData.fullDayPrice)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Both halfDayPrice and fullDayPrice are required for half-full-day pricing'
+        });
+      }
+    } else if (activityData.pricingType === 'full-day') {
+      // For full-day pricing, set price from fullDayPrice
+      if (activityData.fullDayPrice && !activityData.price) {
+        activityData.price = activityData.fullDayPrice;
+      }
+      
+      // If updating to full-day, ensure fullDayPrice is provided
+      if (activityData.pricingType === 'full-day' && !activityData.fullDayPrice) {
+        return res.status(400).json({
+          success: false,
+          error: 'fullDayPrice is required for full-day pricing'
+        });
+      }
+    } else {
+      // For other pricing types, ensure price is provided
+      if (!activityData.price && activityData.fullDayPrice) {
+        activityData.price = activityData.fullDayPrice;
+      }
+    }
+
+    const activity = await Activity.findByIdAndUpdate(req.params.id, activityData, {
+      new: true,
+      runValidators: true,
+    });
+
     if (!activity) {
       return res.status(404).json({
         success: false,
-        error: 'Activity not found'
+        error: 'Activity not found',
       });
     }
-    
+
     res.status(200).json({
       success: true,
-      data: activity
+      data: activity,
     });
   } catch (err) {
     res.status(400).json({
       success: false,
-      error: err.message
+      error: err.message,
     });
   }
 };
 
 // @desc    Delete activity
 // @route   DELETE /api/v1/activities/:id
-// @access  Private (Admin only)
-exports.deleteActivity = async (req, res) => {
+// @access  Private/Admin
+exports.deleteActivity = async (req, res, next) => {
   try {
-    const activity = await Activity.findByIdAndDelete(req.params.id);
-    
+    const activity = await Activity.findById(req.params.id);
+
     if (!activity) {
       return res.status(404).json({
         success: false,
-        error: 'Activity not found'
+        error: 'Activity not found',
       });
     }
-    
+
+    await activity.deleteOne();
+
     res.status(200).json({
       success: true,
-      data: {}
+      data: {},
     });
   } catch (err) {
-    res.status(500).json({
+    res.status(400).json({
       success: false,
-      error: 'Server Error'
+      error: err.message,
     });
   }
 };

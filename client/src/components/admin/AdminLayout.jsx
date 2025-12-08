@@ -1,41 +1,104 @@
 import React, { useState } from 'react';
-import { Link, useLocation, Navigate } from 'react-router-dom';
+import { Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 const AdminLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const location = useLocation();
-  const { currentUser } = useAuth();
-  
+  const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
+
   // Check if user is admin, if not redirect to home
   if (!currentUser || currentUser.role !== 'admin') {
     return <Navigate to="/" replace />;
   }
 
-  // Sidebar links
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (error) {
+      console.error('Failed to log out', error);
+    }
+  };
+
+  // Sidebar links - UPDATED with correct icons and paths
   const navLinks = [
     { path: '/admin/dashboard', icon: 'fa-tachometer-alt', text: 'Dashboard' },
-    { path: '/admin/activities', icon: 'fa-umbrella-beach', text: 'Activities' },
+    {
+      path: '/admin/activities',
+      icon: 'fa-umbrella-beach',
+      text: 'Excursions',
+    },
     { path: '/admin/bookings', icon: 'fa-calendar-check', text: 'Bookings' },
     { path: '/admin/users', icon: 'fa-users', text: 'Users' },
+    { path: '/admin/dashboard?tab=contacts', icon: 'fa-envelope', text: 'Contact Inquiries' },
+    { path: '/admin/dashboard?tab=airport-transfers', icon: 'fa-plane', text: 'Airport Transfers' },
   ];
 
-  // Check if link is active
-  const isActive = (path) => location.pathname === path;
+  // Check if link is active (including query parameters)
+  const isActive = (path) => {
+    // Extract path and query parameters
+    const [pathPart, queryPart] = path.split('?');
+    
+    // Check if the current location matches the path
+    if (location.pathname !== pathPart && location.pathname !== '/admin/dashboard') {
+      return false;
+    }
+    
+    // For paths with query parameters (dashboard tabs)
+    if (queryPart) {
+      const queryParams = new URLSearchParams(queryPart);
+      const currentParams = new URLSearchParams(location.search);
+      const tab = queryParams.get('tab');
+      const currentTab = currentParams.get('tab');
+      
+      // If we're on dashboard and the tab matches
+      if (location.pathname === '/admin/dashboard') {
+        if (tab && currentTab) {
+          return tab === currentTab;
+        }
+        // If no tab in URL but we're looking for dashboard, it's the default dashboard
+        return !tab && !currentTab;
+      }
+    }
+    
+    // For exact path matches
+    return location.pathname === path;
+  };
 
   // Get current page title
   const getCurrentPageTitle = () => {
-    const currentLink = navLinks.find(link => isActive(link.path));
+    // Check for dashboard tabs first
+    if (location.pathname === '/admin/dashboard') {
+      const params = new URLSearchParams(location.search);
+      const tab = params.get('tab');
+      if (tab === 'contacts') return 'Contact Inquiries';
+      if (tab === 'airport-transfers') return 'Airport Transfers';
+      return 'Dashboard';
+    }
+    
+    // Check for other pages
+    const currentLink = navLinks.find((link) => location.pathname === link.path);
     return currentLink ? currentLink.text : 'Admin Panel';
   };
 
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar - Mobile */}
-      <div className={`fixed inset-0 z-40 lg:hidden ${sidebarOpen ? '' : 'hidden'}`} aria-hidden="true">
-        <div className="absolute inset-0 bg-gray-600 opacity-75" onClick={() => setSidebarOpen(false)}></div>
-        
+      <div
+        className={`fixed inset-0 z-40 lg:hidden ${
+          sidebarOpen ? '' : 'hidden'
+        }`}
+        aria-hidden="true"
+      >
+        <div
+          className="absolute inset-0 bg-gray-600 opacity-75"
+          onClick={() => setSidebarOpen(false)}
+        ></div>
+
         <div className="relative flex-1 flex flex-col max-w-xs w-full bg-gradient-to-b from-blue-800 to-blue-900 text-white shadow-xl">
           <div className="absolute top-0 right-0 -mr-12 pt-2">
             <button
@@ -46,7 +109,7 @@ const AdminLayout = ({ children }) => {
               <i className="fas fa-times text-white"></i>
             </button>
           </div>
-          
+
           <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
             <div className="flex-shrink-0 flex items-center justify-center px-6 py-4 border-b border-blue-700/50">
               <Link to="/" className="flex items-center group">
@@ -54,8 +117,12 @@ const AdminLayout = ({ children }) => {
                   <span className="text-yellow-400 mr-1 group-hover:rotate-12 transition-transform duration-300">
                     <i className="fas fa-umbrella-beach drop-shadow-md"></i>
                   </span>
-                  <span className="group-hover:text-yellow-100 transition-colors">Maldives</span>
-                  <span className="text-yellow-400 ml-1 group-hover:scale-105 transition-transform duration-300">Activities</span>
+                  <span className="group-hover:text-yellow-100 transition-colors">
+                    Mauritius
+                  </span>
+                  <span className="text-yellow-400 ml-1 group-hover:scale-105 transition-transform duration-300">
+                    Paradise
+                  </span>
                 </div>
               </Link>
             </div>
@@ -69,14 +136,21 @@ const AdminLayout = ({ children }) => {
                       ? 'bg-white/10 text-white shadow-sm border-l-4 border-yellow-400'
                       : 'text-blue-100 hover:bg-white/5 hover:border-l-4 hover:border-yellow-400/50'
                   }`}
+                  onClick={() => setSidebarOpen(false)}
                 >
-                  <i className={`fas ${link.icon} mr-4 ${isActive(link.path) ? 'text-yellow-400' : 'text-blue-300 group-hover:text-yellow-400'}`}></i>
+                  <i
+                    className={`fas ${link.icon} mr-4 ${
+                      isActive(link.path)
+                        ? 'text-yellow-400'
+                        : 'text-blue-300 group-hover:text-yellow-400'
+                    }`}
+                  ></i>
                   {link.text}
                 </Link>
               ))}
             </nav>
           </div>
-          
+
           <div className="flex-shrink-0 flex border-t border-blue-700/50 p-4 bg-blue-900/30">
             <Link to="/" className="flex-shrink-0 group block w-full">
               <div className="flex items-center">
@@ -90,7 +164,8 @@ const AdminLayout = ({ children }) => {
                     {currentUser?.name || currentUser?.email}
                   </p>
                   <p className="text-sm font-medium text-blue-200 group-hover:text-blue-100 flex items-center">
-                    <i className="fas fa-external-link-alt text-xs mr-1"></i> View site
+                    <i className="fas fa-external-link-alt text-xs mr-1"></i>{' '}
+                    View site
                   </p>
                 </div>
               </div>
@@ -110,8 +185,12 @@ const AdminLayout = ({ children }) => {
                     <span className="text-yellow-400 mr-1 group-hover:rotate-12 transition-transform duration-300">
                       <i className="fas fa-umbrella-beach drop-shadow-md"></i>
                     </span>
-                    <span className="group-hover:text-yellow-100 transition-colors">Maldives</span>
-                    <span className="text-yellow-400 ml-1 group-hover:scale-105 transition-transform duration-300">Activities</span>
+                    <span className="group-hover:text-yellow-100 transition-colors">
+                      Mauritius
+                    </span>
+                    <span className="text-yellow-400 ml-1 group-hover:scale-105 transition-transform duration-300">
+                      Paradise
+                    </span>
                   </div>
                 </Link>
               </div>
@@ -126,7 +205,13 @@ const AdminLayout = ({ children }) => {
                         : 'text-blue-100 hover:bg-white/5 hover:border-l-4 hover:border-yellow-400/50'
                     }`}
                   >
-                    <i className={`fas ${link.icon} mr-3 ${isActive(link.path) ? 'text-yellow-400' : 'text-blue-300 group-hover:text-yellow-400'}`}></i>
+                    <i
+                      className={`fas ${link.icon} mr-3 ${
+                        isActive(link.path)
+                          ? 'text-yellow-400'
+                          : 'text-blue-300 group-hover:text-yellow-400'
+                      }`}
+                    ></i>
                     {link.text}
                   </Link>
                 ))}
@@ -145,7 +230,8 @@ const AdminLayout = ({ children }) => {
                       {currentUser?.name || currentUser?.email}
                     </p>
                     <p className="text-xs font-medium text-blue-200 group-hover:text-blue-100 flex items-center">
-                      <i className="fas fa-external-link-alt text-xs mr-1"></i> View site
+                      <i className="fas fa-external-link-alt text-xs mr-1"></i>{' '}
+                      View site
                     </p>
                   </div>
                 </div>
@@ -166,13 +252,13 @@ const AdminLayout = ({ children }) => {
             <span className="sr-only">Open sidebar</span>
             <i className="fas fa-bars text-gray-600 text-xl"></i>
           </button>
-          
+
           <div className="px-4 py-2 text-lg font-semibold text-gray-700">
             {getCurrentPageTitle()}
           </div>
-          
+
           <div className="relative">
-            <button 
+            <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               className="p-2 mr-2 flex items-center focus:outline-none"
             >
@@ -180,44 +266,61 @@ const AdminLayout = ({ children }) => {
                 <i className="fas fa-user text-white text-sm"></i>
               </span>
             </button>
-            
+
             {userMenuOpen && (
               <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
-                <Link to="/admin/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Your Profile</Link>
-                <Link to="/admin/settings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</Link>
-                <Link to="/" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">View Site</Link>
+                <Link
+                  to="/admin/profile"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Your Profile
+                </Link>
+                <Link
+                  to="/admin/settings"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  Settings
+                </Link>
+                <Link
+                  to="/"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  View Site
+                </Link>
                 <div className="border-t border-gray-100"></div>
-                <button className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                <button
+                  onClick={handleLogout}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
                   Sign out
                 </button>
               </div>
             )}
           </div>
         </div>
-        
+
         {/* Desktop top bar */}
         <div className="hidden md:flex md:flex-shrink-0">
           <div className="flex-1 flex">
             <div className="w-full bg-white shadow-sm">
               <div className="h-16 flex justify-between px-4">
                 <div className="flex items-center">
-                  <h1 className="text-xl font-semibold text-gray-800">{getCurrentPageTitle()}</h1>
+                  <h1 className="text-xl font-semibold text-gray-800">
+                    {getCurrentPageTitle()}
+                  </h1>
                 </div>
                 <div className="ml-4 flex items-center md:ml-6 space-x-4">
-                  {/* Search */}
-                  
-                  
                   {/* Notification bell */}
                   <button className="p-1 rounded-full text-gray-500 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 relative">
                     <span className="sr-only">View notifications</span>
                     <i className="fas fa-bell text-lg"></i>
                     <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 transform -translate-y-1/2 translate-x-1/2"></span>
                   </button>
-                  
+
                   {/* User dropdown */}
                   <div className="ml-3 relative">
                     <div>
-                      <button 
+                      <button
                         onClick={() => setUserMenuOpen(!userMenuOpen)}
                         className="max-w-xs bg-white flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                         id="user-menu"
@@ -228,27 +331,39 @@ const AdminLayout = ({ children }) => {
                         <div className="flex items-center">
                           <span className="inline-block h-8 w-8 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 flex items-center justify-center shadow-md mr-2">
                             <span className="text-white font-medium">
-                              {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : currentUser.email.charAt(0).toUpperCase()}
+                              {currentUser.name
+                                ? currentUser.name.charAt(0).toUpperCase()
+                                : currentUser.email.charAt(0).toUpperCase()}
                             </span>
                           </span>
-                          <span className="hidden md:block text-sm font-medium text-gray-700 mr-1">{currentUser.name || currentUser.email}</span>
+                          <span className="hidden md:block text-sm font-medium text-gray-700 mr-1">
+                            {currentUser.name || currentUser.email}
+                          </span>
                           <i className="fas fa-chevron-down text-xs text-gray-500"></i>
                         </div>
                       </button>
                     </div>
-                    
+
                     {userMenuOpen && (
-                      <div 
+                      <div
                         className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10"
-                        role="menu" 
-                        aria-orientation="vertical" 
+                        role="menu"
+                        aria-orientation="vertical"
                         aria-labelledby="user-menu"
                       >
-                        
-                        
-                        <Link to="/" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">View Site</Link>
+                        <Link
+                          to="/"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          role="menuitem"
+                        >
+                          View Site
+                        </Link>
                         <div className="border-t border-gray-100"></div>
-                        <button className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                        <button
+                          onClick={handleLogout}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          role="menuitem"
+                        >
                           Sign out
                         </button>
                       </div>
@@ -259,7 +374,7 @@ const AdminLayout = ({ children }) => {
             </div>
           </div>
         </div>
-        
+
         <main className="flex-1 relative z-0 overflow-y-auto focus:outline-none">
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">

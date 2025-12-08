@@ -53,7 +53,7 @@ const ActivityListItem = ({ activity }) => {
                 <div className="mt-auto flex flex-col sm:flex-row justify-between items-start sm:items-center pt-4 border-t border-gray-100">
                     <div>
                         <div className="text-blue-800 font-bold text-xl">${activity.price || 0}</div>
-                        <div className="text-gray-500 text-sm">per person</div>
+                        <div className="text-gray-500 text-sm">per package</div>
                     </div>
                       <Link 
                         to={`/activities/${activity._id || activity.id}`}

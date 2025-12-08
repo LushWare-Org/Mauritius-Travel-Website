@@ -89,7 +89,7 @@ const Dashboard = () => {  const { currentUser } = useAuth();
       <div>
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-1">Welcome back, {currentUser?.name || 'User'}!</h2>
-          <p className="text-gray-600">Here's an overview of your bookings and activities.</p>
+          <p className="text-gray-600">Here's an overview of your bookings and excursions.</p>
         </div>        {/* Error Message */}
         {error && (
           <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
@@ -183,7 +183,7 @@ const Dashboard = () => {  const { currentUser } = useAuth();
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-100">
                         <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activity</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Excursion</th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -238,7 +238,7 @@ const Dashboard = () => {  const { currentUser } = useAuth();
                       <i className="fas fa-compass text-blue-500"></i>
                     </div>
                     <div className="ml-4">
-                      <h4 className="text-gray-800 font-medium">Browse Activities</h4>
+                      <h4 className="text-gray-800 font-medium">Browse Excursions</h4>
                       <p className="text-gray-500 text-sm">Discover new experiences</p>
                     </div>
                   </div>

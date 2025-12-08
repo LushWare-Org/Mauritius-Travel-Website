@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
-import { bookingsAPI } from '../../utils/api';
+import { bookingsAPI, airportTransferBookingAPI } from '../../utils/api';
 
 const AdminBookings = () => {
   const [bookings, setBookings] = useState([]);
+  const [airportTransferBookings, setAirportTransferBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,23 +33,54 @@ const AdminBookings = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await bookingsAPI.getAll();
-      if (response.data.success) {
+      // Fetch both activity bookings and airport transfer bookings
+      const [bookingsResponse, airportBookingsResponse] = await Promise.all([
+        bookingsAPI.getAll(),
+        airportTransferBookingAPI.getAllBookings()
+      ]);
+
+      if (bookingsResponse.data.success) {
         // Sort bookings by date (newest first)
-        const sortedBookings = response.data.data.sort((a, b) => 
+        const sortedBookings = bookingsResponse.data.data.sort((a, b) => 
           new Date(b.date) - new Date(a.date)
         );
+        console.log('📊 Activity bookings data:', sortedBookings);
         setBookings(sortedBookings);
-        setCurrentPage(1); // Reset to first page when new data is fetched
       } else {
-        setError('Failed to fetch bookings');
+        setError('Failed to fetch activity bookings');
       }
+
+      if (airportBookingsResponse.data.success) {
+        console.log('📊 Airport transfer bookings data:', airportBookingsResponse.data.data);
+        setAirportTransferBookings(airportBookingsResponse.data.data);
+      }
+
+      setCurrentPage(1); // Reset to first page when new data is fetched
     } catch (error) {
       console.error('Error fetching bookings:', error);
       setError('Error connecting to the server. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Function to find airport transfer booking for a specific activity booking
+  const findAirportTransferForBooking = (bookingReference) => {
+    return airportTransferBookings.find(
+      transfer => transfer.specialRequests?.includes(bookingReference)
+    );
+  };
+
+  // Calculate total price including airport transfer
+  const getTotalPriceWithTransfer = (booking) => {
+    const airportTransfer = findAirportTransferForBooking(booking.bookingReference);
+    let total = booking.totalPrice || 0;
+    
+    if (airportTransfer) {
+      total += parseFloat(airportTransfer.totalPrice || airportTransfer.price || 0);
+    }
+    
+    return total;
   };
 
   // Filter bookings based on search, status filter and date filter
@@ -137,6 +169,122 @@ const AdminBookings = () => {
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  // Get duration type display text
+  const getDurationTypeDisplay = (booking) => {
+    // Check for durationType first (new field)
+    if (booking.durationType) {
+      return booking.durationType;
+    }
+    
+    // Check for duration field (old field)
+    if (booking.duration === 'halfDay') {
+      return 'Half Day';
+    } else if (booking.duration === 'fullDay') {
+      return 'Full Day';
+    }
+    
+    // Check activity pricing type
+    if (booking.activity?.pricingType === 'half-full-day') {
+      // If we have pricePerPerson, we can infer
+      if (booking.pricePerPerson && booking.activity) {
+        if (booking.pricePerPerson === booking.activity.halfDayPrice) {
+          return 'Half Day';
+        } else if (booking.pricePerPerson === booking.activity.fullDayPrice) {
+          return 'Full Day';
+        }
+      }
+      return 'Half/Full Day';
+    }
+    
+    return 'Standard';
+  };
+
+  // Get price per person
+  const getPricePerPerson = (booking) => {
+    if (booking.pricePerPerson) {
+      return booking.pricePerPerson;
+    }
+    
+    // Calculate from total price and guests
+    if (booking.totalPrice && booking.guests) {
+      return booking.totalPrice / booking.guests;
+    }
+    
+    return null;
+  };
+
+  // Duration badge component
+  const DurationBadge = ({ booking }) => {
+    const durationType = getDurationTypeDisplay(booking);
+    
+    if (durationType === 'Standard') {
+      return null;
+    }
+    
+    const styles = {
+      'Half Day': 'bg-purple-100 text-purple-800 border-purple-200',
+      'Full Day': 'bg-indigo-100 text-indigo-800 border-indigo-200',
+      'Half/Full Day': 'bg-blue-100 text-blue-800 border-blue-200'
+    };
+    
+    const iconStyles = {
+      'Half Day': 'bg-purple-600',
+      'Full Day': 'bg-indigo-600',
+      'Half/Full Day': 'bg-blue-600'
+    };
+    
+    return (
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${styles[durationType] || 'bg-gray-100 text-gray-800'}`}>
+        <span className={`h-1.5 w-1.5 rounded-full mr-1.5 ${iconStyles[durationType] || 'bg-gray-600'}`}></span>
+        {durationType}
+      </span>
+    );
+  };
+
+  // Airport Transfer Badge component
+  const AirportTransferBadge = ({ booking }) => {
+    const airportTransfer = findAirportTransferForBooking(booking.bookingReference);
+    
+    if (!airportTransfer) {
+      return null;
+    }
+    
+    const getTransferTypeIcon = (transferType) => {
+      if (transferType === 'airport-to-hotel') {
+        return (
+          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        );
+      } else if (transferType === 'hotel-to-airport') {
+        return (
+          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        );
+      }
+      return (
+        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      );
+    };
+    
+    const getTripTypeText = (tripType) => {
+      return tripType === 'one-way' ? 'One Way' : 'Round Trip';
+    };
+    
+    return (
+      <div className="mt-1">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+          {getTransferTypeIcon(airportTransfer.transferType)}
+          Airport Transfer
+          <span className="ml-1 text-xs">({getTripTypeText(airportTransfer.tripType)})</span>
+        </span>
+      </div>
+    );
   };
 
   // Status badge component
@@ -233,7 +381,7 @@ const AdminBookings = () => {
                 className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'}`}
               >
                 <span className="sr-only">Previous</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <svg className="h-5 w-5" xmlns="http://www.w3.org2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               </button>
@@ -301,11 +449,98 @@ const AdminBookings = () => {
     );
   };
 
+  // Stats component
+  const BookingStats = () => {
+    const totalBookings = bookings.length;
+    const bookingsWithTransfer = bookings.filter(booking => 
+      findAirportTransferForBooking(booking.bookingReference)
+    ).length;
+    const totalRevenue = bookings.reduce((sum, booking) => {
+      const airportTransfer = findAirportTransferForBooking(booking.bookingReference);
+      let bookingTotal = booking.totalPrice || 0;
+      if (airportTransfer) {
+        bookingTotal += parseFloat(airportTransfer.totalPrice || airportTransfer.price || 0);
+      }
+      return sum + bookingTotal;
+    }, 0);
+    
+    const avgRevenuePerBooking = totalBookings > 0 ? totalRevenue / totalBookings : 0;
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center">
+            <div className="bg-blue-100 p-3 rounded-full">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm text-gray-500">Total Bookings</p>
+              <p className="text-2xl font-bold text-gray-900">{totalBookings}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center">
+            <div className="bg-green-100 p-3 rounded-full">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm text-gray-500">With Airport Transfer</p>
+              <p className="text-2xl font-bold text-gray-900">{bookingsWithTransfer}</p>
+              <p className="text-xs text-gray-500">
+                {totalBookings > 0 ? `${((bookingsWithTransfer / totalBookings) * 100).toFixed(1)}% of bookings` : '0%'}
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center">
+            <div className="bg-yellow-100 p-3 rounded-full">
+              <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm text-gray-500">Total Revenue</p>
+              <p className="text-2xl font-bold text-gray-900">${totalRevenue.toFixed(2)}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center">
+            <div className="bg-purple-100 p-3 rounded-full">
+              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm text-gray-500">Avg. Revenue/Booking</p>
+              <p className="text-2xl font-bold text-gray-900">${avgRevenuePerBooking.toFixed(2)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <AdminLayout>
       <div className="pb-5 border-b border-gray-200 mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Manage Bookings</h1>
+        <p className="text-gray-600 mt-1">
+          View and manage all activity bookings including airport transfers
+        </p>
       </div>
+
+      {/* Booking Stats */}
+      <BookingStats />
 
       {/* Filters and Search */}
       <div className="bg-white shadow rounded-lg mb-6">
@@ -321,7 +556,7 @@ const AdminBookings = () => {
                   type="text"
                   id="search"
                   className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-3 py-2.5 text-base border-gray-300 rounded-lg h-12"
-                  placeholder="Search by booking ID, activity or customer name"
+                  placeholder="Search by booking ID, activity, customer name or email"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -413,13 +648,10 @@ const AdminBookings = () => {
                     Customer
                   </th>
                   <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
+                    Date & Duration
                   </th>
                   <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Guests
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
+                    Price Details
                   </th>
                   <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -431,63 +663,149 @@ const AdminBookings = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {getCurrentPageBookings().length > 0 ? (
-                  getCurrentPageBookings().map((booking, index) => (
-                    <tr 
-                      key={booking._id} 
-                      className={`hover:bg-blue-50 transition-colors duration-150 cursor-pointer ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
-                      onClick={(e) => handleRowClick(booking._id, e)}
-                    >
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
-                        <Link to={`/admin/bookings/${booking._id}`} onClick={(e) => e.stopPropagation()} className="hover:underline">
-                          {booking.bookingReference}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {booking.activity?.title || "Unknown Activity"}
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{booking.fullName}</div>
-                        <div className="text-xs text-gray-500 truncate max-w-[200px]">{booking.email}</div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{formatDate(booking.date)}</div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900 text-center">{booking.guests}</div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-gray-900">${booking.totalPrice}</div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${
-                          booking.status === 'confirmed' 
-                            ? 'bg-green-100 text-green-800 border-green-200' 
-                            : booking.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                              : 'bg-red-100 text-red-800 border-red-200'
-                        }`}>
-                          <span className={`h-1.5 w-1.5 rounded-full mr-1.5 ${
-                            booking.status === 'confirmed' ? 'bg-green-600' : 
-                            booking.status === 'pending' ? 'bg-yellow-600' : 'bg-red-600'
-                          }`}></span>
-                          {booking.status ? booking.status.charAt(0).toUpperCase() + booking.status.slice(1) : ''}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        {booking.status === 'pending' && (
-                          <div className="flex justify-end space-x-1">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleStatusChange(booking._id, 'confirmed');
-                              }}
-                              className="inline-flex items-center px-2 py-1 rounded text-xs text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
-                            >
-                              <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                              Confirm
-                            </button>
+                  getCurrentPageBookings().map((booking, index) => {
+                    const durationType = getDurationTypeDisplay(booking);
+                    const pricePerPerson = getPricePerPerson(booking);
+                    const airportTransfer = findAirportTransferForBooking(booking.bookingReference);
+                    const totalWithTransfer = getTotalPriceWithTransfer(booking);
+                    const hasAirportTransfer = !!airportTransfer;
+                    
+                    return (
+                      <tr 
+                        key={booking._id} 
+                        className={`hover:bg-blue-50 transition-colors duration-150 cursor-pointer ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+                        onClick={(e) => handleRowClick(booking._id, e)}
+                      >
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-blue-600 font-medium">
+                            <Link to={`/admin/bookings/${booking._id}`} onClick={(e) => e.stopPropagation()} className="hover:underline">
+                              {booking.bookingReference}
+                            </Link>
+                          </div>
+                          {hasAirportTransfer && (
+                            <div className="text-xs text-green-600 font-medium mt-1">
+                              + Airport Transfer
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="text-sm text-gray-900">{booking.activity?.title || "Unknown Activity"}</div>
+                          {booking.activity?.pricingType === 'half-full-day' && (
+                            <div className="mt-1">
+                              <DurationBadge booking={booking} />
+                            </div>
+                          )}
+                          <AirportTransferBadge booking={booking} />
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="text-sm font-medium text-gray-900">{booking.fullName}</div>
+                          <div className="text-xs text-gray-500 truncate max-w-[200px]">{booking.email}</div>
+                          <div className="text-xs text-gray-500">{booking.phone || 'No phone'}</div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="text-sm text-gray-900">{formatDate(booking.date)}</div>
+                          {durationType !== 'Standard' && (
+                            <div className="mt-1">
+                              <DurationBadge booking={booking} />
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="space-y-1">
+                            <div className="text-sm font-semibold text-gray-900">
+                              ${totalWithTransfer.toFixed(2)}
+                              {hasAirportTransfer && (
+                                <span className="text-xs text-green-600 ml-1">
+                                  (incl. transfer)
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 space-y-0.5">
+                              <div>Activity: ${booking.totalPrice?.toFixed(2) || '0.00'}</div>
+                              {hasAirportTransfer && (
+                                <div className="text-green-600">
+                                  Transfer: +${(airportTransfer.totalPrice || airportTransfer.price || 0).toFixed(2)}
+                                  <span className="text-gray-400 ml-1">
+                                    (flat rate)
+                                  </span>
+                                </div>
+                              )}
+                              {pricePerPerson && (
+                                <div>
+                                  ${pricePerPerson.toFixed(2)} per person
+                                  {durationType !== 'Standard' && (
+                                    <span className="ml-1">({durationType})</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${
+                            booking.status === 'confirmed' 
+                              ? 'bg-green-100 text-green-800 border-green-200' 
+                              : booking.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                : 'bg-red-100 text-red-800 border-red-200'
+                          }`}>
+                            <span className={`h-1.5 w-1.5 rounded-full mr-1.5 ${
+                              booking.status === 'confirmed' ? 'bg-green-600' : 
+                              booking.status === 'pending' ? 'bg-yellow-600' : 'bg-red-600'
+                            }`}></span>
+                            {booking.status ? booking.status.charAt(0).toUpperCase() + booking.status.slice(1) : ''}
+                          </span>
+                          {hasAirportTransfer && airportTransfer.status && (
+                            <div className="mt-1">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${
+                                airportTransfer.status === 'confirmed' 
+                                  ? 'bg-green-100 text-green-800 border-green-200' 
+                                  : airportTransfer.status === 'pending'
+                                    ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                    : airportTransfer.status === 'completed'
+                                      ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                      : 'bg-red-100 text-red-800 border-red-200'
+                              }`}>
+                                <span className={`h-1.5 w-1.5 rounded-full mr-1.5 ${
+                                  airportTransfer.status === 'confirmed' ? 'bg-green-600' : 
+                                  airportTransfer.status === 'pending' ? 'bg-yellow-600' :
+                                  airportTransfer.status === 'completed' ? 'bg-blue-600' : 'bg-red-600'
+                                }`}></span>
+                                Transfer: {airportTransfer.status.charAt(0).toUpperCase() + airportTransfer.status.slice(1)}
+                              </span>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          {booking.status === 'pending' && (
+                            <div className="flex justify-end space-x-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusChange(booking._id, 'confirmed');
+                                }}
+                                className="inline-flex items-center px-2 py-1 rounded text-xs text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
+                              >
+                                <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Confirm
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusChange(booking._id, 'cancelled');
+                                }}
+                                className="inline-flex items-center px-2 py-1 rounded text-xs text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
+                              >
+                                <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Cancel
+                              </button>
+                            </div>
+                          )}
+                          {booking.status === 'confirmed' && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -500,42 +818,28 @@ const AdminBookings = () => {
                               </svg>
                               Cancel
                             </button>
-                          </div>
-                        )}
-                        {booking.status === 'confirmed' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusChange(booking._id, 'cancelled');
-                            }}
-                            className="inline-flex items-center px-2 py-1 rounded text-xs text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
-                          >
-                            <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            Cancel
-                          </button>
-                        )}
-                        {booking.status === 'cancelled' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusChange(booking._id, 'confirmed');
-                            }}
-                            className="inline-flex items-center px-2 py-1 rounded text-xs text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
-                          >
-                            <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            Reactivate
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                          )}
+                          {booking.status === 'cancelled' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStatusChange(booking._id, 'confirmed');
+                              }}
+                              className="inline-flex items-center px-2 py-1 rounded text-xs text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
+                            >
+                              <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                              Reactivate
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan="8" className="px-4 py-4 text-center text-sm text-gray-500">
+                    <td colSpan="7" className="px-4 py-4 text-center text-sm text-gray-500">
                       No bookings found.
                     </td>
                   </tr>

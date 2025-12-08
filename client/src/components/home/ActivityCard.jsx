@@ -11,7 +11,7 @@ const ActivityCard = ({ activity }) => {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div className="absolute top-3 right-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
-                    ${activity.price} USD
+                    ${activity.price} Rs
                 </div>
             </div>
             <div className="p-6 flex flex-col flex-grow">

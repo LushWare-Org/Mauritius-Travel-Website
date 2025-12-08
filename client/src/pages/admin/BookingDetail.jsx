@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { bookingsAPI } from '../../utils/api';
+import { bookingsAPI, airportTransferBookingAPI } from '../../utils/api';
 import AdminLayout from '../../components/admin/AdminLayout';
 
 const BookingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [booking, setBooking] = useState(null);
+  const [airportTransferBooking, setAirportTransferBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [updating, setUpdating] = useState(false);
@@ -15,9 +16,29 @@ const BookingDetail = () => {
     const fetchBookingDetails = async () => {
       setLoading(true);
       try {
-        const response = await bookingsAPI.getById(id);
-        if (response.data.success) {
-          setBooking(response.data.data);
+        // Fetch activity booking
+        const bookingResponse = await bookingsAPI.getById(id);
+        if (bookingResponse.data.success) {
+          console.log('📊 Booking data:', bookingResponse.data.data);
+          setBooking(bookingResponse.data.data);
+          
+          // Try to find associated airport transfer booking
+          try {
+            const airportBookingsResponse = await airportTransferBookingAPI.getAllBookings();
+            if (airportBookingsResponse.data.success) {
+              // Look for airport transfer booking linked to this activity booking
+              const linkedTransfer = airportBookingsResponse.data.data.find(
+                transfer => transfer.specialRequests?.includes(bookingResponse.data.data.bookingReference)
+              );
+              
+              if (linkedTransfer) {
+                console.log('📊 Found linked airport transfer booking:', linkedTransfer);
+                setAirportTransferBooking(linkedTransfer);
+              }
+            }
+          } catch (transferErr) {
+            console.log('No airport transfer booking found or error fetching:', transferErr.message);
+          }
         } else {
           setError('Failed to load booking details');
         }
@@ -52,6 +73,80 @@ const BookingDetail = () => {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
+  // Format time
+  const formatTime = (timeString) => {
+    if (!timeString) return 'N/A';
+    return timeString;
+  };
+
+  // Get duration type display text
+  const getDurationTypeDisplay = () => {
+    if (!booking) return '';
+    
+    // Check for durationType first (new field)
+    if (booking.durationType) {
+      return booking.durationType;
+    }
+    
+    // Check for duration field (old field)
+    if (booking.duration === 'halfDay') {
+      return 'Half Day';
+    } else if (booking.duration === 'fullDay') {
+      return 'Full Day';
+    }
+    
+    // Check activity pricing type
+    if (booking.activity?.pricingType === 'half-full-day') {
+      // If we have pricePerPerson, we can infer
+      if (booking.pricePerPerson && booking.activity) {
+        if (booking.pricePerPerson === booking.activity.halfDayPrice) {
+          return 'Half Day';
+        } else if (booking.pricePerPerson === booking.activity.fullDayPrice) {
+          return 'Full Day';
+        }
+      }
+    }
+    
+    return 'Standard';
+  };
+
+  // Get price per person display
+  const getPricePerPersonDisplay = () => {
+    if (booking?.pricePerPerson) {
+      return `$${booking.pricePerPerson}`;
+    }
+    
+    // Calculate from total price and guests
+    if (booking?.totalPrice && booking?.guests) {
+      return `$${(booking.totalPrice / booking.guests).toFixed(2)}`;
+    }
+    
+    return 'N/A';
+  };
+
+  // Get trip type display
+  const getTripTypeDisplay = (tripType) => {
+    if (!tripType) return 'N/A';
+    return tripType === 'one-way' ? 'One Way' : 'Round Trip';
+  };
+
+  // Get transfer type display
+  const getTransferTypeDisplay = (transferType) => {
+    if (!transferType) return 'N/A';
+    return transferType === 'airport-to-hotel' ? 'Airport to Hotel' :
+           transferType === 'hotel-to-airport' ? 'Hotel to Airport' :
+           transferType;
+  };
+
+  // Calculate grand total
+  const getGrandTotal = () => {
+    let total = booking?.totalPrice || 0;
+    if (airportTransferBooking?.totalPrice) {
+      total += parseFloat(airportTransferBooking.totalPrice);
+    }
+    return total;
+  };
+
   const handleStatusChange = async (newStatus) => {
     setUpdating(true);
     try {
@@ -72,11 +167,39 @@ const BookingDetail = () => {
     }
   };
 
+  const handleAirportTransferStatusChange = async (newStatus) => {
+    if (!airportTransferBooking) return;
+    
+    setUpdating(true);
+    try {
+      const response = await airportTransferBookingAPI.updateBookingStatus(
+        airportTransferBooking._id, 
+        newStatus,
+        `Status changed from ${airportTransferBooking.status} to ${newStatus}`
+      );
+      
+      if (response.data.success) {
+        setAirportTransferBooking({
+          ...airportTransferBooking,
+          status: newStatus
+        });
+      } else {
+        setError('Failed to update airport transfer booking status');
+      }
+    } catch (err) {
+      console.error('Error updating airport transfer booking status:', err);
+      setError('Failed to update airport transfer booking status. Please try again.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const StatusBadge = ({ status }) => {
     const styles = {
       confirmed: 'bg-green-100 text-green-800',
       pending: 'bg-yellow-100 text-yellow-800',
       cancelled: 'bg-red-100 text-red-800',
+      completed: 'bg-blue-100 text-blue-800',
     };
 
     return (
@@ -137,6 +260,10 @@ const BookingDetail = () => {
     );
   }
 
+  const durationType = getDurationTypeDisplay();
+  const pricePerPerson = getPricePerPersonDisplay();
+  const grandTotal = getGrandTotal();
+
   return (
     <AdminLayout>
       {/* Header */}
@@ -161,7 +288,7 @@ const BookingDetail = () => {
         <div className="bg-white shadow overflow-hidden sm:rounded-lg">
           <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
             <div>
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Booking Summary</h3>
+              <h3 className="text-lg leading-6 font-medium text-gray-900">Excursions Booking Summary</h3>
               <p className="mt-1 max-w-2xl text-sm text-gray-500">Created on {formatTimestamp(booking.createdAt)}</p>
             </div>
             <StatusBadge status={booking.status} />
@@ -169,9 +296,14 @@ const BookingDetail = () => {
           <div className="border-t border-gray-200">
             <dl>
               <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Activity</dt>
+                <dt className="text-sm font-medium text-gray-500">Excursions</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                   {booking.activity ? booking.activity.title : 'Unknown Activity'}
+                  {booking.activity?.pricingType === 'half-full-day' && (
+                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                      Half/Full Day Pricing
+                    </span>
+                  )}
                 </dd>
               </div>
               <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
@@ -180,14 +312,55 @@ const BookingDetail = () => {
                   {formatDate(booking.date)}
                 </dd>
               </div>
+              
+              {/* Duration Type (Half Day / Full Day) */}
               <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Duration Type</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  <div className="flex items-center">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      durationType === 'Half Day' 
+                        ? 'bg-purple-100 text-purple-800' 
+                        : durationType === 'Full Day'
+                          ? 'bg-indigo-100 text-indigo-800'
+                          : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {durationType === 'Half Day' && (
+                        <svg className="mr-1.5 h-2 w-2 text-purple-600" fill="currentColor" viewBox="0 0 8 8">
+                          <circle cx="4" cy="4" r="3" />
+                        </svg>
+                      )}
+                      {durationType === 'Full Day' && (
+                        <svg className="mr-1.5 h-2 w-2 text-indigo-600" fill="currentColor" viewBox="0 0 8 8">
+                          <circle cx="4" cy="4" r="3" />
+                        </svg>
+                      )}
+                      {durationType}
+                    </span>
+                  </div>
+                </dd>
+              </div>
+              
+              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500">Number of Guests</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                   {booking.guests} {booking.guests === 1 ? 'person' : 'people'}
                 </dd>
               </div>
+              
+              {/* Price Per Person */}
+              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Price Per Person</dt>
+                <dd className="mt-1 text-sm font-medium text-green-700 sm:mt-0 sm:col-span-2">
+                  {pricePerPerson}
+                  {durationType !== 'Standard' && (
+                    <span className="ml-2 text-xs text-gray-500">({durationType})</span>
+                  )}
+                </dd>
+              </div>
+              
               <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Total Price</dt>
+                <dt className="text-sm font-medium text-gray-500">Excursions Total</dt>
                 <dd className="mt-1 text-sm font-medium text-blue-700 sm:mt-0 sm:col-span-2">
                   ${booking.totalPrice}
                 </dd>
@@ -227,49 +400,277 @@ const BookingDetail = () => {
         </div>
       </div>
 
+      {/* Airport Transfer Booking Section */}
+      {airportTransferBooking && (
+        <div className="mt-6 bg-white shadow overflow-hidden sm:rounded-lg">
+          <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+            <div>
+              <h3 className="text-lg leading-6 font-medium text-gray-900">Airport Transfer Booking</h3>
+              <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                Linked to excursion booking #{booking.bookingReference}
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <StatusBadge status={airportTransferBooking.status} />
+              <span className="text-sm text-gray-500">
+                Ref: {airportTransferBooking.bookingReference || 'N/A'}
+              </span>
+            </div>
+          </div>
+          <div className="border-t border-gray-200">
+            <dl>
+              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Transfer Service</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  {airportTransferBooking.transfer?.airportName || 'Airport Transfer'}
+                  {airportTransferBooking.transfer?.airportCode && (
+                    <span className="ml-2 text-gray-500">({airportTransferBooking.transfer.airportCode})</span>
+                  )}
+                  {airportTransferBooking.transfer?.vehicleType && (
+                    <span className="ml-2 text-gray-500">• {airportTransferBooking.transfer.vehicleType}</span>
+                  )}
+                </dd>
+              </div>
+              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Trip Type</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  {getTripTypeDisplay(airportTransferBooking.tripType)}
+                </dd>
+              </div>
+              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Transfer Type</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  {getTransferTypeDisplay(airportTransferBooking.transferType)}
+                </dd>
+              </div>
+              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Arrival Date & Time</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  {formatDate(airportTransferBooking.arrivalDate)} at {formatTime(airportTransferBooking.arrivalTime)}
+                </dd>
+              </div>
+              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Flight Number</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  {airportTransferBooking.flightNumber || 'Not specified'}
+                </dd>
+              </div>
+              <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Passengers</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  {airportTransferBooking.passengers || booking.guests} passengers
+                </dd>
+              </div>
+              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Transfer Price</dt>
+                <dd className="mt-1 text-sm font-medium text-green-700 sm:mt-0 sm:col-span-2">
+                  ${airportTransferBooking.totalPrice || airportTransferBooking.price || '0.00'}
+                </dd>
+              </div>
+              {airportTransferBooking.specialRequests && (
+                <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                  <dt className="text-sm font-medium text-gray-500">Transfer Notes</dt>
+                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 whitespace-pre-line">
+                    {airportTransferBooking.specialRequests}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </div>
+        </div>
+      )}
+
+      {/* Additional Booking Details */}
+      <div className="mt-6 bg-white shadow overflow-hidden sm:rounded-lg">
+        <div className="px-4 py-5 sm:px-6">
+          <h3 className="text-lg leading-6 font-medium text-gray-900">Price Summary</h3>
+        </div>
+        <div className="border-t border-gray-200">
+          <dl>
+            {/* Activity Pricing Information */}
+            {booking.activity && (
+              <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Excursion Pricing</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <span className="font-medium">Base Price:</span> ${booking.activity.price}
+                    </div>
+                    {booking.activity.halfDayPrice && (
+                      <div>
+                        <span className="font-medium">Half Day:</span> ${booking.activity.halfDayPrice}
+                      </div>
+                    )}
+                    {booking.activity.fullDayPrice && (
+                      <div>
+                        <span className="font-medium">Full Day:</span> ${booking.activity.fullDayPrice}
+                      </div>
+                    )}
+                  </div>
+                </dd>
+              </div>
+            )}
+            
+            {/* Booking Calculation Details */}
+            <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <dt className="text-sm font-medium text-gray-500">Price Calculation</dt>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span>Excursions price per person:</span>
+                    <span>{pricePerPerson}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Number of guests:</span>
+                    <span>{booking.guests}</span>
+                  </div>
+                  <div className="flex justify-between font-medium pt-2 border-t">
+                    <span>Excursions Subtotal:</span>
+                    <span className="text-blue-700">${booking.totalPrice}</span>
+                  </div>
+                  
+                  {/* Airport Transfer Price */}
+                  {airportTransferBooking && (
+                    <>
+                      <div className="flex justify-between pt-2">
+                        <span>Airport Transfer ({getTripTypeDisplay(airportTransferBooking.tripType)}):</span>
+                        <span className="text-green-600">
+                          ${airportTransferBooking.totalPrice || airportTransferBooking.price || '0.00'}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500 pl-4">
+                        {getTransferTypeDisplay(airportTransferBooking.transferType)} • {airportTransferBooking.passengers || booking.guests} passengers
+                      </div>
+                    </>
+                  )}
+                  
+                  {/* Grand Total */}
+                  <div className="flex justify-between font-bold text-lg pt-4 border-t-2">
+                    <span>GRAND TOTAL:</span>
+                    <span className="text-blue-800">${grandTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+
       {/* Action Buttons */}
       <div className="mt-6 bg-white shadow overflow-hidden sm:rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Booking Actions</h3>
 
-          <div className="flex flex-wrap gap-3">
-            {booking.status === 'pending' && (
-              <>
-                <button
-                  onClick={() => handleStatusChange('confirmed')}
-                  disabled={updating}
-                  className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  {updating ? 'Processing...' : 'Confirm Booking'}
-                </button>
-                <button
-                  onClick={() => handleStatusChange('cancelled')}
-                  disabled={updating}
-                  className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  {updating ? 'Processing...' : 'Cancel Booking'}
-                </button>
-              </>
-            )}
+          <div className="space-y-4">
+            {/* Activity Booking Actions */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Excursions Booking Status</h4>
+              <div className="flex flex-wrap gap-2">
+                {booking.status === 'pending' && (
+                  <>
+                    <button
+                      onClick={() => handleStatusChange('confirmed')}
+                      disabled={updating}
+                      className={`inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {updating ? 'Processing...' : 'Confirm Activity'}
+                    </button>
+                    <button
+                      onClick={() => handleStatusChange('cancelled')}
+                      disabled={updating}
+                      className={`inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {updating ? 'Processing...' : 'Cancel Activity'}
+                    </button>
+                  </>
+                )}
 
-            {booking.status === 'confirmed' && (
-              <button
-                onClick={() => handleStatusChange('cancelled')}
-                disabled={updating}
-                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {updating ? 'Processing...' : 'Cancel Booking'}
-              </button>
-            )}
+                {booking.status === 'confirmed' && (
+                  <button
+                    onClick={() => handleStatusChange('cancelled')}
+                    disabled={updating}
+                    className={`inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    {updating ? 'Processing...' : 'Cancel Activity'}
+                  </button>
+                )}
 
-            {booking.status === 'cancelled' && (
-              <button
-                onClick={() => handleStatusChange('confirmed')}
-                disabled={updating}
-                className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {updating ? 'Processing...' : 'Reactivate Booking'}
-              </button>
+                {booking.status === 'cancelled' && (
+                  <button
+                    onClick={() => handleStatusChange('confirmed')}
+                    disabled={updating}
+                    className={`inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    {updating ? 'Processing...' : 'Reactivate Activity'}
+                  </button>
+                )}
+              </div>
+              <div className="mt-1 text-xs text-gray-500">
+                Current status: <StatusBadge status={booking.status} />
+              </div>
+            </div>
+
+            {/* Airport Transfer Actions */}
+            {airportTransferBooking && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Airport Transfer Booking Status</h4>
+                <div className="flex flex-wrap gap-2">
+                  {airportTransferBooking.status === 'pending' && (
+                    <>
+                      <button
+                        onClick={() => handleAirportTransferStatusChange('confirmed')}
+                        disabled={updating}
+                        className={`inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        {updating ? 'Processing...' : 'Confirm Transfer'}
+                      </button>
+                      <button
+                        onClick={() => handleAirportTransferStatusChange('cancelled')}
+                        disabled={updating}
+                        className={`inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        {updating ? 'Processing...' : 'Cancel Transfer'}
+                      </button>
+                    </>
+                  )}
+
+                  {airportTransferBooking.status === 'confirmed' && (
+                    <>
+                      <button
+                        onClick={() => handleAirportTransferStatusChange('completed')}
+                        disabled={updating}
+                        className={`inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        {updating ? 'Processing...' : 'Mark as Completed'}
+                      </button>
+                      <button
+                        onClick={() => handleAirportTransferStatusChange('cancelled')}
+                        disabled={updating}
+                        className={`inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        {updating ? 'Processing...' : 'Cancel Transfer'}
+                      </button>
+                    </>
+                  )}
+
+                  {airportTransferBooking.status === 'cancelled' && (
+                    <button
+                      onClick={() => handleAirportTransferStatusChange('confirmed')}
+                      disabled={updating}
+                      className={`inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {updating ? 'Processing...' : 'Reactivate Transfer'}
+                    </button>
+                  )}
+
+                  {airportTransferBooking.status === 'completed' && (
+                    <span className="text-sm text-gray-500">Transfer completed ✓</span>
+                  )}
+                </div>
+                <div className="mt-1 text-xs text-gray-500">
+                  Current status: <StatusBadge status={airportTransferBooking.status} />
+                </div>
+              </div>
             )}
           </div>
 

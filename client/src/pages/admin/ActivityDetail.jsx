@@ -83,7 +83,7 @@ const AdminActivityDetail = () => {
           onClick={() => navigate('/admin/activities')}
           className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
         >
-          Back to Activities
+          Back to Excursions
         </button>
       </AdminLayout>
     );
@@ -92,7 +92,7 @@ const AdminActivityDetail = () => {
   return (
     <AdminLayout>
       <div className="pb-5 border-b border-gray-200 sm:flex sm:items-center sm:justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Activity Details</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Excursions Details</h1>
         <div className="mt-3 flex space-x-3 sm:mt-0">
           <Link
             to="/admin/activities"
@@ -187,13 +187,38 @@ const AdminActivityDetail = () => {
               {/* Basic Details */}
               <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-3">
                 <div className="col-span-1">
-                  <dt className="text-sm font-medium text-gray-500">Price</dt>
+                  <dt className="text-sm font-medium text-gray-500">Base Price</dt>
                   <dd className="mt-1 text-sm text-gray-900">${activity.price}</dd>
                 </div>
                 <div className="col-span-1">
                   <dt className="text-sm font-medium text-gray-500">Duration</dt>
                   <dd className="mt-1 text-sm text-gray-900">{activity.duration} hours</dd>
                 </div>
+                <div className="col-span-1">
+                  <dt className="text-sm font-medium text-gray-500">Pricing Type</dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {activity.pricingType === 'half-full-day' ? 'Half/Full Day' : 'Single Price'}
+                  </dd>
+                </div>
+                
+                {/* Half/Full Day Pricing Fields */}
+                {activity.pricingType === 'half-full-day' && (
+                  <>
+                    <div className="col-span-1">
+                      <dt className="text-sm font-medium text-gray-500">Half Day Price</dt>
+                      <dd className="mt-1 text-sm text-gray-900">
+                        ${activity.halfDayPrice || activity.price || 'Not set'}
+                      </dd>
+                    </div>
+                    <div className="col-span-1">
+                      <dt className="text-sm font-medium text-gray-500">Full Day Price</dt>
+                      <dd className="mt-1 text-sm text-gray-900">
+                        ${activity.fullDayPrice || activity.price || 'Not set'}
+                      </dd>
+                    </div>
+                  </>
+                )}
+                
                 <div className="col-span-1">
                   <dt className="text-sm font-medium text-gray-500">Location</dt>
                   <dd className="mt-1 text-sm text-gray-900">{activity.location}</dd>

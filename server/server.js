@@ -21,6 +21,11 @@ const bookingRoutes = require('./routes/booking.routes');
 const userRoutes = require('./routes/user.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const userBookingRoutes = require('./routes/userBooking.routes');
+const userContactRoutes = require('./routes/userContactRoutes');
+const contactRoutes = require('./routes/contactRoutes');
+
+const airportTransferRoutes = require('./routes/airportTransfer');
+const airportTransferBookingRoutes = require('./routes/airportTransferBooking');
 
 const app = express();
 
@@ -237,6 +242,11 @@ app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/user/bookings', userBookingRoutes);
+app.use('/api/v1/contact', contactRoutes); // Public submit + admin routes
+app.use('/api/v1/user/contact', userContactRoutes); // User's own contacts
+
+app.use('/api/v1/airport-transfers', airportTransferRoutes);
+app.use('/api/v1/airport-transfer-bookings', airportTransferBookingRoutes);
 
 // Add debug routes (available in all environments for troubleshooting)
 const debugRoutes = require('./routes/debug.routes');
@@ -245,6 +255,49 @@ app.use('/api/v1/debug', debugRoutes);
 // Always include debug upload routes for troubleshooting
 const debugUploadRoutes = require('./routes/debugUpload.routes');
 app.use('/api/v1/debug', debugUploadRoutes);
+
+app.get('/api/v1/contacts/migrate', async (req, res) => {
+  try {
+    const Contact = require('./models/Contact');
+    
+    console.log('🔄 Migrating existing contacts...');
+    
+    // Get all contacts
+    const contacts = await Contact.find({});
+    let updated = 0;
+    
+    for (const contact of contacts) {
+      // If contact has email but no userEmail, copy it
+      if (contact.email && !contact.userEmail) {
+        contact.userEmail = contact.email;
+        await contact.save();
+        updated++;
+        console.log(`  ✅ Updated ${contact.email}`);
+      }
+    }
+    
+    // Get stats
+    const total = await Contact.countDocuments();
+    const withUserEmail = await Contact.countDocuments({ userEmail: { $exists: true, $ne: null } });
+    
+    res.json({
+      success: true,
+      message: `Migration complete. Updated ${updated} of ${total} contacts.`,
+      stats: {
+        total,
+        withUserEmail,
+        withoutUserEmail: total - withUserEmail
+      }
+    });
+    
+  } catch (err) {
+    console.error('Migration error:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
 
 // Add this after your route mounting but before the 404 handler
 app.get('/api/v1/db-debug', async (req, res) => {

@@ -1,6 +1,25 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 const ActivityInfo = ({ activity }) => {
+    const [selectedDuration, setSelectedDuration] = useState('halfDay');
+    
+    // Determine current price based on selection
+    const getCurrentPrice = () => {
+        if (activity.pricingType === 'half-full-day') {
+            return selectedDuration === 'halfDay' 
+                ? (activity.halfDayPrice || activity.price)
+                : (activity.fullDayPrice || activity.price);
+        }
+        return activity.price;
+    };
+    
+    const getCurrentDuration = () => {
+        if (activity.pricingType === 'half-full-day') {
+            return selectedDuration === 'halfDay' ? 'Half Day' : 'Full Day';
+        }
+        return activity.duration;
+    };
+
     return (
         <div>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
@@ -25,8 +44,53 @@ const ActivityInfo = ({ activity }) => {
                 </div>
                 
                 <div className="mt-4 md:mt-0 bg-blue-50 p-4 rounded-lg">
+                    {/* Duration Selection for Half/Full Day */}
+                    {activity.pricingType === 'half-full-day' ? (
+                        <div className="mb-3">
+                            <div className="flex space-x-2">
+                                <button
+                                    type="button"
+                                    className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                                        selectedDuration === 'halfDay'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-white text-blue-600 border border-blue-300 hover:bg-blue-50'
+                                    }`}
+                                    onClick={() => setSelectedDuration('halfDay')}
+                                >
+                                    Half Day
+                                    <div className="text-xs mt-1">
+                                        ${activity.halfDayPrice || activity.price}
+                                    </div>
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                                        selectedDuration === 'fullDay'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-white text-blue-600 border border-blue-300 hover:bg-blue-50'
+                                    }`}
+                                    onClick={() => setSelectedDuration('fullDay')}
+                                >
+                                    Full Day
+                                    <div className="text-xs mt-1">
+                                        ${activity.fullDayPrice || activity.price}
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                    ) : null}
+                    
                     <div className="text-gray-700 mb-2">
-                        <span className="font-medium">Duration:</span> {activity.duration} hour{activity.duration !== 1 ? 's' : ''}
+                        <span className="font-medium">Price:</span> 
+                        <span className="ml-1 text-blue-700 font-bold">${getCurrentPrice()} per package</span>
+                    </div>
+                    <div className="text-gray-700 mb-2">
+                        <span className="font-medium">Duration:</span> 
+                        <span className="ml-1">
+                            {activity.pricingType === 'half-full-day' 
+                                ? getCurrentDuration() 
+                                : `${activity.duration} hour${activity.duration !== 1 ? 's' : ''}`}
+                        </span>
                     </div>
                     <div className="text-gray-700">
                         <span className="font-medium">Type:</span> {activity.type.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}

@@ -117,11 +117,11 @@ const HeroSection = () => {
             <div className="relative z-10 py-24 md:py-32 text-center px-4">
                 <div className="container mx-auto max-w-5xl">
                     <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 font-display leading-tight animate-fade-in text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                        Discover Paradise in <span className="text-yellow-400 inline-block hover:scale-105 transition-transform cursor-pointer drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]">Maldives</span>
+                        Discover Paradise in <span className="text-yellow-400 inline-block hover:scale-105 transition-transform cursor-pointer drop-shadow-[0_2px_3px_rgba(0,0,0,0.7)]">Mauritius</span>
                     </h1>
                     
                     <p className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto animate-fade-in-delay text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
-                        Book unforgettable experiences and activities in the world's most beautiful archipelago
+                        Book unforgettable experiences and excursions in the world's most beautiful archipelago
                     </p>
                     
                     {/* Enhanced Search form */}
@@ -194,7 +194,7 @@ const HeroSection = () => {
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <i className="fas fa-tag text-gray-400"></i>
                                 </div>
-                                <label htmlFor="activity-type" className="sr-only">Activity Type</label>
+                                <label htmlFor="activity-type" className="sr-only">Excursion Type</label>
                                 <select
                                     id="activity-type"
                                     className="w-full h-12 pl-10 pr-4 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
@@ -229,7 +229,7 @@ const HeroSection = () => {
                                             <span className="animate-pulse">Searching for adventures...</span>
                                         </>
                                     ) : (
-                                        <><span className="relative group">Find Perfect Activities <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-900 group-hover:w-full transition-all"></span></span> <i className="fas fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform"></i></>
+                                        <><span className="relative group">Find Perfect Excursions <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-900 group-hover:w-full transition-all"></span></span> <i className="fas fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform"></i></>
                                     )}
                                 </button>
                             </div>
@@ -243,7 +243,7 @@ const HeroSection = () => {
                                 <i className="fas fa-star"></i>
                             </div>
                             <h3 className="text-xl font-bold mb-2 text-yellow-400 group-hover:text-yellow-300 transition-colors drop-shadow-sm">Top-rated Experiences</h3>
-                            <p className="text-white transition-colors">Curated selection of the highest quality activities</p>
+                            <p className="text-white transition-colors">Curated selection of the highest quality excursion</p>
                             <div className="mt-3 h-0.5 w-0 bg-yellow-400 group-hover:w-1/2 transition-all duration-300"></div>
                         </div>
                         
@@ -268,7 +268,7 @@ const HeroSection = () => {
                     
                     {/* Trending Activity Types */}
                     <div className="mt-12 mb-8 animate-fade-in-delay-2">
-                        <h3 className="text-xl font-semibold mb-6 drop-shadow-md text-yellow-300">Trending Activity Types</h3>
+                        <h3 className="text-xl font-semibold mb-6 drop-shadow-md text-yellow-300">Trending Excursion Types</h3>
                         <div className="flex flex-wrap justify-center gap-3">
                             {activityTypes.filter(type => type.value).map((type, index) => (
                                 <Link 
@@ -291,7 +291,7 @@ const HeroSection = () => {
                     >
                         <span className="absolute inset-0 rounded-full bg-yellow-400 blur-md opacity-80 group-hover:opacity-100 transition-opacity duration-300"></span>
                         <span className="relative inline-block bg-gradient-to-r from-yellow-500 to-yellow-400 hover:from-yellow-600 hover:to-yellow-500 text-blue-950 px-10 py-5 rounded-full font-bold text-lg transition-all transform hover:scale-105 shadow-lg border border-yellow-300/50">
-                            Explore All Activities
+                            Explore All Excursions
                             <i className="fas fa-chevron-right ml-2 group-hover:translate-x-1 transition-transform"></i>
                         </span>
                     </Link>

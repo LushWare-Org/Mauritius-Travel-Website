@@ -1,4 +1,9 @@
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  useLocation,
+} from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { useEffect } from 'react';
 import authDiagnostic from './utils/authDiagnostic';
@@ -13,26 +18,29 @@ if (import.meta.env.DEV) {
 // Run auth diagnostics and wake up the backend in production
 if (import.meta.env.PROD) {
   // Wake up the backend immediately to reduce initial load time
-  wakeUpBackend().then(result => {
+  wakeUpBackend().then((result) => {
     if (result.success) {
       console.log('Successfully woke up backend server');
-      
+
       // Keep the backend server awake with regular pings
       keepBackendAwake(10 * 60 * 1000); // Ping every 10 minutes
     }
   });
-  
+
   // Initial diagnostic check with a small delay to allow app to initialize
   setTimeout(() => {
-    authDiagnostic.testApiConnection()
-      .then(result => {
+    authDiagnostic
+      .testApiConnection()
+      .then((result) => {
         if (result.success) {
           console.log('API connection test successful');
         } else {
-          console.warn('API connection test failed, authentication may not work properly');
+          console.warn(
+            'API connection test failed, authentication may not work properly'
+          );
         }
       })
-      .catch(error => console.error('Error testing API connection:', error));
+      .catch((error) => console.error('Error testing API connection:', error));
   }, 2000);
 }
 
@@ -47,16 +55,18 @@ import ResetPassword from './pages/auth/ResetPassword';
 import Profile from './pages/auth/Profile';
 import Dashboard from './pages/dashboard/Dashboard';
 import MyBookings from './pages/dashboard/MyBookings';
-import BookingHistory from './pages/dashboard/BookingHistory';
 import EditProfile from './pages/dashboard/EditProfile';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminRoute from './components/auth/AdminRoute';
 import NotFound from './pages/NotFound';
 import About from './pages/About';
-import Contact from './pages/Contact';
+import Contact from './pages/ContactForm';
 import Header from './components/common/Header';
 import Footer from './components/common/Footer';
 import Navbar from './components/common/Navbar';
+import ContactHistory from './pages/UserContactHistory';
+import DashboardLayout from './components/dashboard/DashboardLayout';
+import HelpCenter from './pages/HelpCenter';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -66,6 +76,13 @@ import AdminBookings from './pages/admin/Bookings';
 import AdminBookingDetail from './pages/admin/BookingDetail'; // Add this import
 import AdminUsers from './pages/admin/Users';
 import AdminActivityView from './pages/admin/AdminActivityView';
+
+import AirportTransferList from './components/AirportTransferList';
+import AirportTransferBookingForm from './components/AirportTransferBookingForm';
+import AirportTransfers from './pages/admin/AirportTransfers';
+import AirportTransferForm from './pages/admin/AirportTransferForm';
+import AirportTransferBookings from './pages/admin/AirportTransferBookings';
+import UserAirportTransfers from './pages/dashboard/UserAirportTransfers';
 
 // Wrapper component to conditionally render Header and Navbar
 const AppContent = () => {
@@ -89,30 +106,169 @@ const AppContent = () => {
           <Route path="/contact" element={<Contact />} />
           <Route path="/activities/:id" element={<ActivityDetail />} />
           <Route path="/booking/:id" element={<BookingRequest />} />
-          
+          <Route path="/airport-transfers" element={<AirportTransferList />} />
+             <Route path="/help" element={<HelpCenter />} />
+          <Route
+            path="/airport-transfer/book/:id?"
+            element={<AirportTransferBookingForm />}
+          />
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          
           {/* User Dashboard Routes */}
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/dashboard/bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
-          <Route path="/dashboard/history" element={<ProtectedRoute><BookingHistory /></ProtectedRoute>} />
-          <Route path="/dashboard/profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/bookings"
+            element={
+              <ProtectedRoute>
+                <MyBookings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/profile"
+            element={
+              <ProtectedRoute>
+                <EditProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/airport-transfers"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout title="My Airport Transfers">
+                  <UserAirportTransfers />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          {/* Contact History Route - Fixed */}
+          <Route
+            path="/contacthistory"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout title="Contact History">
+                  <ContactHistory />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
           {/* Admin Routes */}
-          <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-          <Route path="/admin/activities" element={<AdminRoute><AdminActivities /></AdminRoute>} />
-          <Route path="/admin/activities/new" element={<AdminRoute><ActivityForm /></AdminRoute>} />
-          <Route path="/admin/activities/:id" element={<AdminRoute><ActivityForm /></AdminRoute>} />
-          <Route path="/admin/activities/view/:id" element={<AdminRoute><AdminActivityView /></AdminRoute>} />
-          <Route path="/admin/bookings" element={<AdminRoute><AdminBookings /></AdminRoute>} />
-          <Route path="/admin/bookings/:id" element={<AdminRoute><AdminBookingDetail /></AdminRoute>} /> {/* Add this line */}
-          <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
-          
+          <Route
+            path="/admin/dashboard"
+            element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/activities"
+            element={
+              <AdminRoute>
+                <AdminActivities />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/activities/new"
+            element={
+              <AdminRoute>
+                <ActivityForm />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/activities/:id"
+            element={
+              <AdminRoute>
+                <ActivityForm />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/activities/view/:id"
+            element={
+              <AdminRoute>
+                <AdminActivityView />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/bookings"
+            element={
+              <AdminRoute>
+                <AdminBookings />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/bookings/:id"
+            element={
+              <AdminRoute>
+                <AdminBookingDetail />
+              </AdminRoute>
+            }
+          />{' '}
+          {/* Add this line */}
+          <Route
+            path="/admin/users"
+            element={
+              <AdminRoute>
+                <AdminUsers />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/airport-transfers"
+            element={
+              <AdminRoute>
+                <AirportTransfers />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/airport-transfers/new"
+            element={
+              <AdminRoute>
+                <AirportTransferForm />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/airport-transfers/:id/edit"
+            element={
+              <AdminRoute>
+                <AirportTransferForm />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/airport-transfer-bookings"
+            element={
+              <AdminRoute>
+                <AirportTransferBookings />
+              </AdminRoute>
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

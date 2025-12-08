@@ -9,18 +9,6 @@ exports.createBooking = async (req, res) => {
     console.log('📝 Creating new booking...');
     console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
     
-    // Check database connection
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      console.error('❌ Database not connected! Connection state:', mongoose.connection.readyState);
-      return res.status(500).json({
-        success: false,
-        error: 'Database connection not available'
-      });
-    }
-    
-    console.log('✅ Database connection verified');
-    
     // Check if the activity exists
     const activity = await Activity.findById(req.body.activityId);
     if (!activity) {
@@ -50,9 +38,11 @@ exports.createBooking = async (req, res) => {
       bookingReference: req.body.bookingReference,
       date: new Date(req.body.date),
       guests: req.body.guests,
+      durationType: req.body.durationType || null,
+      pricePerPerson: req.body.pricePerPerson || null,
       totalPrice: req.body.totalPrice,
       fullName: req.body.fullName,
-      email: bookingEmail, // Use logged-in user's email if available
+      email: bookingEmail,
       phone: req.body.phone,
       specialRequests: req.body.specialRequests
     });
@@ -105,25 +95,9 @@ exports.getAllBookings = async (req, res) => {
   try {
     console.log('📋 Fetching all bookings (admin)');
     
-    // Check database connection
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      console.error('❌ Database not connected!');
-      return res.status(500).json({
-        success: false,
-        error: 'Database connection not available'
-      });
-    }
-    
-    const totalCount = await Booking.countDocuments();
-    console.log(`📊 Total bookings in database: ${totalCount}`);
-    
-    const bookings = await Booking.find().populate('activity', 'title image');
+    const bookings = await Booking.find().populate('activity', 'title image price halfDayPrice fullDayPrice pricingType');
     
     console.log(`✅ Retrieved ${bookings.length} bookings`);
-    if (bookings.length > 0) {
-      console.log('📝 Sample booking emails:', bookings.slice(0, 5).map(b => b.email));
-    }
     
     res.status(200).json({
       success: true,
@@ -200,7 +174,7 @@ exports.updateBookingStatus = async (req, res) => {
   try {
     const { status } = req.body;
     
-    if (!status || !['pending', 'confirmed', 'cancelled'].includes(status)) {
+    if (!status || !['pending', 'confirmed', 'cancelled', 'completed'].includes(status)) {
       return res.status(400).json({
         success: false,
         error: 'Valid status is required'

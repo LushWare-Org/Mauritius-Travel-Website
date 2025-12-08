@@ -37,14 +37,14 @@ const optionalAuth = async (req, res, next) => {
 router.post('/', optionalAuth, bookingController.createBooking);
 
 // Route to get all bookings (admin only)
-router.get('/', bookingController.getAllBookings);
+router.get('/', protect, bookingController.getAllBookings);
 
 // Route to get booking by reference number
 router.get('/reference/:reference', bookingController.getBookingByReference);
 
 // Route to get, update or delete a booking by ID
-router.get('/:id', bookingController.getBookingById);
-router.put('/:id', bookingController.updateBookingStatus);
-router.delete('/:id', bookingController.deleteBooking);
+router.get('/:id', protect, bookingController.getBookingById);
+router.put('/:id', protect, bookingController.updateBookingStatus);
+router.delete('/:id', protect, bookingController.deleteBooking);
 
 module.exports = router;
