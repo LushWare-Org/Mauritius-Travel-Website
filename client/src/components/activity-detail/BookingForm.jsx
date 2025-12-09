@@ -27,6 +27,14 @@ const BookingForm = ({ activity }) => {
     return activity.price;
   };
 
+  // Get selected airport transfer details
+  const getSelectedAirportTransfer = () => {
+    if (!selectedAirportTransfer || airportTransfers.length === 0) return null;
+    return airportTransfers.find(t => t._id === selectedAirportTransfer);
+  };
+
+  const selectedAirport = getSelectedAirportTransfer();
+
   useEffect(() => {
     const fetchAirportTransfers = async () => {
       if (!includeAirportTransfer) return;
@@ -163,6 +171,27 @@ const BookingForm = ({ activity }) => {
     if (!dateString) return 'Select date';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  // Function to format airport transfer option display
+  const formatAirportTransferOption = (transfer) => {
+    const airportCode = transfer.airportCode || '';
+    const airportName = transfer.airportName || 'Airport Transfer';
+    const price = tripType === 'one-way' ? transfer.oneWayPrice : transfer.roundTripPrice;
+    
+    return `${airportCode ? `${airportCode} - ` : ''}${airportName} - $${price}`;
+  };
+
+  // Function to get airport code display text
+  const getAirportCodeDisplay = () => {
+    if (!selectedAirport) return '';
+    return selectedAirport.airportCode || '';
+  };
+
+  // Function to get airport name display text
+  const getAirportNameDisplay = () => {
+    if (!selectedAirport) return '';
+    return selectedAirport.airportName || '';
   };
 
   return (
@@ -352,10 +381,40 @@ const BookingForm = ({ activity }) => {
                 >
                   {airportTransfers.map((transfer) => (
                     <option key={transfer._id} value={transfer._id}>
-                      {transfer.airportName} - ${tripType === 'one-way' ? transfer.oneWayPrice : transfer.roundTripPrice}
+                      {formatAirportTransferOption(transfer)}
                     </option>
                   ))}
                 </select>
+                
+                {/* Selected airport details - Showing both code and name */}
+                {selectedAirport && (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center">
+                      <svg className="w-4 h-4 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      </svg>
+                      <div className="text-xs text-gray-700">
+                        <span className="font-medium mr-2">Selected airport code:</span>
+                        <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-semibold">
+                          {getAirportCodeDisplay()}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center">
+                      <svg className="w-4 h-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <div className="text-xs text-gray-700">
+                        <span className="font-medium mr-2">Selected hotel name:</span>
+                        <span className="text-gray-900 font-medium">
+                          {getAirportNameDisplay()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -376,10 +435,32 @@ const BookingForm = ({ activity }) => {
               <div className="font-semibold text-gray-900">${getCurrentPrice()}</div>
             </div>
 
-            {includeAirportTransfer && airportTransferPrice > 0 && (
-              <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                <div className="text-sm text-gray-800">Airport Transfer</div>
-                <div className="font-semibold text-blue-600">+${airportTransferPrice}</div>
+            {includeAirportTransfer && airportTransferPrice > 0 && selectedAirport && (
+              <div className="pt-2 border-t border-gray-200">
+                <div className="flex justify-between items-center mb-2">
+                  <div>
+                    <div className="text-sm text-gray-800 font-medium">Airport Transfer</div>
+                    {/* Display both airport code and name */}
+                    <div className="text-xs text-gray-600 mt-1">
+                      <span className="font-semibold text-blue-700">{getAirportCodeDisplay()}</span>
+                      {getAirportCodeDisplay() && getAirportNameDisplay() && (
+                        <span className="mx-1">•</span>
+                      )}
+                      <span>{getAirportNameDisplay()}</span>
+                    </div>
+                  </div>
+                  <div className="font-semibold text-blue-600">+${airportTransferPrice}</div>
+                </div>
+                
+                {/* Additional transfer details */}
+                <div className="flex items-center text-xs text-gray-500">
+                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  </svg>
+                  <span className="mr-2">{tripType === 'one-way' ? 'One Way' : 'Round Trip'}</span>
+                  <span className="mx-2">•</span>
+                  <span>{selectedAirport.vehicleType || 'Standard Vehicle'}</span>
+                </div>
               </div>
             )}
 

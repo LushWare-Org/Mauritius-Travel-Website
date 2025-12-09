@@ -86,6 +86,7 @@ const AdminActivities = () => {
       setActivities(previousActivities);
     }
   };
+  
 
   if (error) {
     return (
