@@ -28,27 +28,27 @@ const AdminLayout = ({ children }) => {
   const navLinks = [
     { path: '/admin/dashboard', icon: 'fa-tachometer-alt', text: 'Dashboard' },
     {
+      path: '/admin/tour-packages',
+      icon: 'fa-map-marked-alt', 
+      text: 'Tour Packages',
+    },
+    { path: '/admin/tour-package-bookings', icon: 'fa-calendar-check', text: 'Tour Bookings' },
+    {
       path: '/admin/activities',
-      icon: 'fa-umbrella-beach',
+      icon: 'fa-hiking',
       text: 'Excursions',
     },
-    { path: '/admin/bookings', icon: 'fa-calendar-check', text: 'Bookings' },
-    { path: '/admin/users', icon: 'fa-users', text: 'Users' },
-    {
-      path: '/admin/tour-packages',
-      icon: 'fa-umbrella-beach',
-      text: 'TourPackages',
-    },
-
-    {
-      path: '/admin/dashboard?tab=contacts',
-      icon: 'fa-envelope',
-      text: 'Contact Inquiries',
-    },
+    { path: '/admin/bookings', icon: 'fa-receipt', text: 'Bookings' },
     {
       path: '/admin/dashboard?tab=airport-transfers',
-      icon: 'fa-plane',
+      icon: 'fa-shuttle-van', 
       text: 'Airport Transfers',
+    },
+    { path: '/admin/users', icon: 'fa-users', text: 'Users' },
+    {
+      path: '/admin/dashboard?tab=contacts',
+      icon: 'fa-comments', 
+      text: 'Contact Inquiries',
     },
   ];
 
