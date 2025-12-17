@@ -25,6 +25,7 @@ const TourPackageBookingConfirmation = () => {
   const [formData, setFormData] = useState({
     fullName: currentUser?.name || '',
     email: currentUser?.email || '',
+    countryCode: '+230',
     phone: currentUser?.phone || '',
     specialRequests: '',
   });
@@ -118,7 +119,7 @@ const TourPackageBookingConfirmation = () => {
         startDate: new Date(selectedDate).toISOString().split('T')[0],
         fullName: formData.fullName || currentUser.name,
         email: formData.email || currentUser.email,
-        phone: formData.phone || currentUser.phone,
+        phone: `${formData.countryCode}${formData.phone}`,
 
         // Send Rs values directly
         totalPrice: calculatedPrices?.grandTotal || 0,
@@ -382,16 +383,34 @@ const TourPackageBookingConfirmation = () => {
 
               <div className="mb-4">
                 <label className="block text-gray-700 text-sm font-medium mb-1">
-                  Phone Number (with counry code)*
+                  Phone Number *
                 </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                  required
-                />
+
+                <div className="flex gap-2">
+                  {/* Country Code */}
+                  <input
+                    type="text"
+                    name="countryCode"
+                    value={formData.countryCode}
+                    onChange={(e) =>
+                      setFormData({ ...formData, countryCode: e.target.value })
+                    }
+                    className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+
+                  {/* Local Number */}
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
               </div>
 
               <div className="mb-6">

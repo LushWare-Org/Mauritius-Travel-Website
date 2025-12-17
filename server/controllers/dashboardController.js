@@ -18,8 +18,8 @@ exports.getStats = async (req, res) => {
       totalBookings,
       pendingBookings,
       totalTourPackages,
-      totalTourPackagesBookings,
-      pendingTourPackagesBookings,
+      totalTourPackageBookings,
+      pendingTourPackageBookings,
     ] = await Promise.all([
       Activity.countDocuments(),
       User.countDocuments(),
@@ -28,6 +28,8 @@ exports.getStats = async (req, res) => {
       TourPackage.countDocuments(),
       TourPackageBooking.countDocuments(),
       TourPackageBooking.countDocuments({ status: 'pending' }),
+      TourPackageBooking.countDocuments({ status: 'confirmed' }),  
+      TourPackageBooking.countDocuments({ status: 'completed' }),  
     ]);
 
     // Get contact stats
@@ -58,6 +60,31 @@ exports.getStats = async (req, res) => {
       },
     ]);
 
+    // Get tour package booking stats
+    const tourPackageBookingStats = await TourPackageBooking.aggregate([
+  {
+    $facet: {
+      totalBookings: [{ $count: 'count' }],
+      pendingBookings: [
+        { $match: { status: 'pending' } },
+        { $count: 'count' },
+      ],
+      confirmedBookings: [
+        { $match: { status: 'confirmed' } },
+        { $count: 'count' },
+      ],
+      completedBookings: [
+        { $match: { status: 'completed' } },
+        { $count: 'count' },
+      ],
+      totalRevenue: [
+        { $match: { status: { $in: ['confirmed', 'completed'] } } },
+        { $group: { _id: null, total: { $sum: '$totalPrice' } } },
+      ],
+    },
+  },
+]);
+
     // Get recent regular bookings
     const recentBookings = await Booking.find()
       .sort({ createdAt: -1 })
@@ -74,6 +101,13 @@ exports.getStats = async (req, res) => {
       .populate('user', 'name email')
       .lean();
 
+    // Get recent tour package bookings
+    const recentTourPackageBookings = await TourPackageBooking.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate('tourPackage', 'title images price')
+      .lean();
+
     res.status(200).json({
       success: true,
       data: {
@@ -82,6 +116,11 @@ exports.getStats = async (req, res) => {
         totalUsers,
         totalBookings,
         pendingBookings,
+
+        // Tour Package stats
+        totalTourPackages,
+        totalTourPackageBookings,
+        pendingTourPackageBookings,
 
         // Contact stats
         totalContacts,
@@ -99,35 +138,26 @@ exports.getStats = async (req, res) => {
           totalRevenue: airportTransferStats[0]?.totalRevenue[0]?.total || 0,
         },
 
+        // Tour Package Booking stats
+        tourPackageBookings: {
+        totalBookings: tourPackageBookingStats[0]?.totalBookings[0]?.count || 0,
+        pendingBookings: tourPackageBookingStats[0]?.pendingBookings[0]?.count || 0,
+        confirmedBookings: tourPackageBookingStats[0]?.confirmedBookings[0]?.count || 0,
+        completedBookings: tourPackageBookingStats[0]?.completedBookings[0]?.count || 0,
+        totalRevenue: tourPackageBookingStats[0]?.totalRevenue[0]?.total || 0,
+        },
+
         // Recent data
         recentBookings,
         recentAirportBookings,
+        recentTourPackageBookings,
 
         // Additional useful stats
         statsByMonth: await getMonthlyStats(),
         topActivities: await getTopActivities(),
       },
     });
-    const recentTourPackageBookings = await TourPackageBooking.find()
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .populate('tourPackage', 'title images price')
-      .lean();
 
-    res.status(200).json({
-      success: true,
-      data: {
-        totalActivities,
-        totalUsers,
-        totalBookings,
-        pendingBookings,
-        totalTourPackages,
-        totalTourPackagesBookings,
-        pendingTourPackagesBookings,
-        recentBookings,
-        recentTourPackageBookings,
-      },
-    });
   } catch (err) {
     console.error('Error fetching dashboard stats:', err);
     res.status(500).json({
