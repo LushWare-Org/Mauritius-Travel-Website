@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import logo from '../../assets/logo.png';
 
 const AdminLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -28,27 +29,47 @@ const AdminLayout = ({ children }) => {
   const navLinks = [
     { path: '/admin/dashboard', icon: 'fa-tachometer-alt', text: 'Dashboard' },
     {
-      path: '/admin/tour-packages',
-      icon: 'fa-map-marked-alt', 
-      text: 'Tour Packages',
-    },
-    { path: '/admin/tour-package-bookings', icon: 'fa-calendar-check', text: 'Tour Bookings' },
-    {
       path: '/admin/activities',
-      icon: 'fa-hiking',
+      icon: 'fa-umbrella-beach',
       text: 'Excursions',
     },
-    { path: '/admin/bookings', icon: 'fa-receipt', text: 'Bookings' },
     {
-      path: '/admin/dashboard?tab=airport-transfers',
-      icon: 'fa-shuttle-van', 
-      text: 'Airport Transfers',
+      path: '/admin/bookings',
+      icon: 'fa-calendar-check',
+      text: 'Excursion Bookings',
     },
     { path: '/admin/users', icon: 'fa-users', text: 'Users' },
     {
+      path: '/admin/tour-packages',
+      icon: 'fa-umbrella-beach',
+      text: 'TourPackages',
+    },
+    {
+      path: '/admin/tour-package-bookings',
+      icon: 'fa-calendar-check',
+      text: 'Tour Bookings',
+    },
+
+    {
       path: '/admin/dashboard?tab=contacts',
-      icon: 'fa-comments', 
+      icon: 'fa-envelope',
       text: 'Contact Inquiries',
+    },
+    {
+      path: '/admin/airport-transfers',
+      icon: 'fa-plane',
+      text: 'Airport Transfers',
+    },
+    {
+      path: '/admin/airport-transfer-bookings',
+      icon: 'fa-plane',
+      text: 'Airport Transfers Bookings',
+    },
+
+    {
+      path: '/admin/activity-reviews',
+      icon: 'fa-plane',
+      text: 'Excursion Reviews',
     },
   ];
 
@@ -137,10 +158,10 @@ const AdminLayout = ({ children }) => {
                     <i className="fas fa-umbrella-beach drop-shadow-md"></i>
                   </span>
                   <span className="group-hover:text-yellow-100 transition-colors">
-                    Mauritius
+                    Holiday
                   </span>
                   <span className="text-yellow-400 ml-1 group-hover:scale-105 transition-transform duration-300">
-                    Paradise
+                    Vibes
                   </span>
                 </div>
               </Link>
@@ -201,14 +222,16 @@ const AdminLayout = ({ children }) => {
               <div className="flex items-center justify-center flex-shrink-0 px-6 py-4 border-b border-blue-700/50">
                 <Link to="/" className="flex items-center group">
                   <div className="text-2xl font-bold text-white font-display flex items-center">
-                    <span className="text-yellow-400 mr-1 group-hover:rotate-12 transition-transform duration-300">
-                      <i className="fas fa-umbrella-beach drop-shadow-md"></i>
-                    </span>
-                    <span className="group-hover:text-yellow-100 transition-colors">
-                      Mauritius
+                    <img
+                      src={logo}
+                      alt="Holiday Vibes Logo"
+                      className="h-8 w-8 mr-2 group-hover:scale-110 transition-transform duration-300"
+                    />
+                    <span className="hidden sm:inline group-hover:text-yellow-100 transition-colors">
+                      Holiday
                     </span>
                     <span className="text-yellow-400 ml-1 group-hover:scale-105 transition-transform duration-300">
-                      Paradise
+                      Vibes
                     </span>
                   </div>
                 </Link>

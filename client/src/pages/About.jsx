@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const About = () => {
     return (
@@ -19,7 +20,7 @@ const About = () => {
                         </svg>
                     </div>
                     <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500">
-                        Mauritius Paradise
+                        Holiday Vibes Tour Ltd
                     </h1>
                     <div className="w-24 h-1 bg-gradient-to-r from-blue-400 via-green-400 to-yellow-400 mx-auto mb-6 rounded-full shadow-lg"></div>
                     <p className="text-gray-700 text-lg md:text-xl max-w-3xl mx-auto leading-relaxed font-light">
@@ -30,7 +31,7 @@ const About = () => {
                 {/* Cards Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-16">
                     {/* Card 1 - Blue Theme */}
-                    <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl shadow-blue-100/50 border border-blue-200/50 hover:border-blue-300 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-blue-200/50">
+                    <Link to="/activities" className="group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl shadow-blue-100/50 border border-blue-200/50 hover:border-blue-300 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-blue-200/50 block">
                         <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                         <div className="relative z-10">
                             <div className="flex items-center mb-6">
@@ -46,17 +47,17 @@ const About = () => {
                             </p>
                             <div className="pt-6 border-t border-blue-100/50">
                                 <div className="inline-flex items-center text-blue-600 font-semibold group-hover:text-blue-700 transition-colors text-sm">
-                                    <span>Explore Adventures</span>
+                                    <span>Explore Excursions Here</span>
                                     <svg className="w-5 h-5 ml-2 transform group-hover:translate-x-2 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                                     </svg>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </Link>
 
                     {/* Card 2 - Yellow Theme */}
-                    <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl shadow-yellow-100/50 border border-yellow-200/50 hover:border-yellow-300 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-yellow-200/50">
+                    <Link to="/airport-transfers" className="group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl shadow-yellow-100/50 border border-yellow-200/50 hover:border-yellow-300 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-yellow-200/50 block">
                         <div className="absolute inset-0 bg-gradient-to-br from-yellow-50/50 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                         <div className="relative z-10">
                             <div className="flex items-center mb-6">
@@ -72,17 +73,17 @@ const About = () => {
                             </p>
                             <div className="pt-6 border-t border-yellow-100/50">
                                 <div className="inline-flex items-center text-yellow-600 font-semibold group-hover:text-yellow-700 transition-colors text-sm">
-                                    <span>Book Transfer</span>
+                                    <span>Book Airport Transfer Here</span>
                                     <svg className="w-5 h-5 ml-2 transform group-hover:translate-x-2 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                                     </svg>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </Link>
 
                     {/* Card 3 - Green Theme */}
-                    <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl shadow-green-100/50 border border-green-200/50 hover:border-green-300 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-green-200/50">
+                    <Link to="/tour-packages" className="group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl shadow-green-100/50 border border-green-200/50 hover:border-green-300 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-green-200/50 block">
                         <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                         <div className="relative z-10">
                             <div className="flex items-center mb-6">
@@ -98,14 +99,14 @@ const About = () => {
                             </p>
                             <div className="pt-6 border-t border-green-100/50">
                                 <div className="inline-flex items-center text-green-600 font-semibold group-hover:text-green-700 transition-colors text-sm">
-                                    <span>Meet Our Team</span>
+                                    <span>Visit Tour Packages Here</span>
                                     <svg className="w-5 h-5 ml-2 transform group-hover:translate-x-2 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                                     </svg>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </Link>
                 </div>
 
                 {/* Stats Section */}
@@ -157,15 +158,15 @@ const About = () => {
                             <p className="text-lg md:text-xl mb-10 opacity-95 max-w-2xl mx-auto leading-relaxed font-light">
                                 Join thousands who've discovered the magic of Mauritius with us
                             </p>
-                            <a 
-                                href="/activities" 
+                            <Link 
+                                to="/activities" 
                                 className="group inline-flex items-center bg-gradient-to-r from-yellow-300 via-yellow-200 to-yellow-300 text-gray-900 font-bold py-4 px-10 rounded-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1 hover:scale-105 text-base shadow-xl"
                             >
                                 <span>Begin Your Journey</span>
                                 <svg className="w-6 h-6 ml-3 transform group-hover:translate-x-2 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                                 </svg>
-                            </a>
+                            </Link>
                             <div className="mt-8 flex items-center justify-center text-yellow-100/80 text-base">
                                 <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />

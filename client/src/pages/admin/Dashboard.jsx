@@ -1,25 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
-import { dashboardAPI } from '../../utils/api';
+import { dashboardAPI, activitiesAPI, tourPackagesAPI, tourPackageBookingsAPI } from '../../utils/api';
 import AdminContacts from './AdminContacts.jsx';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
     totalActivities: 0,
-    totalTourPackages: 0, 
+    totalTourPackages: 0,
     totalBookings: 0,
     totalUsers: 0,
     pendingBookings: 0,
     totalContacts: 0,
     unreadContacts: 0,
-    tourPackageBookings: { 
+    tourPackageBookings: {
       totalBookings: 0,
       totalRevenue: 0,
       pendingBookings: 0,
       confirmedBookings: 0,
       completedBookings: 0
-  },
+    },
     airportTransfers: {
       totalBookings: 0,
       totalRevenue: 0,
@@ -29,10 +29,19 @@ const AdminDashboard = () => {
     }
   });
   const [loading, setLoading] = useState(true);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
+  const [tourPackagesLoading, setTourPackagesLoading] = useState(true);
   const [error, setError] = useState('');
   const [recentBookings, setRecentBookings] = useState([]);
   const [recentAirportBookings, setRecentAirportBookings] = useState([]);
   const [recentTourPackageBookings, setRecentTourPackageBookings] = useState([]);
+  
+  // Add state for activities breakdown
+  const [activitiesBreakdown, setActivitiesBreakdown] = useState({
+    total: 0,
+    active: 0,
+    featured: 0
+  });
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -43,6 +52,8 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
+    fetchActivitiesData();
+    fetchTourPackagesData();
   }, []);
 
   const fetchDashboardData = async () => {
@@ -66,35 +77,23 @@ const AdminDashboard = () => {
       
       if (response && response.data && response.data.success) {
         const { 
-          totalActivities, 
-          totalTourPackages, 
           totalBookings, 
           totalUsers, 
           pendingBookings, 
           recentBookings,
           totalContacts,
           unreadContacts,
-          tourPackageBookings, 
           airportTransfers,
-          recentAirportBookings,
-          recentTourPackageBookings 
+          recentAirportBookings 
         } = response.data.data;
         
-        setStats({
-          totalActivities: totalActivities || 0,
-          totalTourPackages: totalTourPackages || 0, 
+        setStats(prevStats => ({
+          ...prevStats,
           totalBookings: totalBookings || 0,
           totalUsers: totalUsers || 0,
           pendingBookings: pendingBookings || 0,
           totalContacts: totalContacts || 0,
           unreadContacts: unreadContacts || 0,
-          tourPackageBookings: tourPackageBookings || { 
-          totalBookings: 0,
-          totalRevenue: 0,
-          pendingBookings: 0,
-          confirmedBookings: 0,
-          completedBookings: 0
-        },
           airportTransfers: airportTransfers || {
             totalBookings: 0,
             totalRevenue: 0,
@@ -102,11 +101,10 @@ const AdminDashboard = () => {
             confirmedBookings: 0,
             completedBookings: 0
           }
-        });
+        }));
         
         setRecentBookings(recentBookings || []);
         setRecentAirportBookings(recentAirportBookings || []);
-        setRecentTourPackageBookings(recentTourPackageBookings || []);
       } else {
         setError('Failed to fetch dashboard data');
       }
@@ -115,6 +113,137 @@ const AdminDashboard = () => {
       setError('Error connecting to the server. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Separate function to fetch activities count
+  const fetchActivitiesData = async () => {
+    setActivitiesLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.warn('No token found for activities fetch');
+        return;
+      }
+
+      console.log('Fetching activities data...');
+      const response = await activitiesAPI.getAll();
+      console.log('Activities API response:', response);
+      
+      if (response && response.data) {
+        if (response.data.success) {
+          const activitiesData = response.data.data || [];
+          console.log('Activities count:', activitiesData.length);
+          
+          const totalActivities = activitiesData.length;
+          const activeActivities = activitiesData.filter(activity => 
+            activity.status === 'active' || activity.isActive === true
+          ).length;
+          const featuredActivities = activitiesData.filter(activity => 
+            activity.featured === true || activity.isFeatured === true
+          ).length;
+          
+          // Update stats and activities breakdown
+          setStats(prevStats => ({
+            ...prevStats,
+            totalActivities
+          }));
+          
+          setActivitiesBreakdown({
+            total: totalActivities,
+            active: activeActivities,
+            featured: featuredActivities
+          });
+          
+          console.log('Activities stats updated:', {
+            total: totalActivities,
+            active: activeActivities,
+            featured: featuredActivities
+          });
+        } else {
+          console.error('Activities API returned success: false', response.data);
+        }
+      } else {
+        console.error('Invalid activities API response:', response);
+      }
+    } catch (error) {
+      console.error('Error fetching activities data:', error);
+      // Set default values on error
+      setActivitiesBreakdown({
+        total: 0,
+        active: 0,
+        featured: 0
+      });
+    } finally {
+      setActivitiesLoading(false);
+    }
+  };
+
+  // Separate function to fetch tour packages data
+  const fetchTourPackagesData = async () => {
+    setTourPackagesLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.warn('No token found for tour packages fetch');
+        return;
+      }
+
+      console.log('Fetching tour packages data...');
+      
+      // Fetch tour packages count
+      const packagesResponse = await tourPackagesAPI.getAll();
+      const tourPackagesData = packagesResponse.data.data || [];
+      const totalTourPackages = tourPackagesData.length;
+      
+      // Fetch tour package bookings
+      const bookingsResponse = await tourPackageBookingsAPI.getAllAdmin();
+      const tourBookingsData = bookingsResponse.data.data || [];
+      
+      // Calculate tour package booking stats
+      const totalTourBookings = tourBookingsData.length;
+      const pendingTourBookings = tourBookingsData.filter(b => 
+        b.status === 'pending'
+      ).length;
+      const confirmedTourBookings = tourBookingsData.filter(b => 
+        b.status === 'confirmed'
+      ).length;
+      const completedTourBookings = tourBookingsData.filter(b => 
+        b.status === 'completed'
+      ).length;
+      const totalTourRevenue = tourBookingsData.reduce((sum, booking) => 
+        sum + (parseFloat(booking.totalPrice) || 0), 0
+      );
+      
+      // Get recent tour package bookings (last 5)
+      const recentTourPackageBookings = tourBookingsData
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+        .slice(0, 5);
+      
+      setStats(prevStats => ({
+        ...prevStats,
+        totalTourPackages,
+        tourPackageBookings: {
+          totalBookings: totalTourBookings,
+          totalRevenue: totalTourRevenue,
+          pendingBookings: pendingTourBookings,
+          confirmedBookings: confirmedTourBookings,
+          completedBookings: completedTourBookings
+        }
+      }));
+      
+      setRecentTourPackageBookings(recentTourPackageBookings);
+      
+      console.log('Tour packages stats updated:', {
+        totalPackages: totalTourPackages,
+        totalBookings: totalTourBookings,
+        revenue: totalTourRevenue
+      });
+      
+    } catch (error) {
+      console.error('Error fetching tour packages data:', error);
+    } finally {
+      setTourPackagesLoading(false);
     }
   };
 
@@ -151,6 +280,13 @@ const AdminDashboard = () => {
         {displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1)}
       </span>
     );
+  };
+
+  // Refresh all data
+  const refreshAllData = () => {
+    fetchDashboardData();
+    fetchActivitiesData();
+    fetchTourPackagesData();
   };
 
   return (
@@ -234,7 +370,7 @@ const AdminDashboard = () => {
                   className="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600"
                 >
                   <span className="sr-only">Dismiss</span>
-                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>
                 </button>
@@ -247,7 +383,7 @@ const AdminDashboard = () => {
       {/* Dashboard Tab */}
       {activeTab === 'dashboard' && (
         <>
-          {loading ? (
+          {(loading || activitiesLoading || tourPackagesLoading) ? (
             <div className="flex flex-col items-center justify-center py-16">
               <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
               <p className="text-gray-500">Loading dashboard data...</p>
@@ -258,62 +394,62 @@ const AdminDashboard = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 
                 {/* Tour Packages Card */}
-<div className="bg-white overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg border border-gray-50">
-  <div className="px-5 py-6">
-    <div className="flex justify-between items-center mb-4">
-      <div className="bg-purple-100 p-3 rounded-full">
-        <i className="fas fa-route text-purple-600 text-xl"></i>
-      </div>
-      <span className="text-xs font-medium text-gray-500 bg-purple-50 py-1 px-2 rounded-md">Tour Packages</span>
-    </div>
-    <dl>
-      <dt className="text-sm font-medium text-gray-500 truncate">Total Tour Packages</dt>
-      {/* <dd className="mt-2 text-3xl font-extrabold text-purple-600">{stats.totalTourPackages}</dd> */}
-    </dl>
-    {/* <div className="mt-2">
-      <span className="text-xs text-gray-500">
-        Bookings: <span className="font-semibold">{stats.tourPackageBookings.totalBookings}</span>
-      </span>
-    </div> */} 
-    <div className="mt-5">
-      <Link to="/admin/tour-packages" className="text-sm text-purple-600 hover:text-purple-800 font-medium flex items-center">
-        Manage tour packages 
-        <svg className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-        </svg>
-      </Link>
-    </div>
-  </div>
-</div>
+                <div className="bg-white overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg border border-gray-50">
+                  <div className="px-5 py-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="bg-purple-100 p-3 rounded-full">
+                        <i className="fas fa-route text-purple-600 text-xl"></i>
+                      </div>
+                      <span className="text-xs font-medium text-gray-500 bg-purple-50 py-1 px-2 rounded-md">Tour Packages</span>
+                    </div>
+                    <dl>
+                      <dt className="text-sm font-medium text-gray-500 truncate">Total Tour Packages</dt>
+                      <dd className="mt-2 text-3xl font-extrabold text-purple-600">{stats.totalTourPackages}</dd>
+                    </dl>
+                    <div className="mt-2">
+                      <span className="text-xs text-gray-500">
+                        Bookings: <span className="font-semibold">{stats.tourPackageBookings.totalBookings}</span>
+                      </span>
+                    </div>
+                    <div className="mt-5">
+                      <Link to="/admin/tour-packages" className="text-sm text-purple-600 hover:text-purple-800 font-medium flex items-center">
+                        Manage tour packages 
+                        <svg className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
 
-{/* Tour Package Bookings Card */}
-<div className="bg-white overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg border border-gray-50">
-  <div className="px-5 py-6">
-    <div className="flex justify-between items-center mb-4">
-      <div className="bg-teal-100 p-3 rounded-full">
-        <i className="fas fa-suitcase-rolling text-teal-600 text-xl"></i>
-      </div>
-      <span className="text-xs font-medium text-gray-500 bg-teal-50 py-1 px-2 rounded-md">Tour Bookings</span>
-    </div>
-    <dl>
-      <dt className="text-sm font-medium text-gray-500 truncate">Tour Package Bookings</dt>
-      {/* <dd className="mt-2 text-3xl font-extrabold text-teal-600">{stats.tourPackageBookings.totalBookings}</dd> */}
-    </dl>
-    {/* <div className="mt-2">
-      <span className="text-xs text-gray-500">
-        Revenue: <span className="font-semibold">Rs {(Number(stats.tourPackageBookings.totalRevenue) || 0).toFixed(2)}</span>
-      </span>
-    </div> */}
-    <div className="mt-5">
-      <Link to="/admin/tour-package-bookings" className="text-sm text-teal-600 hover:text-teal-800 font-medium flex items-center">
-        View bookings 
-        <svg className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-        </svg>
-      </Link>
-    </div>
-  </div>
-</div>
+                {/* Tour Package Bookings Card */}
+                <div className="bg-white overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg border border-gray-50">
+                  <div className="px-5 py-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="bg-teal-100 p-3 rounded-full">
+                        <i className="fas fa-suitcase-rolling text-teal-600 text-xl"></i>
+                      </div>
+                      <span className="text-xs font-medium text-gray-500 bg-teal-50 py-1 px-2 rounded-md">Tour Bookings</span>
+                    </div>
+                    <dl>
+                      <dt className="text-sm font-medium text-gray-500 truncate">Tour Package Bookings</dt>
+                      <dd className="mt-2 text-3xl font-extrabold text-teal-600">{stats.tourPackageBookings.totalBookings}</dd>
+                    </dl>
+                    <div className="mt-2">
+                      <span className="text-xs text-gray-500">
+                        Revenue: <span className="font-semibold">Rs {(Number(stats.tourPackageBookings.totalRevenue) || 0).toFixed(2)}</span>
+                      </span>
+                    </div>
+                    <div className="mt-5">
+                      <Link to="/admin/tour-package-bookings" className="text-sm text-teal-600 hover:text-teal-800 font-medium flex items-center">
+                        View bookings 
+                        <svg className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Activities Card */}
                 <div className="bg-white overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg border border-gray-50">
@@ -326,8 +462,20 @@ const AdminDashboard = () => {
                     </div>
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">Total Excursions</dt>
-                      <dd className="mt-2 text-3xl font-extrabold text-blue-600">{stats.totalActivities}</dd>
+                      <dd className="mt-2 text-3xl font-extrabold text-blue-600">
+                        {activitiesBreakdown.total}
+                      </dd>
                     </dl>
+                    <div className="mt-2 flex space-x-4 text-xs text-gray-500">
+                      <span className="flex items-center">
+                        <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                        {activitiesBreakdown.active} active
+                      </span>
+                      <span className="flex items-center">
+                        <span className="w-2 h-2 bg-yellow-500 rounded-full mr-1"></span>
+                        {activitiesBreakdown.featured} featured
+                      </span>
+                    </div>
                     <div className="mt-5">
                       <Link to="/admin/activities" className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center">
                         View all excursions 
@@ -346,15 +494,15 @@ const AdminDashboard = () => {
                       <div className="bg-green-100 p-3 rounded-full">
                         <i className="fas fa-calendar-check text-green-600 text-xl"></i>
                       </div>
-                      <span className="text-xs font-medium text-gray-500 bg-green-50 py-1 px-2 rounded-md">Bookings</span>
+                      <span className="text-xs font-medium text-gray-500 bg-green-50 py-1 px-2 rounded-md">Excursion Bookings</span>
                     </div>
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Total Bookings</dt>
+                      <dt className="text-sm font-medium text-gray-500 truncate">Total Excursion Bookings</dt>
                       <dd className="mt-2 text-3xl font-extrabold text-green-600">{stats.totalBookings}</dd>
                     </dl>
                     <div className="mt-5">
                       <Link to="/admin/bookings" className="text-sm text-green-600 hover:text-green-800 font-medium flex items-center">
-                        Manage bookings 
+                        Manage Excursion bookings 
                         <svg className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
                         </svg>
@@ -479,89 +627,89 @@ const AdminDashboard = () => {
               </div>
 
               {/* Recent Tour Package Bookings */}
-{/* <div className="bg-white shadow-md rounded-lg mb-8 border border-gray-100">
-  <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-white to-teal-50">
-    <div>
-      <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Tour Package Bookings</h3>
-      <p className="text-sm text-gray-500 mt-1">Latest tour package bookings</p>
-    </div>
-    <Link to="/admin/tour-package-bookings" className="text-sm bg-teal-500 hover:bg-teal-600 text-white py-2 px-4 rounded-md transition-colors duration-200 flex items-center">
-      View all 
-      <i className="fas fa-arrow-right ml-2"></i>
-    </Link>
-  </div>
-  
-  {recentTourPackageBookings && recentTourPackageBookings.length > 0 ? (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-              Booking ID
-            </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-              Tour Package
-            </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-              Customer
-            </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-              Date / Guests
-            </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-              Status
-            </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-              Amount
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {recentTourPackageBookings.map((booking) => (
-            <tr key={booking._id} className="hover:bg-teal-50 transition-colors duration-150">
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-teal-600">
-                <Link to={`/admin/tour-package-bookings/${booking._id}`} className="hover:underline">
-                  {booking.bookingReference || booking._id}
-                </Link>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">
-                  {booking.tourPackage?.title || 'Unknown Tour'}
+              <div className="bg-white shadow-md rounded-lg mb-8 border border-gray-100">
+                <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-white to-teal-50">
+                  <div>
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Tour Package Bookings</h3>
+                    <p className="text-sm text-gray-500 mt-1">Latest tour package bookings</p>
+                  </div>
+                  <Link to="/admin/tour-package-bookings" className="text-sm bg-teal-500 hover:bg-teal-600 text-white py-2 px-4 rounded-md transition-colors duration-200 flex items-center">
+                    View all 
+                    <i className="fas fa-arrow-right ml-2"></i>
+                  </Link>
                 </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm text-gray-900">
-                  {booking.user?.name || booking.fullName || 'N/A'}
-                </div>
-                <div className="text-sm text-gray-500">
-                  {booking.user?.email || booking.email || ''}
-                </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm text-gray-600">{formatDate(booking.startDate)}</div>
-                <div className="text-xs text-gray-500">{booking.guests || 0} guests</div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <StatusBadge status={booking.status} />
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">Rs {booking.totalPrice || 0}</div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  ) : (
-    <div className="py-8 px-4 text-center">
-      <div className="mx-auto h-16 w-16 rounded-full bg-teal-50 flex items-center justify-center mb-4">
-        <i className="fas fa-suitcase-rolling text-teal-500 text-xl"></i>
-      </div>
-      <p className="text-gray-500 font-medium">No recent tour package bookings found.</p>
-      <p className="text-gray-400 text-sm mt-1">New tour package bookings will appear here when created.</p>
-    </div>
-  )}
-</div> */}
+                
+                {recentTourPackageBookings && recentTourPackageBookings.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Booking ID
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Tour Package
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Customer
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Date / Guests
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Amount
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {recentTourPackageBookings.map((booking) => (
+                          <tr key={booking._id} className="hover:bg-teal-50 transition-colors duration-150">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-teal-600">
+                              <Link to={`/admin/tour-package-bookings/${booking._id}`} className="hover:underline">
+                                {booking.bookingReference || booking._id}
+                              </Link>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">
+                                {booking.tourPackage?.title || 'Unknown Tour'}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {booking.user?.name || booking.fullName || 'N/A'}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {booking.user?.email || booking.email || ''}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-600">{formatDate(booking.startDate)}</div>
+                              <div className="text-xs text-gray-500">{booking.guests || 0} guests</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <StatusBadge status={booking.status} />
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">Rs {booking.totalPrice || 0}</div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="py-8 px-4 text-center">
+                    <div className="mx-auto h-16 w-16 rounded-full bg-teal-50 flex items-center justify-center mb-4">
+                      <i className="fas fa-suitcase-rolling text-teal-500 text-xl"></i>
+                    </div>
+                    <p className="text-gray-500 font-medium">No recent tour package bookings found.</p>
+                    <p className="text-gray-400 text-sm mt-1">New tour package bookings will appear here when created.</p>
+                  </div>
+                )}
+              </div>
 
               {/* Recent Bookings */}
               <div className="bg-white shadow-md rounded-lg mb-8 border border-gray-100">
@@ -584,7 +732,7 @@ const AdminDashboard = () => {
                             Booking ID
                           </th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Activity
+                            Excursion
                           </th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             Customer
@@ -756,7 +904,7 @@ const AdminDashboard = () => {
               {/* Refresh Button */}
               <div className="mt-8 flex justify-center">
                 <button
-                  onClick={fetchDashboardData}
+                  onClick={refreshAllData}
                   className="inline-flex items-center px-5 py-2.5 border border-blue-300 rounded-md bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium shadow hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
                 >
                   <svg className="mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">

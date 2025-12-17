@@ -173,8 +173,8 @@ const BookingRequest = () => {
     }
 
     const phoneDigits = formData.phone.replace(/\D/g, '');
-    if (phoneDigits.length < 8) {
-      setError('Please enter a valid phone number (minimum 8 digits)');
+    if (phoneDigits.length < 5) {
+      setError('Please enter a valid phone number (minimum 5 digits)');
       return false;
     }
 
@@ -489,7 +489,7 @@ const BookingRequest = () => {
                   {/* Phone */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Phone Number
+                      Phone Number (minimum 5 digits)
                     </label>
                     <div className="flex gap-3">
                       <select

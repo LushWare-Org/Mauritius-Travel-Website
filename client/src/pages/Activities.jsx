@@ -1,24 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import ActivityFilters from '../components/activities/ActivityFilters';
-import ActivitySorting from '../components/activities/ActivitySorting';
+import { useLocation } from 'react-router-dom';
 import ActivityList from '../components/activities/ActivityList';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import { activitiesAPI } from '../utils/api';
 
 const Activities = () => {
     const location = useLocation();
-    const navigate = useNavigate();
     const [allActivities, setAllActivities] = useState([]);
     const [filteredActivities, setFilteredActivities] = useState([]);
-    
-    // IMPORTANT: Use BROAD initial filters to show ALL activities
-    const [filters, setFilters] = useState({
-        priceRange: [0, 1000],    // Make it wide enough
-        duration: [0, 24],        // Make it wide enough
-        activityTypes: []         // Empty = show all types
-    });
-    
     const [sortOption, setSortOption] = useState('popularity');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -26,7 +15,6 @@ const Activities = () => {
     // Parse URL search parameters
     const queryParams = new URLSearchParams(location.search);
     const searchQuery = queryParams.get('search');
-    const dateParam = queryParams.get('date');
     const typeParam = queryParams.get('type');
     const locationParam = queryParams.get('location');
     const categoryParam = queryParams.get('category');
@@ -39,7 +27,6 @@ const Activities = () => {
                 setError(null);
                 
                 console.log('🔍 Activities Page: Starting to fetch activities...');
-                console.log('🌐 API Base URL:', activitiesAPI.baseUrl);
                 
                 // Build params object from URL query parameters
                 const params = {};
@@ -71,51 +58,20 @@ const Activities = () => {
                 
                 setAllActivities(activitiesData);
                 
-                // Calculate ACTUAL ranges from the data and update filters
-                if (activitiesData.length > 0) {
-                    const prices = activitiesData.map(a => Number(a.price)).filter(p => !isNaN(p));
-                    const durations = activitiesData.map(a => Number(a.duration)).filter(d => !isNaN(d));
-                    
-                    const minPrice = Math.min(...prices);
-                    const maxPrice = Math.max(...prices);
-                    const maxDuration = Math.max(...durations);
-                    
-                    console.log(`💰 Actual price range: $${minPrice} - $${maxPrice}`);
-                    console.log(`⏱️ Actual duration range: 0 - ${maxDuration} hours`);
-                    
-                    // Find all unique activity types
-                    const uniqueTypes = [...new Set(activitiesData.map(a => a.type).filter(Boolean))];
-                    console.log('🎯 Unique activity types:', uniqueTypes);
-                    
-                    // Update filters to match ACTUAL data (not hardcoded values)
-                    const updatedFilters = {
-                        priceRange: [minPrice, maxPrice],  // Use actual min/max
-                        duration: [0, maxDuration],        // Use actual max duration
-                        activityTypes: []                  // Show all types initially
-                    };
-                    
-                    // If there's a type param from URL, set it
-                    if (type) {
-                        updatedFilters.activityTypes = [type];
-                    }
-                    
-                    setFilters(updatedFilters);
-                    
-                    // Handle client-side filtering for search term
-                    let filtered = activitiesData;
-                    if (searchQuery) {
-                        filtered = activitiesData.filter(activity => 
-                            activity?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            activity?.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            activity?.shortDescription?.toLowerCase().includes(searchQuery.toLowerCase())
-                        );
-                        console.log('🔍 Activities Page: Filtered activities for search:', filtered.length);
-                    }
-                    
-                    setFilteredActivities(filtered);
-                } else {
-                    setFilteredActivities([]);
+                // Handle client-side filtering for search term
+                let filtered = activitiesData;
+                if (searchQuery) {
+                    filtered = activitiesData.filter(activity => 
+                        activity?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        activity?.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        activity?.shortDescription?.toLowerCase().includes(searchQuery.toLowerCase())
+                    );
+                    console.log('🔍 Activities Page: Filtered activities for search:', filtered.length);
                 }
+                
+                // Apply initial sorting
+                filtered = applySorting(filtered, sortOption);
+                setFilteredActivities(filtered);
                 
                 console.log('✅ Activities Page: Successfully loaded activities');
             } catch (err) {
@@ -136,131 +92,44 @@ const Activities = () => {
         fetchActivities();
     }, [location.search]);
 
-    // Handle filter changes
-    const handleFilterChange = (newFilters) => {
-        console.log('🎯 New filters:', newFilters);
-        console.log('📦 Total activities:', allActivities.length);
+    // Helper function to apply sorting
+    const applySorting = (activities, option) => {
+        const sorted = [...activities];
         
-        // Update the filter state
-        setFilters(newFilters);
-        
-        // Apply filters to ALL activities
-        let filtered = [...allActivities];
-        
-        // Apply search query filter first (if any)
-        if (searchQuery) {
-            const q = searchQuery.toLowerCase();
-            filtered = filtered.filter(activity =>
-                activity?.title?.toLowerCase().includes(q) ||
-                activity?.description?.toLowerCase().includes(q) ||
-                activity?.shortDescription?.toLowerCase().includes(q)
-            );
-        }
-        
-        // Filter by price
-        filtered = filtered.filter(activity => {
-            const price = Number(activity.price);
-            return price >= newFilters.priceRange[0] && price <= newFilters.priceRange[1];
-        });
-        
-        // Filter by duration
-        filtered = filtered.filter(activity => {
-            const duration = Number(activity.duration);
-            return duration >= newFilters.duration[0] && duration <= newFilters.duration[1];
-        });
-        
-        // Filter by activity type (if any selected)
-        if (newFilters.activityTypes && newFilters.activityTypes.length > 0) {
-            filtered = filtered.filter(activity => {
-                const activityType = activity.type || 'unknown';
-                return newFilters.activityTypes.includes(activityType);
-            });
-        }
-        
-        // Apply sorting
-        switch (sortOption) {
+        switch (option) {
             case 'price-asc':
-                filtered.sort((a, b) => (a?.price || 0) - (b?.price || 0));
+                sorted.sort((a, b) => (a?.price || 0) - (b?.price || 0));
                 break;
             case 'price-desc':
-                filtered.sort((a, b) => (b?.price || 0) - (a?.price || 0));
+                sorted.sort((a, b) => (b?.price || 0) - (a?.price || 0));
                 break;
             case 'duration':
-                filtered.sort((a, b) => (a?.duration || 0) - (b?.duration || 0));
+                sorted.sort((a, b) => (a?.duration || 0) - (b?.duration || 0));
                 break;
             case 'popularity':
             default:
-                filtered.sort((a, b) => (b?.rating || 0) - (a?.rating || 0));
+                sorted.sort((a, b) => (b?.rating || 0) - (a?.rating || 0));
                 break;
         }
         
-        console.log(`✅ Filtered to: ${filtered.length} activities`);
-        setFilteredActivities(filtered);
+        return sorted;
     };
 
     // Handle sort changes
     const handleSortChange = (option) => {
         setSortOption(option);
         
-        // Re-apply sorting
+        // Apply sorting to filtered activities
         if (filteredActivities.length > 0) {
-            let sorted = [...filteredActivities];
-            
-            switch (option) {
-                case 'price-asc':
-                    sorted.sort((a, b) => (a?.price || 0) - (b?.price || 0));
-                    break;
-                case 'price-desc':
-                    sorted.sort((a, b) => (b?.price || 0) - (a?.price || 0));
-                    break;
-                case 'duration':
-                    sorted.sort((a, b) => (a?.duration || 0) - (b?.duration || 0));
-                    break;
-                case 'popularity':
-                default:
-                    sorted.sort((a, b) => (b?.rating || 0) - (a?.rating || 0));
-                    break;
-            }
-            
+            const sorted = applySorting(filteredActivities, option);
             setFilteredActivities(sorted);
         }
     };
 
-    // Reset to show ALL activities
-    const handleResetFilters = () => {
-        console.log('🔄 Resetting to show all activities');
-        
-        if (allActivities.length > 0) {
-            const prices = allActivities.map(a => Number(a.price)).filter(p => !isNaN(p));
-            const durations = allActivities.map(a => Number(a.duration)).filter(d => !isNaN(d));
-            
-            const minPrice = Math.min(...prices);
-            const maxPrice = Math.max(...prices);
-            const maxDuration = Math.max(...durations);
-            
-            const resetFilters = {
-                priceRange: [minPrice, maxPrice],
-                duration: [0, maxDuration],
-                activityTypes: []
-            };
-            
-            setFilters(resetFilters);
-            
-            // Also re-apply search query if exists
-            let filtered = [...allActivities];
-            if (searchQuery) {
-                const q = searchQuery.toLowerCase();
-                filtered = filtered.filter(activity =>
-                    activity?.title?.toLowerCase().includes(q) ||
-                    activity?.description?.toLowerCase().includes(q) ||
-                    activity?.shortDescription?.toLowerCase().includes(q)
-                );
-            }
-            
-            setFilteredActivities(filtered);
-            
-            console.log('✅ Reset filters:', resetFilters);
-        }
+    // Show all activities (clear search filter)
+    const handleShowAll = () => {
+        const sorted = applySorting(allActivities, sortOption);
+        setFilteredActivities(sorted);
     };
 
     return (
@@ -268,38 +137,52 @@ const Activities = () => {
             <div className="container mx-auto px-4">
                 {/* Page Header */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-blue-700 font-display">Mauritius Paradise</h1>
+                    <h1 className="text-3xl font-bold text-blue-700 font-display">Our Excursions</h1>
                     <p className="text-gray-600 mt-2">Discover and book the best experiences in the Mauritius</p>
                 </div>
                 
                 <div className="flex flex-col lg:flex-row gap-8">
-                    {/* Filters Sidebar */}
+                    {/* Sidebar - Simplified */}
                     <div className="w-full lg:w-1/4">
-                        <ActivityFilters 
-                            filters={filters} 
-                            onFilterChange={handleFilterChange} 
-                        />
+                        {/* Clear Search Button (only shown when searching) */}
+                        {searchQuery && (
+                            <div className="bg-white p-4 rounded-lg shadow mb-6">
+                                <h3 className="font-medium text-gray-700 mb-3">Search Results</h3>
+                                <p className="text-gray-600 text-sm mb-4">
+                                    Showing results for: <span className="font-medium">"{searchQuery}"</span>
+                                </p>
+                                <button
+                                    onClick={handleShowAll}
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-300"
+                                >
+                                    Show All Excursions
+                                </button>
+                            </div>
+                        )}
                         
-                        {/* Reset Filters Button */}
-                        <div className="mt-6">
-                            <button
-                                onClick={handleResetFilters}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-colors duration-300"
-                            >
-                                Reset All Filters
-                            </button>
-                        </div>
-                        
-                        {/* Debug Info - Remove in production */}
-                        <div className="mt-6 p-4 bg-gray-50 rounded-lg text-sm border border-gray-200">
-                            <h4 className="font-semibold mb-2 text-gray-700">Filter Info:</h4>
-                            <p className="text-gray-600">Total: {allActivities.length}</p>
-                            <p className="text-gray-600">Showing: {filteredActivities.length}</p>
-                            <p className="text-gray-600">Price: ${filters.priceRange[0]} - ${filters.priceRange[1]}</p>
-                            <p className="text-gray-600">Duration: {filters.duration[0]} - {filters.duration[1]}h</p>
-                            <p className="text-gray-600">
-                                Types: {filters.activityTypes.length > 0 ? filters.activityTypes.join(', ') : 'All'}
-                            </p>
+                        {/* Activity Count Info */}
+                        <div className="bg-white p-4 rounded-lg shadow">
+                            <h3 className="font-medium text-gray-700 mb-3">Excursions Overview</h3>
+                            <div className="space-y-2">
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">Total Excursions:</span>
+                                    <span className="font-medium">{allActivities.length}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">Currently Showing:</span>
+                                    <span className="font-medium text-blue-600">{filteredActivities.length}</span>
+                                </div>
+                                {filteredActivities.length < allActivities.length && (
+                                    <div className="pt-2 border-t border-gray-100">
+                                        <button
+                                            onClick={handleShowAll}
+                                            className="text-sm text-blue-600 hover:text-blue-800"
+                                        >
+                                            View all {allActivities.length} excursions
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                     
@@ -335,10 +218,25 @@ const Activities = () => {
                                     )}
                                 </p>
                             </div>
-                            <ActivitySorting 
-                                sortOption={sortOption} 
-                                onSortChange={handleSortChange} 
-                            />
+                            
+                            {/* Sorting Dropdown */}
+                            <div className="relative">
+                                <select
+                                    value={sortOption}
+                                    onChange={(e) => handleSortChange(e.target.value)}
+                                    className="border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+                                >
+                                    <option value="popularity">Sort by: Popularity</option>
+                                    <option value="price-asc">Sort by: Price (Low to High)</option>
+                                    <option value="price-desc">Sort by: Price (High to Low)</option>
+                                    <option value="duration">Sort by: Duration</option>
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                                    </svg>
+                                </div>
+                            </div>
                         </div>
                         
                         {/* Activity Listings */}
@@ -365,14 +263,16 @@ const Activities = () => {
                                 <div className="text-gray-400 text-6xl mb-4">😕</div>
                                 <h3 className="text-xl font-semibold text-gray-700 mb-2">No activities found</h3>
                                 <p className="text-gray-500 mb-6">
-                                    Try adjusting your filters or resetting to see all activities.
+                                    {searchQuery ? `No results found for "${searchQuery}". Try a different search term.` : 'No activities available at the moment.'}
                                 </p>
-                                <button
-                                    onClick={handleResetFilters}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors duration-300"
-                                >
-                                    Reset All Filters
-                                </button>
+                                {searchQuery && (
+                                    <button
+                                        onClick={handleShowAll}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors duration-300"
+                                    >
+                                        Show All Activities
+                                    </button>
+                                )}
                             </div>
                         ) : (
                             <ErrorBoundary>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import logo from '../../assets/logo.png';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -65,17 +66,18 @@ const Navbar = () => {
     >
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center">
-          {/* Logo */}
           <Link to="/" className="flex items-center group">
             <div className="text-2xl font-bold text-white font-display flex items-center">
-              <span className="text-yellow-400 mr-1 group-hover:rotate-12 transition-transform duration-300">
-                <i className="fas fa-umbrella-beach drop-shadow-md"></i>
-              </span>
+              <img
+                src={logo}
+                alt="Holiday Vibes Logo"
+                className="h-10 w-10 mr-2 group-hover:scale-110 transition-transform duration-300"
+              />
               <span className="hidden sm:inline group-hover:text-yellow-100 transition-colors">
-                Mauritius
+                Holiday Vibes
               </span>
               <span className="text-yellow-400 ml-1 group-hover:scale-105 transition-transform duration-300">
-                Paradise
+               Tour Ltd
               </span>
             </div>
           </Link>
@@ -207,7 +209,7 @@ const Navbar = () => {
                         /* Admin specific links */
                         <>
                           {/* Menu Items Grid */}
-                           <div className="space-y-0.5 px-2">
+                          <div className="space-y-0.5 px-2">
                             <Link
                               to="/admin/dashboard"
                               className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-purple-50 rounded-md transition-colors"
@@ -268,7 +270,7 @@ const Navbar = () => {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium text-gray-900 text-sm group-hover:text-emerald-700 truncate">
-                                  Bookings
+                                  Excursion Bookings
                                 </div>
                                 <div className="text-xs text-gray-500 truncate">
                                   Activity Reservations
@@ -419,7 +421,7 @@ const Navbar = () => {
                                   <i className="fas fa-calendar-check text-base"></i>
                                 </div>
                                 <div className="font-medium text-gray-900 group-hover:text-emerald-700 transition-colors text-sm">
-                                  Bookings
+                                  Excursion Bookings
                                 </div>
                                 <div className="text-xs text-gray-500 group-hover:text-emerald-500 transition-colors mt-0.5">
                                   Reservations
@@ -617,7 +619,7 @@ const Navbar = () => {
                       className="text-white hover:text-yellow-300 transition-colors flex items-center"
                     >
                       <i className="fas fa-calendar-check mr-2"></i> Manage
-                      Bookings
+                      Excursion Bookings
                     </Link>
                     <Link
                       to="/admin/tour-package-bookings"

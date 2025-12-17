@@ -7,7 +7,7 @@ const Footer = () => {
                 <div className="border-t border-white/20 pt-4">
                     <div className="flex flex-col md:flex-row justify-between items-center">
                         <p className="text-center md:text-left text-white/90 mb-4 md:mb-0">
-                            &copy; {new Date().getFullYear()} Mauritius Island Adventures. All rights reserved.
+                            &copy; {new Date().getFullYear()} Holiday Vibes Tour Ltd. All rights reserved.
                         </p>
                         
                         {/* Mauritius Flag Color Strip */}
