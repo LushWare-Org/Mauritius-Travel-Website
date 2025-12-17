@@ -5,7 +5,7 @@ import TourImageGallery from '../components/tour-detail/TourPackageImageGallery'
 import TourInfo from '../components/tour-detail/TourPackageInfo';
 import TourTabs from '../components/tour-detail/TourPackageTabs';
 import BookingForm from '../components/tour-detail/TourPackageBookingForm';
-import { FaStar } from 'react-icons/fa';
+import { FaStar, FaCalendarAlt, FaUsers, FaCheckCircle } from 'react-icons/fa';
 import { tourPackagesAPI } from '../utils/api';
 
 const TourPackageDetail = () => {
@@ -66,120 +66,132 @@ const TourPackageDetail = () => {
     }
 
     return (
-        <div className="bg-gray-50">
+        <div className="bg-gray-50 min-h-screen">
             {/* Hero Image Gallery */}
             <TourImageGallery pkg={tour} />
 
-            <div className="container mx-auto px-4 py-8">
+            <div className="container mx-auto px-4 py-8 max-w-7xl">
                 {/* Tour Header with Rating */}
-                <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between">
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-800 mb-2">{tour.title}</h1>
-                            <p className="text-gray-600 text-lg mb-4">{tour.shortDescription}</p>
-                            
-                            {/* Rating Display */}
-                            <div className="flex items-center mb-4">
-                                <div className="flex items-center bg-blue-50 text-blue-700 px-3 py-1 rounded-full">
-                                    <div className="flex">
-                                        {[...Array(5)].map((_, index) => (
-                                            <FaStar
-                                                key={index}
-                                                size={16}
-                                                className={index < Math.floor(tour.averageRating) ? "text-yellow-500" : "text-gray-300"}
-                                            />
-                                        ))}
-                                    </div>
-                                    <span className="ml-2 font-bold">{tour.averageRating.toFixed(1)}</span>
-                                    <span className="ml-1">({tour.totalRatings} reviews)</span>
-                                </div>
-                                <span className="ml-4 text-2xl font-bold text-green-600">
-                                    Rs {tour.price}
-                                </span>
-                            </div>
-                        </div>
-                        
-                        {/* Quick Stats */}
-                        {/*<div className="flex space-x-6 mt-4 md:mt-0">
-                            <div className="text-center">
-                                <div className="text-2xl font-bold text-gray-800">
-                                    {tour.duration || '5-7'}
-                                </div>
-                                <div className="text-sm text-gray-600">Days</div>
-                            </div>
-                            <div className="text-center">
-                                <div className="text-2xl font-bold text-gray-800">
-                                    {tour.difficulty || 'Moderate'}
-                                </div>
-                                <div className="text-sm text-gray-600">Difficulty</div>
-                            </div>
-                        </div>*/}
-                    </div>
-                </div>
-
-                <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Left Column - Details Tabs (Now includes Reviews) */}
-                    <div className="lg:col-span-2">
-                        <TourTabs pkg={tour} />
-                    </div>
-
-                    {/* Right Column - Booking Form */}
-                    <div>
-                        <BookingForm tour={tour} />
-                        
-                        {/* Additional Info Card */}
-                        <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-                            <h3 className="text-lg font-semibold mb-4">Tour Highlights</h3>
-                            <ul className="space-y-3">
-                                <li className="flex items-center">
-                                    <svg className="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                                    </svg>
-                                    <span>Customer Rating: {tour.averageRating.toFixed(1)}/5</span>
-                                </li>
-                                <li className="flex items-center">
-                                    <svg className="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                                    </svg>
-                                    <span>Based on {tour.totalRatings} verified reviews</span>
-                                </li>
-                                <li className="flex items-center">
-                                    <svg className="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                                    </svg>
-                                    <span>Instant booking confirmation</span>
-                                </li>
-                                <li className="flex items-center">
-                                    <svg className="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                                    </svg>
-                                    <span>Best price guarantee</span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Related Tours - Optional with ratings */}
-                {relatedTours.length > 0 && (
-                    <div className="mt-16">
-                        <h2 className="text-2xl font-bold mb-6">Related Tours</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {relatedTours.map((relatedTour) => (
-                                <div key={relatedTour._id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                                    <img 
-                                        src={relatedTour.image} 
-                                        alt={relatedTour.title}
-                                        className="w-full h-48 object-cover"
-                                    />
-                                    <div className="p-4">
-                                        <h3 className="font-semibold text-gray-800 mb-2 truncate">{relatedTour.title}</h3>
-                                        <div className="flex items-center mb-2">
+                <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-100">
+                    <div className="flex flex-col lg:flex-row lg:items-start justify-between">
+                        <div className="lg:w-2/3">
+                            <div className="flex flex-col md:flex-row md:items-start justify-between">
+                                <div>
+                                    <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3 leading-tight">{tour.title}</h1>
+                                    <p className="text-gray-600 text-lg mb-6 max-w-3xl">{tour.shortDescription}</p>
+                                    
+                                    {/* Rating Display */}
+                                    <div className="flex flex-wrap items-center gap-4 mb-6">
+                                        <div className="flex items-center bg-blue-50 text-blue-700 px-4 py-2 rounded-full border border-blue-100">
                                             <div className="flex">
                                                 {[...Array(5)].map((_, index) => (
                                                     <FaStar
                                                         key={index}
-                                                        size={12}
+                                                        size={18}
+                                                        className={index < Math.floor(tour.averageRating) ? "text-yellow-500" : "text-gray-300"}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <span className="ml-2 font-bold text-lg">{tour.averageRating.toFixed(1)}</span>
+                                            <span className="ml-2 text-gray-600">({tour.totalRatings} reviews)</span>
+                                        </div>
+                                        
+                                        {/* Quick Stats */}
+                                        <div className="flex flex-wrap gap-4">
+                                            {tour.duration && (
+                                                <div className="flex items-center text-gray-700">
+                                                    <FaCalendarAlt className="text-blue-500 mr-2" />
+                                                    <span className="font-medium">{tour.duration}</span>
+                                                </div>
+                                            )}
+                                            {tour.maxParticipants && (
+                                                <div className="flex items-center text-gray-700">
+                                                    <FaUsers className="text-green-500 mr-2" />
+                                                    <span className="font-medium">Up to {tour.maxParticipants} guests</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Tour Highlights */}
+                            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {tour.highlights?.slice(0, 4).map((highlight, index) => (
+                                    <div key={index} className="flex items-center text-gray-700">
+                                        <FaCheckCircle className="text-green-500 mr-3 flex-shrink-0" />
+                                        <span>{highlight}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        
+                        {/* Price Box */}
+                        <div className="lg:w-1/3 mt-6 lg:mt-0 lg:pl-8">
+                            <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-5 text-white shadow-lg">
+                                <div className="text-sm font-medium mb-2 opacity-90">Starting from</div>
+                                <div className="text-4xl font-bold mb-1">Rs {tour.price}</div>
+                                <div className="text-sm opacity-90 mb-4">per person</div>
+                                <div className="text-xs opacity-75">
+                                    <div className="flex items-center">
+                                        <FaCheckCircle className="mr-2" size={12} />
+                                        Free cancellation up to 24 hours
+                                    </div>
+                                    <div className="flex items-center mt-1">
+                                        <FaCheckCircle className="mr-2" size={12} />
+                                        Reserve now & pay later
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Main Content Area - Full width layout */}
+                <div className="flex flex-col xl:flex-row gap-8">
+                    {/* Left Column - Details Tabs */}
+                    <div className="xl:w-6/12">
+                        {/* Details Tabs */}
+                        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+                            <TourTabs pkg={tour} />
+                        </div>
+                    </div>
+
+                    {/* Right Column - Booking Form (Wider) */}
+                    <div className="xl:w-6/12">
+                        {/* Booking Form - Now takes full width of the right column */}
+                        <div>
+                            <BookingForm tour={tour} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Related Tours */}
+                {relatedTours.length > 0 && (
+                    <div className="mt-16">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">You might also like</h2>
+                        <p className="text-gray-600 mb-8">Similar tours you might enjoy</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {relatedTours.map((relatedTour) => (
+                                <div key={relatedTour._id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 border border-gray-100">
+                                    <div className="relative">
+                                        <img 
+                                            src={relatedTour.image} 
+                                            alt={relatedTour.title}
+                                            className="w-full h-56 object-cover"
+                                        />
+                                        <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full">
+                                            <span className="text-sm font-bold text-green-600">Rs {relatedTour.price}</span>
+                                        </div>
+                                    </div>
+                                    <div className="p-5">
+                                        <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 h-14">{relatedTour.title}</h3>
+                                        <div className="flex items-center mb-3">
+                                            <div className="flex">
+                                                {[...Array(5)].map((_, index) => (
+                                                    <FaStar
+                                                        key={index}
+                                                        size={14}
                                                         className={index < Math.floor(relatedTour.averageRating) ? "text-yellow-500" : "text-gray-300"}
                                                     />
                                                 ))}
@@ -188,10 +200,13 @@ const TourPackageDetail = () => {
                                                 {relatedTour.averageRating.toFixed(1)} ({relatedTour.totalRatings})
                                             </span>
                                         </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-lg font-bold text-green-600">Rs {relatedTour.price}</span>
-                                            <button className="text-blue-600 text-sm font-semibold hover:text-blue-800">
-                                                View Details →
+                                        <div className="flex justify-between items-center mt-4">
+                                            <span className="text-gray-600 text-sm">{relatedTour.duration || '1 day'}</span>
+                                            <button className="text-blue-600 font-semibold text-sm hover:text-blue-800 flex items-center">
+                                                View Details
+                                                <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                                </svg>
                                             </button>
                                         </div>
                                     </div>
