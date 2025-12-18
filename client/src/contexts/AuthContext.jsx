@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { 
   getCurrentUser, 
   login as loginService, 
@@ -18,72 +18,115 @@ setupAxiosInterceptors();
 // Create auth context
 const AuthContext = createContext();
 
+// Helper function to save user to localStorage
+const saveUserToStorage = (user) => {
+  if (user) {
+    localStorage.setItem('user', JSON.stringify(user));
+  } else {
+    localStorage.removeItem('user');
+  }
+};
+
+// Helper function to get user from localStorage
+const getUserFromStorage = () => {
+  try {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+  } catch (error) {
+    console.error('Error parsing user from storage:', error);
+    localStorage.removeItem('user');
+    return null;
+  }
+};
+
 // Auth provider component
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // Check if user is logged in on page load
+  
+  // Stable setter for currentUser that updates localStorage
+  const setCurrentUserWithPersistence = useCallback((user) => {
+    console.log('Setting current user:', user?.name || 'null');
+    setCurrentUser(user);
+    saveUserToStorage(user);
+    
+    // Update token manager if we have a user
+    if (user) {
+      const token = localStorage.getItem('token');
+      if (token) {
+        tokenManager.setToken(token);
+      }
+    }
+  }, []);
+
+  // Check if user is logged in on page load - SIMPLIFIED
   useEffect(() => {
-    const loadUser = async () => {
+    const initializeAuth = async () => {
       try {
-        // First check localStorage
-        const token = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
+        console.log('🔐 Initializing authentication...');
         
-        console.log('Auth check on app load', { 
-          hasToken: !!token,
-          hasStoredUser: !!storedUser
+        // 1. First, check localStorage for immediate UI
+        const storedUser = getUserFromStorage();
+        const token = localStorage.getItem('token');
+        
+        console.log('Initial auth check:', {
+          hasStoredUser: !!storedUser,
+          hasToken: !!token
         });
         
-        // If we have stored user data, use it initially to prevent flicker
+        // 2. Set stored user immediately for fast UI
         if (storedUser) {
-          try {
-            const parsedUser = JSON.parse(storedUser);
-            console.log('Using stored user data:', parsedUser?.name);
-            setCurrentUser(parsedUser);
-          } catch (e) {
-            console.error('Error parsing stored user data:', e);
-          }
+          console.log('Using cached user data:', storedUser.name);
+          setCurrentUser(storedUser);
         }
         
-        // If we have a token, validate it by fetching fresh user data
+        // 3. If we have a token, validate with server
         if (token) {
-          const user = await getCurrentUser();
-          
-          if (user) {
-            console.log('User session validated:', user.name);
-            setCurrentUser(user);
-          } else {
-            console.log('Invalid user session, clearing local data');
-            setCurrentUser(null);
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
+          try {
+            console.log('Validating token with server...');
+            const freshUser = await getCurrentUser();
+            
+            if (freshUser) {
+              console.log('Server validation successful:', freshUser.name);
+              setCurrentUserWithPersistence(freshUser);
+            } else {
+              console.log('Server validation failed, clearing auth data');
+              // Clear invalid data
+              setCurrentUserWithPersistence(null);
+              tokenManager.clearAuth();
+            }
+          } catch (serverError) {
+            console.error('Server validation error:', serverError);
+            // Keep cached user if server is down, but mark as potentially stale
+            console.log('Using cached data due to server error');
           }
         } else {
-          console.log('No authentication token found');
-          setCurrentUser(null);
+          // No token, clear any stale user data
+          console.log('No auth token found, clearing user data');
+          setCurrentUserWithPersistence(null);
         }
       } catch (err) {
-        console.error('Error loading user:', err);
-        // Clear potentially invalid data
+        console.error('❌ Auth initialization error:', err);
+        // Clear potentially corrupted data
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setCurrentUser(null);
       } finally {
+        console.log('✅ Auth initialization complete');
         setLoading(false);
       }
     };
 
-    loadUser();
-  }, []);
+    initializeAuth();
+  }, [setCurrentUserWithPersistence]);
 
   // Register user
   const register = async (userData) => {
     try {
       setLoading(true);
       const data = await registerService(userData);
-      setCurrentUser(data.user);
+      setCurrentUserWithPersistence(data.user);
       return data;
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed');
@@ -92,22 +135,26 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
-  // Login user with improved token validation
+
+  // Login user - FIXED with immediate persistence
   const login = async (email, password) => {
     try {
       setLoading(true);
-      console.log('Attempting login for:', email);
+      console.log('🔐 Attempting login for:', email);
       
       const data = await loginService(email, password);
       
       if (data && data.user) {
-        console.log('Login successful for:', data.user.name);
-        setCurrentUser(data.user);
+        console.log('✅ Login successful for:', data.user.name);
         
-        // Ensure token is properly stored
-        if (data.token && !tokenManager.getToken()) {
+        // CRITICAL: Store token in localStorage immediately
+        if (data.token) {
+          localStorage.setItem('token', data.token);
           tokenManager.setToken(data.token);
         }
+        
+        // Update user state with persistence
+        setCurrentUserWithPersistence(data.user);
         
         return data;
       } else {
@@ -115,31 +162,28 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (err) {
       const errorMessage = err.response?.data?.error || err.message || 'Invalid credentials';
-      console.error('Login error:', errorMessage);
+      console.error('❌ Login error:', errorMessage);
       setError(errorMessage);
       throw err;
     } finally {
       setLoading(false);
     }
   };
-  // Logout user with improved cleanup
+
+  // Logout user
   const logout = async () => {
     try {
-      console.log('Logging out user:', currentUser?.name || 'Unknown user');
+      console.log('👋 Logging out user:', currentUser?.name || 'Unknown user');
       await logoutService();
-      
-      // Clear user state
-      setCurrentUser(null);
-      
-      // Ensure all auth data is cleared
-      tokenManager.clearAuth();
-      
-      console.log('Logout complete, all auth data cleared');
     } catch (err) {
-      console.error('Error during logout:', err);
-      // Still clear local data even if server request fails
-      setCurrentUser(null);
+      console.error('Server logout error:', err);
+      // Continue with client-side cleanup even if server fails
+    } finally {
+      // ALWAYS clear client-side data
+      setCurrentUserWithPersistence(null);
       tokenManager.clearAuth();
+      localStorage.removeItem('token');
+      console.log('✅ Logout complete');
     }
   };
 
@@ -167,7 +211,7 @@ export const AuthProvider = ({ children }) => {
   const updateProfile = async (userData) => {
     try {
       const data = await updateProfileService(userData);
-      setCurrentUser(data.data);
+      setCurrentUserWithPersistence(data.data);
       return data;
     } catch (err) {
       setError(err.response?.data?.error || 'Update failed');
@@ -188,6 +232,20 @@ export const AuthProvider = ({ children }) => {
   // Clear any error
   const clearError = () => setError(null);
 
+  // Refresh user data from server
+  const refreshUserData = async () => {
+    try {
+      const freshUser = await getCurrentUser();
+      if (freshUser) {
+        setCurrentUserWithPersistence(freshUser);
+        return freshUser;
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+    }
+    return null;
+  };
+
   // Context value
   const value = {
     currentUser,
@@ -200,13 +258,14 @@ export const AuthProvider = ({ children }) => {
     resetPassword,
     updateProfile,
     updatePassword,
+    refreshUserData, // Add this
     setError,
     clearError
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

@@ -9,10 +9,10 @@ const Login = () => {
   const location = useLocation();
   const { login, error, setError, clearError } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Determine where to redirect after login
   const from = location.state?.from || '/';
-  
+
   // Validation schema
   const validationSchema = Yup.object({
     email: Yup.string()
@@ -20,32 +20,35 @@ const Login = () => {
       .required('Email is required'),
     password: Yup.string()
       .required('Password is required')
-      .min(6, 'Password must be at least 6 characters')
+      .min(6, 'Password must be at least 6 characters'),
   });
-  
+
   // Handle login
   const handleLogin = async (values, { setSubmitting, setFieldError }) => {
     setIsLoading(true);
     clearError();
-    
+
     try {
       console.log('🔐 Attempting to login with email:', values.email);
       const result = await login(values.email, values.password);
       console.log('✅ Login successful:', result);
-      
+
       // Small delay to ensure state is updated
       setTimeout(() => {
-        navigate(from, { replace: true });
+        navigate('/', { replace: true });
       }, 100);
     } catch (error) {
       console.error('❌ Login error:', error);
       console.error('❌ Login error details:', {
         message: error.message,
         response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
       });
-      
-      const errorMessage = error.response?.data?.error || error.message || 'Invalid email or password';
+
+      const errorMessage =
+        error.response?.data?.error ||
+        error.message ||
+        'Invalid email or password';
       setError(errorMessage);
       setFieldError('email', errorMessage);
       setFieldError('password', errorMessage);
@@ -60,17 +63,21 @@ const Login = () => {
       <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-md">
         <div className="px-6 py-8">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-800 font-display">Welcome Back</h2>
-            <p className="mt-2 text-gray-600">Log in to your account to book activities</p>
+            <h2 className="text-3xl font-bold text-gray-800 font-display">
+              Welcome Back
+            </h2>
+            <p className="mt-2 text-gray-600">
+              Log in to your account to book activities
+            </p>
           </div>
-          
+
           {/* Error Message */}
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
               {error}
             </div>
           )}
-          
+
           {/* Email/Password Login Form */}
           <Formik
             initialValues={{ email: '', password: '' }}
@@ -80,7 +87,10 @@ const Login = () => {
             {({ isSubmitting, errors, touched }) => (
               <Form className="space-y-5">
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     Email Address
                   </label>
                   <Field
@@ -89,19 +99,31 @@ const Login = () => {
                     type="email"
                     autoComplete="email"
                     className={`appearance-none relative block w-full px-3 py-3 border ${
-                      errors.email && touched.email ? 'border-red-300' : 'border-gray-300'
+                      errors.email && touched.email
+                        ? 'border-red-300'
+                        : 'border-gray-300'
                     } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
                     placeholder="Email address"
                   />
-                  <ErrorMessage name="email" component="div" className="text-sm text-red-600 mt-1" />
+                  <ErrorMessage
+                    name="email"
+                    component="div"
+                    className="text-sm text-red-600 mt-1"
+                  />
                 </div>
-                
+
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="password"
+                      className="block text-sm font-medium text-gray-700"
+                    >
                       Password
                     </label>
-                    <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-500">
+                    <Link
+                      to="/forgot-password"
+                      className="text-sm text-blue-600 hover:text-blue-500"
+                    >
                       Forgot password?
                     </Link>
                   </div>
@@ -111,13 +133,19 @@ const Login = () => {
                     type="password"
                     autoComplete="current-password"
                     className={`appearance-none relative block w-full px-3 py-3 border ${
-                      errors.password && touched.password ? 'border-red-300' : 'border-gray-300'
+                      errors.password && touched.password
+                        ? 'border-red-300'
+                        : 'border-gray-300'
                     } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
                     placeholder="Password"
                   />
-                  <ErrorMessage name="password" component="div" className="text-sm text-red-600 mt-1" />
+                  <ErrorMessage
+                    name="password"
+                    component="div"
+                    className="text-sm text-red-600 mt-1"
+                  />
                 </div>
-                
+
                 <div>
                   <button
                     type="submit"
@@ -126,23 +154,44 @@ const Login = () => {
                   >
                     {isSubmitting || isLoading ? (
                       <span className="flex items-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
                         </svg>
                         Processing...
                       </span>
-                    ) : 'Log In'}
+                    ) : (
+                      'Log In'
+                    )}
                   </button>
                 </div>
               </Form>
             )}
           </Formik>
-          
+
           <div className="text-center mt-6">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
-              <Link to="/signup" className="font-medium text-blue-600 hover:text-blue-500">
+              <Link
+                to="/signup"
+                className="font-medium text-blue-600 hover:text-blue-500"
+              >
                 Sign up
               </Link>
             </p>

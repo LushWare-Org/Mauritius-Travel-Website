@@ -46,5 +46,8 @@ export const airportTransferBookingAPI = {
   deleteBooking: (id) => API.delete(`/airport-transfer-bookings/${id}`),
   
   // Get user's bookings
-  getUserBookings: () => API.get('/airport-transfer-bookings/user/my-bookings')
+  getUserBookings: () => API.get('/airport-transfer-bookings/user/my-bookings'),
+  getBookingsByDateRange: (startDate, endDate) => 
+  API.get(`/airport-transfer-bookings/report?startDate=${startDate}&endDate=${endDate}`),
+  
 };

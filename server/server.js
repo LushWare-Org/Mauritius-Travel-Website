@@ -27,6 +27,7 @@ const tourPackageBookingRoutes = require('./routes/tourPackageBooking.routes');
 const userTourPackageBookingRoutes = require('./routes/userTourPackageBooking.routes');
 const tourPackageRoutes = require('./routes/tourPackage.routes'); 
 const feedbackRoutes = require('./routes/feedback');
+const activityReviewRoutes = require('./routes/activityReviewRoutes');
 
 
 
@@ -254,6 +255,8 @@ app.use('/api/v1/tour-package-bookings', tourPackageBookingRoutes);
 app.use('/api/v1/user/tour-package-bookings', userTourPackageBookingRoutes);
 app.use('/api/v1/tour-packages', tourPackageRoutes);
 app.use('/api/v1/feedback', feedbackRoutes);
+app.use('/api/v1/activity-reviews', activityReviewRoutes);
+
 
 
 app.use('/api/v1/airport-transfers', airportTransferRoutes);
@@ -414,7 +417,7 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-console.log('🚀 Starting Maldives Activity Booking Server...');
+console.log('🚀 Starting Mauritius Activity Booking Server...');
 console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`🌐 Port: ${PORT}`);
 console.log(

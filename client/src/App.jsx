@@ -9,7 +9,6 @@ import { useEffect } from 'react';
 import authDiagnostic from './utils/authDiagnostic';
 import AuthMonitor from './components/auth/AuthMonitor';
 import { wakeUpBackend, keepBackendAwake } from './utils/wakeUpBackend';
-import RouteDebugger from './components/debug/RouteDebugger';
 
 // Import environment checker for development debugging
 if (import.meta.env.DEV) {
@@ -18,17 +17,13 @@ if (import.meta.env.DEV) {
 
 // Run auth diagnostics and wake up the backend in production
 if (import.meta.env.PROD) {
-  // Wake up the backend immediately to reduce initial load time
   wakeUpBackend().then((result) => {
     if (result.success) {
       console.log('Successfully woke up backend server');
-
-      // Keep the backend server awake with regular pings
-      keepBackendAwake(10 * 60 * 1000); // Ping every 10 minutes
+      keepBackendAwake(10 * 60 * 1000);
     }
   });
 
-  // Initial diagnostic check with a small delay to allow app to initialize
   setTimeout(() => {
     authDiagnostic
       .testApiConnection()
@@ -45,6 +40,7 @@ if (import.meta.env.PROD) {
   }, 2000);
 }
 
+// Import all your existing pages
 import Home from './pages/Home';
 import Activities from './pages/Activities';
 import ActivityDetail from './pages/ActivityDetail';
@@ -76,6 +72,8 @@ import UserTourPackageBookingDetail from './pages/dashboard/TourPackageBookingDe
 import TourPackageBookingConfirmation from './components/tour-detail/TourPackageBookingConfirmation';
 import BookingConfirmation from './pages/BookingConfirmation';
 
+
+
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminActivities from './pages/admin/Activities';
@@ -84,6 +82,7 @@ import AdminBookings from './pages/admin/Bookings';
 import AdminBookingDetail from './pages/admin/BookingDetail';
 import AdminUsers from './pages/admin/Users';
 import AdminActivityView from './pages/admin/AdminActivityView';
+
 
 import AirportTransferList from './components/AirportTransferList';
 import AirportTransferBookingForm from './components/AirportTransferBookingForm';
@@ -97,7 +96,11 @@ import TourPackageForm from './pages/admin/TourPackageForm';
 import AdminTourPackageBooking from './pages/admin/AdminTourPackageBooking';
 import AdminTourPackageBookingDetail from './pages/admin/TourPackageBookingDetail';
 
-// Wrapper component to conditionally render Header and Navbar
+// Import Activity Review Admin Pages
+import AdminActivityReviews from './pages/admin/activity/ActivityReviews'; 
+import ActivityReviewDetail from './pages/admin/activity/ActivityReviewDetail';
+
+
 const AppContent = () => {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
@@ -135,12 +138,40 @@ const AppContent = () => {
             path="/airport-transfer/book/:id?"
             element={<AirportTransferBookingForm />}
           />
+
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+
           {/* User Dashboard Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/bookings"
+            element={
+              <ProtectedRoute>
+                <MyBookings />
+              </ProtectedRoute>
+            }
+          />
+
+         
+          <Route
+            path="/dashboard/profile"
+            element={
+              <ProtectedRoute>
+                <EditProfile />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/dashboard/tour-package-bookings"
             element={
@@ -158,38 +189,6 @@ const AppContent = () => {
             }
           />
           <Route
-            path="/tour-package-booking-confirmation/:id"
-            element={
-              <ProtectedRoute>
-                <TourPackageBookingConfirmation />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/bookings"
-            element={
-              <ProtectedRoute>
-                <MyBookings />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/profile"
-            element={
-              <ProtectedRoute>
-                <EditProfile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/dashboard/airport-transfers"
             element={
               <ProtectedRoute>
@@ -199,7 +198,16 @@ const AppContent = () => {
               </ProtectedRoute>
             }
           />
-          {/* Contact History Route - Fixed */}
+          <Route
+            path="/tour-package-booking-confirmation/:id"
+            element={
+              <ProtectedRoute>
+                <TourPackageBookingConfirmation />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Contact History Route */}
           <Route
             path="/contacthistory"
             element={
@@ -218,7 +226,101 @@ const AppContent = () => {
               </ProtectedRoute>
             }
           />
+
           {/* Admin Routes */}
+          <Route
+            path="/admin/dashboard"
+            element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
+            }
+          />
+
+          {/* Activity Review Admin Routes */}
+          <Route
+            path="/admin/activity-reviews"
+            element={
+              <AdminRoute>
+                <AdminActivityReviews />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/activity-reviews/:id"
+            element={
+              <AdminRoute>
+                <ActivityReviewDetail /> 
+              </AdminRoute>
+            }
+          />
+
+     {/*    <Route
+            path="/admin/reviews"
+            element={
+              <AdminRoute>
+                <AdminReviews />
+              </AdminRoute>
+            }
+          />*/}
+
+          <Route
+            path="/admin/activities"
+            element={
+              <AdminRoute>
+                <AdminActivities />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/activities/new"
+            element={
+              <AdminRoute>
+                <ActivityForm />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/activities/:id"
+            element={
+              <AdminRoute>
+                <ActivityForm />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/activities/view/:id"
+            element={
+              <AdminRoute>
+                <AdminActivityView />
+              </AdminRoute>
+            }
+          />
+
+          <Route
+            path="/admin/bookings"
+            element={
+              <AdminRoute>
+                <AdminBookings />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/bookings/:id"
+            element={
+              <AdminRoute>
+                <AdminBookingDetail />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <AdminRoute>
+                <AdminUsers />
+              </AdminRoute>
+            }
+          />
           <Route
             path="/admin/tour-packages"
             element={
@@ -268,71 +370,6 @@ const AppContent = () => {
             }
           />
           <Route
-            path="/admin/dashboard"
-            element={
-              <AdminRoute>
-                <AdminDashboard />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/activities"
-            element={
-              <AdminRoute>
-                <AdminActivities />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/activities/new"
-            element={
-              <AdminRoute>
-                <ActivityForm />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/activities/:id"
-            element={
-              <AdminRoute>
-                <ActivityForm />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/activities/view/:id"
-            element={
-              <AdminRoute>
-                <AdminActivityView />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/bookings"
-            element={
-              <AdminRoute>
-                <AdminBookings />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/bookings/:id"
-            element={
-              <AdminRoute>
-                <AdminBookingDetail />
-              </AdminRoute>
-            }
-          />{' '}
-          {/* Add this line */}
-          <Route
-            path="/admin/users"
-            element={
-              <AdminRoute>
-                <AdminUsers />
-              </AdminRoute>
-            }
-          />
-          <Route
             path="/admin/airport-transfers"
             element={
               <AdminRoute>
@@ -364,6 +401,7 @@ const AppContent = () => {
               </AdminRoute>
             }
           />
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
