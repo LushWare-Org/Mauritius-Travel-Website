@@ -5,6 +5,54 @@ import { FaStar, FaRegStar } from 'react-icons/fa';
 const TourPackageListItem = ({ pkg }) => {
     if (!pkg) return null;
 
+    // Helper function to get display price based on currency type
+    const getDisplayPrice = (tour) => {
+        if (!tour) return { display: '', rs: 0, euro: 0, currencyType: 'default' };
+        
+        // Check if tour has the new currency fields
+        if (tour.currencyType && (tour.priceRs !== undefined || tour.priceEuro !== undefined)) {
+            switch(tour.currencyType) {
+                case 'both':
+                    return {
+                        rs: tour.priceRs || tour.price || 0,
+                        euro: tour.priceEuro || 0,
+                        display: `Rs ${tour.priceRs || tour.price || 0} / € ${tour.priceEuro || 0}`,
+                        currencyType: 'both'
+                    };
+                case 'rs-only':
+                    return {
+                        rs: tour.priceRs || tour.price || 0,
+                        euro: null,
+                        display: `Rs ${tour.priceRs || tour.price || 0}`,
+                        currencyType: 'rs-only'
+                    };
+                case 'euro-only':
+                    return {
+                        rs: null,
+                        euro: tour.priceEuro || tour.price || 0,
+                        display: `€ ${tour.priceEuro || tour.price || 0}`,
+                        currencyType: 'euro-only'
+                    };
+                default:
+                    // Fallback to original price field
+                    return {
+                        rs: tour.price || 0,
+                        euro: null,
+                        display: `Rs ${tour.price || 0}`,
+                        currencyType: 'default'
+                    };
+            }
+        }
+        
+        // For backward compatibility with older packages
+        return {
+            rs: tour.price || 0,
+            euro: null,
+            display: `Rs ${tour.price || 0}`,
+            currencyType: 'default'
+        };
+    };
+
     // Helper function to render stars
     const renderStars = (rating) => {
         const stars = [];
@@ -42,6 +90,8 @@ const TourPackageListItem = ({ pkg }) => {
         return stars;
     };
 
+    const priceDisplay = getDisplayPrice(pkg);
+
     return (
         <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col sm:flex-row">
             <div className="sm:w-1/3 h-48 sm:h-auto relative">
@@ -53,6 +103,23 @@ const TourPackageListItem = ({ pkg }) => {
                 {pkg.featured && (
                     <span className="absolute top-3 left-0 bg-yellow-500 text-blue-900 py-1 px-3 font-semibold text-xs uppercase">
                         Featured
+                    </span>
+                )}
+                
+                {/* Currency Type Badge */}
+                {priceDisplay.currencyType !== 'default' && (
+                    <span className={`absolute top-3 right-0 py-1 px-3 font-semibold text-xs uppercase ${
+                        priceDisplay.currencyType === 'both' 
+                            ? 'bg-green-500 text-white'
+                            : priceDisplay.currencyType === 'rs-only'
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-yellow-500 text-white'
+                    }`}>
+                        {priceDisplay.currencyType === 'both' 
+                            ? 'Rs & €' 
+                            : priceDisplay.currencyType === 'rs-only'
+                            ? 'Rs Only'
+                            : '€ Only'}
                     </span>
                 )}
             </div>
@@ -108,13 +175,33 @@ const TourPackageListItem = ({ pkg }) => {
                 </p>
 
                 <div className="mt-auto flex flex-col sm:flex-row justify-between items-start sm:items-center pt-4 border-t border-gray-100">
-                    <div>
-                        <div className="text-blue-800 font-bold text-xl">Rs {pkg.price || 0}</div>
-                        <div className="text-gray-500 text-sm">per person</div>
+                    <div className="mb-3 sm:mb-0">
+                        {/* Price Display without icons */}
+                        <div className="text-blue-800 font-bold text-xl mb-1">
+                            {priceDisplay.display}
+                        </div>
+                        
+                        {/* Secondary Price (for both currencies) */}
+                        {priceDisplay.currencyType === 'both' && priceDisplay.euro && (
+                            <div className="text-gray-600 text-sm">
+                                € {priceDisplay.euro} only
+                            </div>
+                        )}
+                        
+                        <div className="text-gray-500 text-sm mt-1">per person</div>
+                        
+                        {/* Currency Option Info */}
+                        {priceDisplay.currencyType === 'both' && (
+                            <div className="text-xs text-green-600 mt-1">
+                                <i className="fas fa-check-circle mr-1"></i>
+                                Pay in Rs or Euros
+                            </div>
+                        )}
                     </div>
+                    
                     <Link 
                         to={`/tour-packages/${pkg._id || pkg.id}`}
-                        className="mt-3 sm:mt-0 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors font-medium text-sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors font-medium text-sm"
                     >
                         View Details
                     </Link>

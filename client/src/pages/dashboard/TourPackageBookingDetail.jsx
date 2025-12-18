@@ -13,145 +13,97 @@ const TourPackageBookingDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [printMode, setPrintMode] = useState(false);
 
   useEffect(() => {
-  const fetchBookingDetails = async () => {
-    setLoading(true);
-    setError('');
-    console.log('🔄 Starting fetchBookingDetails with ID:', id);
-    console.log('👤 Current User:', currentUser);
-    
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.log('❌ No token found');
-        setError('Please log in to view booking details');
-        navigate('/login');
-        return;
-      }
-
-      console.log('📞 Calling API for booking:', id);
+    const fetchBookingDetails = async () => {
+      setLoading(true);
+      setError('');
       
-      const response = await tourPackageBookingsAPI.getById(id);
-      console.log('✅ API Response received:', response.data);
-      console.log('📊 Full booking data:', JSON.stringify(response.data, null, 2));
-      
-      if (response.data.success) {
-        const bookingData = response.data.data;
-        console.log('📋 Booking data received:', {
-          id: bookingData._id,
-          status: bookingData.status,
-          user: bookingData.user,
-          totalPrice: bookingData.totalPrice,
-          packagePrice: bookingData.packagePrice,
-          activitiesTotal: bookingData.activitiesTotal,
-          selectedActivities: bookingData.selectedActivities
-        });
-        
-        // DEBUG: Check user structure
-        console.log('🔍 User object analysis:', {
-          userIsObject: typeof bookingData.user === 'object',
-          userIsString: typeof bookingData.user === 'string',
-          userHasId: bookingData.user?._id !== undefined,
-          userValue: bookingData.user
-        });
-        
-        // FIXED: Better user authorization check
-        let bookingUserId;
-        
-        if (typeof bookingData.user === 'object' && bookingData.user !== null) {
-          // User is populated object
-          bookingUserId = bookingData.user._id?.toString();
-        } else if (typeof bookingData.user === 'string') {
-          // User is string ID
-          bookingUserId = bookingData.user;
-        } else {
-          // Try to get user from other fields
-          bookingUserId = bookingData.userId || bookingData.user;
-        }
-        
-        const currentUserId = currentUser?._id || currentUser?.id || currentUser?.userId;
-        
-        console.log('🔐 User check DETAILED:', {
-          bookingUserId,
-          currentUserId,
-          currentUser: currentUser,
-          isAdmin: currentUser?.role === 'admin',
-          bookingUserIdType: typeof bookingUserId,
-          currentUserIdType: typeof currentUserId
-        });
-        
-        // If we can't get a valid user ID, skip the check and show the booking
-        if (!bookingUserId) {
-          console.log('⚠️ Booking user ID not found, showing booking anyway');
-          setBooking(bookingData);
-          return;
-        }
-        
-        if (!currentUserId) {
-          console.log('⚠️ Current user ID not found');
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
           setError('Please log in to view booking details');
           navigate('/login');
           return;
         }
-        
-        if (bookingUserId.toString() !== currentUserId.toString() && currentUser?.role !== 'admin') {
-          console.log('⛔ Unauthorized access');
-          setError('You are not authorized to view this booking');
-          setTimeout(() => navigate('/dashboard/tour-package-bookings'), 2000);
-          return;
-        }
-        
-        setBooking(bookingData);
-        console.log('✅ Booking set in state');
-      } else {
-        console.log('❌ API returned success: false');
-        setError(response.data.message || 'Failed to fetch booking details');
-      }
-    } catch (err) {
-      console.error('💥 Error in fetchBookingDetails:', {
-        name: err.name,
-        message: err.message,
-        status: err.response?.status,
-        data: err.response?.data,
-        config: err.config?.url
-      });
-      
-      // Better error messages
-      if (err.response?.status === 404) {
-        setError('Booking not found');
-      } else if (err.response?.status === 401) {
-        setError('Your session has expired. Please log in again.');
-        navigate('/login');
-      } else if (err.response?.status === 403) {
-        setError('You do not have permission to view this booking.');
-        setTimeout(() => navigate('/dashboard/tour-package-bookings'), 2000);
-      } else if (err.response?.status === 500) {
-        setError('Server error. Please try again later or contact support.');
-      } else if (err.message.includes('Network Error')) {
-        setError('Network error. Please check your connection and try again.');
-      } else {
-        setError('An unexpected error occurred. Please try again.');
-      }
-    } finally {
-      console.log('🏁 Fetch completed');
-      setLoading(false);
-    }
-  };
 
-  if (id && currentUser) {
-    console.log('✅ Conditions met: id and currentUser exist');
-    fetchBookingDetails();
-  } else if (id && !currentUser) {
-    console.log('⏳ Waiting for user authentication... id exists but currentUser is:', currentUser);
-    setError('Please log in to view booking details');
-    navigate('/login');
-  } else {
-    console.log('❌ Missing booking ID or user. id:', id, 'currentUser:', currentUser);
-    setError('Invalid booking reference');
-    navigate('/dashboard/tour-package-bookings');
-  }
-}, [id, currentUser, navigate]);
+        const response = await tourPackageBookingsAPI.getById(id);
+        
+        if (response.data.success) {
+          const bookingData = response.data.data;
+          
+          // User authorization check
+          let bookingUserId;
+          
+          if (typeof bookingData.user === 'object' && bookingData.user !== null) {
+            bookingUserId = bookingData.user._id?.toString();
+          } else if (typeof bookingData.user === 'string') {
+            bookingUserId = bookingData.user;
+          } else {
+            bookingUserId = bookingData.userId || bookingData.user;
+          }
+          
+          const currentUserId = currentUser?._id || currentUser?.id || currentUser?.userId;
+          
+          // If we can't get a valid user ID, skip the check and show the booking
+          if (!bookingUserId) {
+            console.log('⚠️ Booking user ID not found, showing booking anyway');
+            setBooking(bookingData);
+            return;
+          }
+          
+          if (!currentUserId) {
+            console.log('⚠️ Current user ID not found');
+            setError('Please log in to view booking details');
+            navigate('/login');
+            return;
+          }
+          
+          if (bookingUserId.toString() !== currentUserId.toString() && currentUser?.role !== 'admin') {
+            console.log('⛔ Unauthorized access');
+            setError('You are not authorized to view this booking');
+            setTimeout(() => navigate('/dashboard/tour-package-bookings'), 2000);
+            return;
+          }
+          
+          setBooking(bookingData);
+        } else {
+          setError(response.data.message || 'Failed to fetch booking details');
+        }
+      } catch (err) {
+        console.error('Error in fetchBookingDetails:', err);
+        
+        if (err.response?.status === 404) {
+          setError('Booking not found');
+        } else if (err.response?.status === 401) {
+          setError('Your session has expired. Please log in again.');
+          navigate('/login');
+        } else if (err.response?.status === 403) {
+          setError('You do not have permission to view this booking.');
+          setTimeout(() => navigate('/dashboard/tour-package-bookings'), 2000);
+        } else if (err.response?.status === 500) {
+          setError('Server error. Please try again later or contact support.');
+        } else if (err.message.includes('Network Error')) {
+          setError('Network error. Please check your connection and try again.');
+        } else {
+          setError('An unexpected error occurred. Please try again.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id && currentUser) {
+      fetchBookingDetails();
+    } else if (id && !currentUser) {
+      setError('Please log in to view booking details');
+      navigate('/login');
+    } else {
+      setError('Invalid booking reference');
+      navigate('/dashboard/tour-package-bookings');
+    }
+  }, [id, currentUser, navigate]);
 
   const handleCancelBooking = async () => {
     if (!window.confirm('Are you sure you want to cancel this booking? This action cannot be undone.')) return;
@@ -190,8 +142,7 @@ const TourPackageBookingDetail = () => {
       style: 'currency',
       currency: 'MUR', 
       currencyDisplay: 'narrowSymbol', 
-  }).format(amount);
-
+    }).format(amount);
   };
 
   // Calculate package total
@@ -221,11 +172,9 @@ const TourPackageBookingDetail = () => {
 
   // Calculate transfer total
   const calculateTransferTotal = () => {
-    // Use the stored transferTotal if available
     if (booking?.transferTotal) {
       return booking.transferTotal;
     }
-    // Otherwise check airportTransferBooking
     if (booking?.airportTransferBooking?.totalPrice) {
       return booking.airportTransferBooking.totalPrice;
     }
@@ -238,6 +187,15 @@ const TourPackageBookingDetail = () => {
       return booking.totalPrice;
     }
     return calculatePackageTotal() + calculateActivitiesTotal() + calculateTransferTotal();
+  };
+
+  // Handle print
+  const handlePrint = () => {
+    setPrintMode(true);
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => setPrintMode(false), 500);
+    }, 100);
   };
 
   if (loading) {
@@ -291,9 +249,267 @@ const TourPackageBookingDetail = () => {
   const displayTotal = getDisplayTotal();
   const pricePerPerson = booking.tourPackage?.price || booking.packagePrice || 0;
 
+  // Print View Component
+  const PrintView = () => (
+    <div className="print-container p-8" style={{ display: printMode ? 'block' : 'none' }}>
+      <style>
+        {`
+          @media print {
+            body * {
+              visibility: hidden;
+            }
+            .print-container, .print-container * {
+              visibility: visible;
+            }
+            .print-container {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100%;
+              padding: 20px;
+              font-family: Arial, sans-serif;
+            }
+            .no-print {
+              display: none !important;
+            }
+            .print-section {
+              page-break-inside: avoid;
+            }
+          }
+        `}
+      </style>
+      
+      {/* Agency Header */}
+      <div className="text-center mb-8 border-b-2 border-gray-300 pb-6 print-section">
+        <div className="flex justify-center items-center mb-4">
+          {/* Replace with your actual logo */}
+          <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-2xl mr-4">
+            AT
+          </div>
+          <div className="text-left">
+            <h1 className="text-3xl font-bold text-gray-800">Agency Tours</h1>
+            <p className="text-gray-600">Your Trusted Travel Partner in Mauritius</p>
+          </div>
+        </div>
+        <div className="mt-4">
+          <p className="text-gray-700">
+            <strong>Address:</strong> Royal Road, Grand Bay, Mauritius
+          </p>
+          <p className="text-gray-700">
+            <strong>Phone:</strong> +230 5XXX XXXX | <strong>Email:</strong> info@agencytours.mu
+          </p>
+          <p className="text-gray-700">
+            <strong>Website:</strong> www.agencytours.mu
+          </p>
+        </div>
+      </div>
+
+      {/* Booking Header */}
+      <div className="mb-8 print-section">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">BOOKING CONFIRMATION</h2>
+            <p className="text-gray-600 mt-2">Booking Reference: <strong>{booking.bookingReference}</strong></p>
+            <p className="text-gray-600">Booking Date: <strong>{formatDate(booking.createdAt)}</strong></p>
+            <p className="text-gray-600">Status: <strong className="uppercase">{booking.status}</strong></p>
+          </div>
+          <div className="text-right">
+            <div className="bg-gray-100 p-4 rounded-lg">
+              <p className="text-sm text-gray-600">Document No:</p>
+              <p className="font-bold">BK-{booking.bookingReference}</p>
+              <p className="text-sm text-gray-600 mt-2">Print Date:</p>
+              <p className="font-bold">{new Date().toLocaleDateString('en-US')}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Customer Information */}
+      <div className="mb-8 print-section">
+        <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">CUSTOMER INFORMATION</h3>
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <table className="w-full">
+              <tbody>
+                <tr>
+                  <td className="py-2 text-gray-600 font-medium w-1/3">Full Name:</td>
+                  <td className="py-2 font-bold">{booking.fullName || currentUser?.name || 'N/A'}</td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-gray-600 font-medium">Email:</td>
+                  <td className="py-2">{booking.email || currentUser?.email || 'N/A'}</td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-gray-600 font-medium">Phone:</td>
+                  <td className="py-2">{booking.phone || 'N/A'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <table className="w-full">
+              <tbody>
+                <tr>
+                  <td className="py-2 text-gray-600 font-medium w-1/3">Start Date:</td>
+                  <td className="py-2 font-bold">{formatDate(booking.startDate)}</td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-gray-600 font-medium">Number of Guests:</td>
+                  <td className="py-2 font-bold">{booking.guests} {booking.guests === 1 ? 'person' : 'people'}</td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-gray-600 font-medium">Special Requests:</td>
+                  <td className="py-2">{booking.specialRequests || 'None'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Tour Package Details */}
+      <div className="mb-8 print-section">
+        <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">TOUR PACKAGE DETAILS</h3>
+        <div className="bg-gray-50 p-4 rounded-lg mb-4">
+          <h4 className="text-lg font-bold text-gray-800 mb-2">{booking.tourPackage?.title || "Tour Package"}</h4>
+          <p className="text-gray-700 mb-3">{booking.tourPackage?.description || 'No description available'}</p>
+          <table className="w-full">
+            <tbody>
+              <tr>
+                <td className="py-2 text-gray-600 font-medium">Price per Person:</td>
+                <td className="py-2 font-bold">{formatCurrency(pricePerPerson)}</td>
+                <td className="py-2 text-gray-600 font-medium">Number of Guests:</td>
+                <td className="py-2 font-bold">{booking.guests}</td>
+                <td className="py-2 text-gray-600 font-medium">Package Total:</td>
+                <td className="py-2 font-bold">{formatCurrency(packageTotal)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Activities Details */}
+      {booking.selectedActivities && booking.selectedActivities.length > 0 && (
+        <div className="mb-8 print-section">
+          <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">SELECTED ACTIVITIES</h3>
+          <table className="w-full border-collapse border border-gray-300">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border border-gray-300 p-3 text-left">Activity</th>
+                <th className="border border-gray-300 p-3 text-left">Price per Person</th>
+                <th className="border border-gray-300 p-3 text-left">Quantity</th>
+                <th className="border border-gray-300 p-3 text-left">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {booking.selectedActivities.map((item, index) => {
+                const quantity = item.quantity || booking.guests || 1;
+                const price = Number(item.price) || 0;
+                const itemTotal = price * quantity;
+                
+                return (
+                  <tr key={index} className="border border-gray-300">
+                    <td className="border border-gray-300 p-3">{item.title}</td>
+                    <td className="border border-gray-300 p-3">{formatCurrency(price)}</td>
+                    <td className="border border-gray-300 p-3">{quantity}</td>
+                    <td className="border border-gray-300 p-3 font-medium">{formatCurrency(itemTotal)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="bg-gray-50 font-bold">
+                <td colSpan="3" className="border border-gray-300 p-3 text-right">Activities Subtotal:</td>
+                <td className="border border-gray-300 p-3">{formatCurrency(activitiesTotal)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+
+      {/* Transfer Details */}
+      {transferTotal > 0 && (
+        <div className="mb-8 print-section">
+          <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">AIRPORT TRANSFER</h3>
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <table className="w-full">
+              <tbody>
+                <tr>
+                  <td className="py-2 text-gray-600 font-medium w-1/3">Transfer Service:</td>
+                  <td className="py-2 font-bold">{booking.airportTransferBooking?.transfer?.airportName || 'Airport Transfer'}</td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-gray-600 font-medium">Trip Type:</td>
+                  <td className="py-2">{booking.airportTransferBooking?.tripType?.replace('-', ' ') || 'One Way'}</td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-gray-600 font-medium">Transfer Total:</td>
+                  <td className="py-2 font-bold">{formatCurrency(transferTotal)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Price Summary */}
+      <div className="mb-8 print-section">
+        <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">PRICE SUMMARY</h3>
+        <table className="w-full border-collapse">
+          <tbody>
+            <tr>
+              <td className="py-3 text-gray-700 font-medium">Tour Package Total:</td>
+              <td className="py-3 text-right font-medium">{formatCurrency(packageTotal)}</td>
+            </tr>
+            {activitiesTotal > 0 && (
+              <tr>
+                <td className="py-3 text-gray-700 font-medium">Activities Total:</td>
+                <td className="py-3 text-right font-medium">{formatCurrency(activitiesTotal)}</td>
+              </tr>
+            )}
+            {transferTotal > 0 && (
+              <tr>
+                <td className="py-3 text-gray-700 font-medium">Transfer Total:</td>
+                <td className="py-3 text-right font-medium">{formatCurrency(transferTotal)}</td>
+              </tr>
+            )}
+            <tr className="border-t-2 border-gray-300">
+              <td className="py-3 text-lg font-bold">GRAND TOTAL:</td>
+              <td className="py-3 text-right text-lg font-bold">{formatCurrency(displayTotal)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Terms and Conditions */}
+      <div className="mb-8 print-section">
+        <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">TERMS & CONDITIONS</h3>
+        <div className="text-sm text-gray-600 space-y-2">
+          <p>1. This booking confirmation serves as an official document for your reservation.</p>
+          <p>2. Full payment is required at least 24 hours before the tour date.</p>
+          <p>3. Cancellations must be made at least 24 hours in advance for a full refund.</p>
+          <p>4. No-shows will be charged the full amount.</p>
+          <p>5. Changes to booking are subject to availability.</p>
+          <p>6. Agency Tours is not responsible for weather-related cancellations.</p>
+          <p>7. Please arrive 15 minutes before the scheduled start time.</p>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="mt-12 pt-6 border-t-2 border-gray-300 text-center text-sm text-gray-600 print-section">
+        <p>Thank you for choosing Agency Tours!</p>
+        <p className="mt-2">For any questions or assistance, please contact us:</p>
+        <p><strong>Phone:</strong> +230 5XXX XXXX | <strong>Email:</strong> support@agencytours.mu</p>
+        <p className="mt-4">This is an electronically generated document. No signature required.</p>
+      </div>
+    </div>
+  );
+
   return (
     <DashboardLayout title="Booking Details">
-      <div>
+      {printMode && <PrintView />}
+      
+      <div className={printMode ? 'no-print' : ''}>
         {/* Header */}
         <div className="mb-6">
           <div className="flex justify-between items-center">
@@ -325,22 +541,8 @@ const TourPackageBookingDetail = () => {
               <div>
                 <div className="mb-4">
                   <h4 className="text-lg font-medium text-gray-800">{booking.tourPackage?.title || "Unknown Package"}</h4>
-                  <div className="flex items-center text-gray-600 mt-1">
-                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                    </svg>
-                    {/*<span>{booking.tourPackage?.location || "Location not available"}</span>*/}
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  {/*<div>
-                    <p className="text-sm text-gray-500 mb-1">Package Duration</p>
-                    <p className="font-medium">{booking.tourPackage?.duration || 'N/A'}</p>
-                  </div>*/}
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">Package Description</p>
-                    <p className="text-gray-700">{booking.tourPackage?.description || 'No description available'}</p>
+                  <div className="text-gray-600 mt-1">
+                    <p>{booking.tourPackage?.description || 'No description available'}</p>
                   </div>
                 </div>
               </div>
@@ -361,7 +563,6 @@ const TourPackageBookingDetail = () => {
                     <span className="font-medium">{formatCurrency(pricePerPerson)}</span>
                   </div>
                   
-                  {/* Package Price Breakdown */}
                   <div className="pt-2 border-t border-gray-300">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Package Total:</span>
@@ -369,7 +570,6 @@ const TourPackageBookingDetail = () => {
                     </div>
                   </div>
                   
-                  {/* Total Price */}
                   <div className="flex justify-between border-t border-gray-300 pt-2">
                     <span className="text-gray-600 font-medium">Total Price:</span>
                     <span className="font-bold text-lg">{formatCurrency(displayTotal)}</span>
@@ -380,7 +580,7 @@ const TourPackageBookingDetail = () => {
           </div>
         </div>
 
-        {/* Selected Activities Section - Updated with better display */}
+        {/* Selected Activities Section */}
         {booking.selectedActivities && booking.selectedActivities.length > 0 && (
           <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-6">
             <div className="p-6">
@@ -410,7 +610,6 @@ const TourPackageBookingDetail = () => {
                   );
                 })}
                 
-                {/* Activities Subtotal */}
                 <div className="flex justify-between pt-4 border-t border-gray-200">
                   <span className="font-medium text-gray-700">Activities Subtotal:</span>
                   <span className="font-bold text-blue-600">{formatCurrency(activitiesTotal)}</span>
@@ -425,7 +624,6 @@ const TourPackageBookingDetail = () => {
           <div className="p-6">
             <h3 className="text-lg font-bold text-gray-800 mb-4">Price Summary</h3>
             <div className="space-y-3">
-              {/* Package Breakdown */}
               <div className="space-y-2">
                 <h4 className="font-medium text-gray-700">Tour Package:</h4>
                 <div className="pl-4">
@@ -440,23 +638,16 @@ const TourPackageBookingDetail = () => {
                 </div>
               </div>
 
-              {/* Activities Breakdown */}
               {activitiesTotal > 0 && (
                 <div className="space-y-2 pt-2 border-t border-gray-200">
                   <h4 className="font-medium text-gray-700">Activities:</h4>
                   <div className="pl-4">
-                    {booking.selectedActivities?.map((item, index) => {
-                      const quantity = item.quantity || booking.guests || 1;
-                      const price = Number(item.price) || 0;
-                      const itemTotal = price * quantity;
-                      
-                      return (
-                        <div key={index} className="flex justify-between text-sm">
-                          <span className="text-gray-600">{item.title}:</span>
-                          <span>{formatCurrency(price)} × {quantity} = {formatCurrency(itemTotal)}</span>
-                        </div>
-                      );
-                    })}
+                    {booking.selectedActivities?.map((item, index) => (
+                      <div key={index} className="flex justify-between text-sm">
+                        <span className="text-gray-600">{item.title}:</span>
+                        <span>{formatCurrency(item.price)} × {item.quantity || booking.guests} = {formatCurrency(Number(item.price) * (item.quantity || booking.guests))}</span>
+                      </div>
+                    ))}
                     <div className="flex justify-between font-medium mt-1">
                       <span>Activities Total:</span>
                       <span>{formatCurrency(activitiesTotal)}</span>
@@ -465,7 +656,6 @@ const TourPackageBookingDetail = () => {
                 </div>
               )}
 
-              {/* Transfer Breakdown */}
               {transferTotal > 0 && (
                 <div className="space-y-2 pt-2 border-t border-gray-200">
                   <h4 className="font-medium text-gray-700">Airport Transfer:</h4>
@@ -484,7 +674,6 @@ const TourPackageBookingDetail = () => {
                 </div>
               )}
 
-              {/* Final Total */}
               <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-300">
                 <span>Grand Total:</span>
                 <span className="text-blue-600">{formatCurrency(displayTotal)}</span>
@@ -562,37 +751,37 @@ const TourPackageBookingDetail = () => {
         </div>
 
         {/* Actions */}
-        {(booking.status === 'pending' || booking.status === 'confirmed') && (
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-            <div className="p-6">
-              <h3 className="text-lg font-bold text-gray-800 mb-4">Booking Actions</h3>
-              <div className="flex flex-wrap gap-4">
-                {/*<button
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+          <div className="p-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">Booking Actions</h3>
+            <div className="flex flex-wrap gap-4">
+              <button
+                onClick={handlePrint}
+                className="px-6 py-2.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium"
+              >
+                Print Booking
+              </button>
+              <button
+                onClick={() => navigate('/dashboard/tour-package-bookings')}
+                className="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+              >
+                Back to Bookings
+              </button>
+              {(booking.status === 'pending' || booking.status === 'confirmed') && (
+                <button
                   onClick={handleCancelBooking}
                   disabled={cancelling}
                   className="px-6 py-2.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {cancelling ? 'Cancelling...' : 'Cancel Booking'}
-                </button>*/}
-                <button
-                  onClick={() => navigate('/dashboard/tour-package-bookings')}
-                  className="px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-                >
-                  Back to Bookings
                 </button>
-                <button
-                  onClick={() => window.print()}
-                  className="px-6 py-2.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium"
-                >
-                  Print Booking
-                </button>
-              </div>
-              <p className="text-sm text-gray-500 mt-3">
-                Note: Bookings can only be cancelled at least 24 hours before the start date.
-              </p>
+              )}
             </div>
+            <p className="text-sm text-gray-500 mt-3">
+              Note: Bookings can only be cancelled at least 24 hours before the start date.
+            </p>
           </div>
-        )}
+        </div>
       </div>
     </DashboardLayout>
   );

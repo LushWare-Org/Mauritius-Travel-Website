@@ -114,7 +114,17 @@ const TourPackageForm = () => {
     title: Yup.string().required('Title is required'),
     shortDescription: Yup.string().max(200, 'Short description max 200 chars'),
     description: Yup.string().required('Description is required'),
-    price: Yup.number().required('Price is required').positive('Must be positive'),
+    priceRs: Yup.number()
+      .required('Price in RS is required')
+      .positive('Must be positive')
+      .min(0, 'Cannot be negative'),
+    priceEuro: Yup.number()
+      .required('Price in Euros is required')
+      .positive('Must be positive')
+      .min(0, 'Cannot be negative'),
+    currencyType: Yup.string()
+      .oneOf(['both', 'rs-only', 'euro-only'])
+      .required('Currency display type is required'),
     itinerary: Yup.array().of(Yup.string()),
     included: Yup.array().of(Yup.string()),
     notIncluded: Yup.array().of(Yup.string()),
@@ -267,11 +277,48 @@ const TourPackageForm = () => {
       .filter(img => img.isUploaded && !img.uploadError)
       .map(img => img.url);
 
+    // Prepare price object based on currency type
+    let priceObject = {};
+    
+    switch(values.currencyType) {
+      case 'both':
+        priceObject = {
+          priceRs: values.priceRs,
+          priceEuro: values.priceEuro,
+          currencyType: 'both',
+          price: values.priceRs // Keep original price field for backward compatibility
+        };
+        break;
+      case 'rs-only':
+        priceObject = {
+          priceRs: values.priceRs,
+          priceEuro: null,
+          currencyType: 'rs-only',
+          price: values.priceRs
+        };
+        break;
+      case 'euro-only':
+        priceObject = {
+          priceRs: null,
+          priceEuro: values.priceEuro,
+          currencyType: 'euro-only',
+          price: values.priceEuro
+        };
+        break;
+      default:
+        priceObject = {
+          priceRs: values.priceRs,
+          priceEuro: values.priceEuro,
+          currencyType: 'both',
+          price: values.priceRs
+        };
+    }
+
     const payload = {
       title: values.title,
       shortDescription: values.shortDescription || '',
       description: values.description,
-      price: values.price,
+      ...priceObject,
       image: images[0]?.url || '',
       galleryImages: validGalleryImages,
       included: Array.isArray(values.included) ? values.included : [],
@@ -349,7 +396,9 @@ const TourPackageForm = () => {
             title: packageData?.title || '',
             shortDescription: packageData?.shortDescription || '',
             description: packageData?.description || '',
-            price: packageData?.price || '',
+            priceRs: packageData?.priceRs || packageData?.price || '',
+            priceEuro: packageData?.priceEuro || '',
+            currencyType: packageData?.currencyType || 'both',
             itinerary: packageData?.itinerary || [],
             included: packageData?.included || [],
             notIncluded: packageData?.notIncluded || ['Entrance fees'],
@@ -381,20 +430,92 @@ const TourPackageForm = () => {
                     <ErrorMessage name="title" component="div" className="text-red-600 text-sm mt-1" />
                   </div>
 
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">
-                      Price (RS) <span className="text-red-500">*</span>
+                  <div className="md:col-span-2">
+                    <label className="block text-gray-700 font-medium mb-3">
+                      Price Display Options <span className="text-red-500">*</span>
                     </label>
-                    <Field 
-                      type="number" 
-                      name="price" 
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                      placeholder="Enter price"
-                      min="0"
-                      step="0.01"
-                    />
-                    <ErrorMessage name="price" component="div" className="text-red-600 text-sm mt-1" />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <label className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-blue-50 transition-colors">
+                        <Field 
+                          type="radio" 
+                          name="currencyType" 
+                          value="both" 
+                          className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div className="ml-3">
+                          <span className="font-medium text-gray-700">Show Both</span>
+                          <p className="text-sm text-gray-500 mt-1">Display price in Rs and Euros</p>
+                        </div>
+                      </label>
+                      
+                      <label className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-blue-50 transition-colors">
+                        <Field 
+                          type="radio" 
+                          name="currencyType" 
+                          value="rs-only" 
+                          className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div className="ml-3">
+                          <span className="font-medium text-gray-700">Rs Only</span>
+                          <p className="text-sm text-gray-500 mt-1">Display only Mauritius Rupees</p>
+                        </div>
+                      </label>
+                      
+                      <label className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-blue-50 transition-colors">
+                        <Field 
+                          type="radio" 
+                          name="currencyType" 
+                          value="euro-only" 
+                          className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div className="ml-3">
+                          <span className="font-medium text-gray-700">Euro Only</span>
+                          <p className="text-sm text-gray-500 mt-1">Display only Euros</p>
+                        </div>
+                      </label>
+                    </div>
+                    <ErrorMessage name="currencyType" component="div" className="text-red-600 text-sm mt-1" />
                   </div>
+
+                  {(values.currencyType === 'both' || values.currencyType === 'rs-only') && (
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-2">
+                        Price (Rs) <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">Rs</span>
+                        <Field 
+                          type="number" 
+                          name="priceRs" 
+                          className="w-full pl-12 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                          placeholder="Enter price in Mauritius Rupees"
+                          min="0"
+                          step="1"
+                        />
+                      </div>
+                      <ErrorMessage name="priceRs" component="div" className="text-red-600 text-sm mt-1" />
+                    </div>
+                  )}
+
+                  {(values.currencyType === 'both' || values.currencyType === 'euro-only') && (
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-2">
+                        Price (EUR) <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">€</span>
+                        <Field 
+                          type="number" 
+                          name="priceEuro" 
+                          className="w-full pl-12 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                          placeholder="Enter price in Euros"
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                      <ErrorMessage name="priceEuro" component="div" className="text-red-600 text-sm mt-1" />
+                    </div>
+                  )}
 
                   <div className="md:col-span-2">
                     <label className="block text-gray-700 font-medium mb-2">

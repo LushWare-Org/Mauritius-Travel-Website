@@ -15,6 +15,13 @@ const TourPackageSchema = new mongoose.Schema({
     type: String,
     maxlength: [200, 'Short description cannot be more than 200 characters']
   },
+  priceRs: { type: Number, min: 0 },
+  priceEuro: { type: Number, min: 0 },
+  currencyType: { 
+    type: String, 
+    enum: ['both', 'rs-only', 'euro-only'],
+    default: 'both'
+  },
   price: {
     type: Number,
     required: [true, 'Please add a price']
