@@ -14,6 +14,46 @@ const TourPackageDetail = () => {
     const [loading, setLoading] = useState(true);
     const [relatedTours, setRelatedTours] = useState([]);
 
+    // Helper function to get display price based on currency type
+    const getDisplayPrice = (tour) => {
+        if (!tour) return { display: '', rs: 0, euro: 0 };
+        
+        switch(tour.currencyType) {
+            case 'both':
+                return {
+                    rs: tour.priceRs,
+                    euro: tour.priceEuro,
+                    display: `Rs ${tour.priceRs} / € ${tour.priceEuro}`,
+                    primary: `Rs ${tour.priceRs}`,
+                    secondary: `€ ${tour.priceEuro}`
+                };
+            case 'rs-only':
+                return {
+                    rs: tour.priceRs,
+                    euro: null,
+                    display: `Rs ${tour.priceRs}`,
+                    primary: `Rs ${tour.priceRs}`,
+                    secondary: null
+                };
+            case 'euro-only':
+                return {
+                    rs: null,
+                    euro: tour.priceEuro,
+                    display: `€ ${tour.priceEuro}`,
+                    primary: `€ ${tour.priceEuro}`,
+                    secondary: null
+                };
+            default:
+                return {
+                    rs: tour.price,
+                    euro: null,
+                    display: `Rs ${tour.price}`,
+                    primary: `Rs ${tour.price}`,
+                    secondary: null
+                };
+        }
+    };
+
     useEffect(() => {
         const fetchTour = async () => {
             setLoading(true);
@@ -64,6 +104,8 @@ const TourPackageDetail = () => {
             </div>
         );
     }
+
+    const priceDisplay = getDisplayPrice(tour);
 
     return (
         <div className="bg-gray-50 min-h-screen">
@@ -130,8 +172,38 @@ const TourPackageDetail = () => {
                         <div className="lg:w-1/3 mt-6 lg:mt-0 lg:pl-8">
                             <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-5 text-white shadow-lg">
                                 <div className="text-sm font-medium mb-2 opacity-90">Starting from</div>
-                                <div className="text-4xl font-bold mb-1">Rs {tour.price}</div>
+                                
+                                {/* Primary Price Display */}
+                                <div className="text-4xl font-bold mb-1">
+                                    {priceDisplay.primary}
+                                </div>
+                                
+                                {/* Secondary Price Display (if both currencies) */}
+                                {priceDisplay.secondary && (
+                                    <div className="text-xl font-semibold mb-2 opacity-90">
+                                        {priceDisplay.secondary}
+                                    </div>
+                                )}
+                                
                                 <div className="text-sm opacity-90 mb-4">per person</div>
+                                
+                                {/* Currency Type Badge */}
+                                <div className="mb-4">
+                                    <span className={`text-xs px-3 py-1 rounded-full ${
+                                        tour.currencyType === 'both' 
+                                            ? 'bg-green-500/20 text-green-300' 
+                                            : tour.currencyType === 'rs-only'
+                                            ? 'bg-blue-500/20 text-blue-300'
+                                            : 'bg-yellow-500/20 text-yellow-300'
+                                    }`}>
+                                        {tour.currencyType === 'both' 
+                                            ? 'Rs & Euro Available' 
+                                            : tour.currencyType === 'rs-only'
+                                            ? 'Rs Only'
+                                            : 'Euro Only'}
+                                    </span>
+                                </div>
+                                
                                 <div className="text-xs opacity-75">
                                     <div className="flex items-center">
                                         <FaCheckCircle className="mr-2" size={12} />
@@ -172,46 +244,51 @@ const TourPackageDetail = () => {
                         <h2 className="text-2xl font-bold text-gray-900 mb-2">You might also like</h2>
                         <p className="text-gray-600 mb-8">Similar tours you might enjoy</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {relatedTours.map((relatedTour) => (
-                                <div key={relatedTour._id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 border border-gray-100">
-                                    <div className="relative">
-                                        <img 
-                                            src={relatedTour.image} 
-                                            alt={relatedTour.title}
-                                            className="w-full h-56 object-cover"
-                                        />
-                                        <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full">
-                                            <span className="text-sm font-bold text-green-600">Rs {relatedTour.price}</span>
-                                        </div>
-                                    </div>
-                                    <div className="p-5">
-                                        <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 h-14">{relatedTour.title}</h3>
-                                        <div className="flex items-center mb-3">
-                                            <div className="flex">
-                                                {[...Array(5)].map((_, index) => (
-                                                    <FaStar
-                                                        key={index}
-                                                        size={14}
-                                                        className={index < Math.floor(relatedTour.averageRating) ? "text-yellow-500" : "text-gray-300"}
-                                                    />
-                                                ))}
+                            {relatedTours.map((relatedTour) => {
+                                const relatedPriceDisplay = getDisplayPrice(relatedTour);
+                                return (
+                                    <div key={relatedTour._id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 border border-gray-100">
+                                        <div className="relative">
+                                            <img 
+                                                src={relatedTour.image} 
+                                                alt={relatedTour.title}
+                                                className="w-full h-56 object-cover"
+                                            />
+                                            <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full">
+                                                <span className="text-sm font-bold text-green-600">
+                                                    {relatedPriceDisplay.display}
+                                                </span>
                                             </div>
-                                            <span className="ml-2 text-sm text-gray-600">
-                                                {relatedTour.averageRating.toFixed(1)} ({relatedTour.totalRatings})
-                                            </span>
                                         </div>
-                                        <div className="flex justify-between items-center mt-4">
-                                            <span className="text-gray-600 text-sm">{relatedTour.duration || '1 day'}</span>
-                                            <button className="text-blue-600 font-semibold text-sm hover:text-blue-800 flex items-center">
-                                                View Details
-                                                <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                                                </svg>
-                                            </button>
+                                        <div className="p-5">
+                                            <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 h-14">{relatedTour.title}</h3>
+                                            <div className="flex items-center mb-3">
+                                                <div className="flex">
+                                                    {[...Array(5)].map((_, index) => (
+                                                        <FaStar
+                                                            key={index}
+                                                            size={14}
+                                                            className={index < Math.floor(relatedTour.averageRating) ? "text-yellow-500" : "text-gray-300"}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <span className="ml-2 text-sm text-gray-600">
+                                                    {relatedTour.averageRating.toFixed(1)} ({relatedTour.totalRatings})
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center mt-4">
+                                                <span className="text-gray-600 text-sm">{relatedTour.duration || '1 day'}</span>
+                                                <button className="text-blue-600 font-semibold text-sm hover:text-blue-800 flex items-center">
+                                                    View Details
+                                                    <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                                    </svg>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 )}

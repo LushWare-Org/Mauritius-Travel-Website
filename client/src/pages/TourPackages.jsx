@@ -1,3 +1,4 @@
+// pages/TourPackages.jsx
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import TourFilters from '../components/tourPackages/TourPackageFilters';
@@ -14,6 +15,7 @@ const TourPackages = () => {
     const [sortOption, setSortOption] = useState('popularity');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [currencyFilter, setCurrencyFilter] = useState('all'); // 'all', 'rs', 'euro'
 
     const queryParams = new URLSearchParams(location.search);
     const searchQuery = queryParams.get('search');
@@ -48,6 +50,36 @@ const TourPackages = () => {
         fetchTours();
     }, [location.search]);
 
+    // Helper function to get display price based on currency type
+    const getDisplayPrice = (tour) => {
+        switch(tour.currencyType) {
+            case 'both':
+                return {
+                    rs: tour.priceRs,
+                    euro: tour.priceEuro,
+                    display: `Rs ${tour.priceRs} / € ${tour.priceEuro}`
+                };
+            case 'rs-only':
+                return {
+                    rs: tour.priceRs,
+                    euro: null,
+                    display: `Rs ${tour.priceRs}`
+                };
+            case 'euro-only':
+                return {
+                    rs: null,
+                    euro: tour.priceEuro,
+                    display: `€ ${tour.priceEuro}`
+                };
+            default:
+                return {
+                    rs: tour.price,
+                    euro: null,
+                    display: `Rs ${tour.price}`
+                };
+        }
+    };
+
     // Filtering & Sorting
     useEffect(() => {
         let result = [...tours];
@@ -65,26 +97,42 @@ const TourPackages = () => {
         if (filters.priceRange) {
             const [minPrice, maxPrice] = filters.priceRange;
             result = result.filter(t => {
-                const price = Number(t?.price) || 0;
+                const price = Number(t?.priceRs) || Number(t?.price) || 0;
                 return price >= minPrice && price <= maxPrice;
+            });
+        }
+
+        // Currency filter
+        if (currencyFilter !== 'all') {
+            result = result.filter(t => {
+                if (currencyFilter === 'rs') {
+                    return t.currencyType === 'both' || t.currencyType === 'rs-only';
+                } else if (currencyFilter === 'euro') {
+                    return t.currencyType === 'both' || t.currencyType === 'euro-only';
+                }
+                return true;
             });
         }
 
         // Sorting
         result.sort((a, b) => {
+            const priceA = Number(a?.priceRs) || Number(a?.price) || 0;
+            const priceB = Number(b?.priceRs) || Number(b?.price) || 0;
+            
             switch (sortOption) {
-                case 'price-asc': return (Number(a?.price) || 0) - (Number(b?.price) || 0);
-                case 'price-desc': return (Number(b?.price) || 0) - (Number(a?.price) || 0);
+                case 'price-asc': return priceA - priceB;
+                case 'price-desc': return priceB - priceA;
                 case 'popularity':
-                default: return (b?.rating || 0) - (a?.rating || 0);
+                default: return (b?.averageRating || 0) - (a?.averageRating || 0);
             }
         });
 
         setFilteredTours(result);
-    }, [tours, filters, sortOption, searchQuery]);
+    }, [tours, filters, sortOption, searchQuery, currencyFilter]);
 
     const handleFilterChange = (newFilters) => setFilters(prev => ({ ...prev, ...newFilters }));
     const handleSortChange = (option) => setSortOption(option);
+    const handleCurrencyFilterChange = (currency) => setCurrencyFilter(currency);
 
     return (
         <div className="bg-gray-50 py-8">
@@ -93,16 +141,44 @@ const TourPackages = () => {
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-blue-700 font-display">Mauritius Tour Packages</h1>
                     <p className="text-gray-600 mt-2">Discover and book the best tour packages in Mauritius</p>
+                    
+                    {/* Currency Filter */}
+                    {/* <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                            onClick={() => handleCurrencyFilterChange('all')}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                                currencyFilter === 'all' 
+                                ? 'bg-blue-600 text-white' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                        >
+                            All Currencies
+                        </button>
+                        <button
+                            onClick={() => handleCurrencyFilterChange('rs')}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                                currencyFilter === 'rs' 
+                                ? 'bg-green-600 text-white' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                        >
+                            Rs Only
+                        </button>
+                        <button
+                            onClick={() => handleCurrencyFilterChange('euro')}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                                currencyFilter === 'euro' 
+                                ? 'bg-yellow-600 text-white' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                        >
+                            Euro Only
+                        </button>
+                    </div> */}
                 </div>
 
-                <div className="flex flex-col lg:flex-row gap-8">
-                    {/* Sidebar Filters */}
-                    <div className="w-full lg:w-1/4">
-                        <TourFilters filters={filters} onFilterChange={handleFilterChange} />
-                    </div>
-
                     {/* Main Content */}
-                    <div className="w-full lg:w-3/4">
+                    <div>
                         {/* Search Tags & Sorting Bar */}
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 bg-white p-4 rounded-lg shadow transition-all hover:shadow-md">
                             <div>
@@ -119,6 +195,12 @@ const TourPackages = () => {
                                         {locationParam && (
                                             <span className="text-sm text-purple-600 bg-purple-50 px-3 py-1 rounded-full">
                                                 <i className="fas fa-map-marker-alt mr-1"></i> {locationParam}
+                                            </span>
+                                        )}
+                                        {currencyFilter !== 'all' && (
+                                            <span className="text-sm text-orange-600 bg-orange-50 px-3 py-1 rounded-full">
+                                                <i className="fas fa-money-bill-wave mr-1"></i> 
+                                                {currencyFilter === 'rs' ? 'Rs Only' : 'Euro Only'}
                                             </span>
                                         )}
                                     </div>
@@ -149,30 +231,13 @@ const TourPackages = () => {
                             </div>
                         ) : (
                             <ErrorBoundary>
-                                <TourList packages={filteredTours} />
-                                {/* Add Type / Duration Tags Above Each Tour */}
-                                <div className="mt-6">
-                                    {filteredTours.map(tour => (
-                                        <div key={tour._id || tour.id} className="mb-4">
-                                            <div className="flex flex-wrap gap-2 mb-2">
-                                                {tour.type && (
-                                                    <span className="text-sm text-green-600 bg-green-50 px-3 py-1 rounded-full">
-                                                        <i className="fas fa-tag mr-1"></i> {tour.type.replace('-', ' ')}
-                                                    </span>
-                                                )}
-                                                {tour.duration && (
-                                                    <span className="text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-                                                        <i className="fas fa-clock mr-1"></i> {tour.duration} days
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                <TourList 
+                                    packages={filteredTours} 
+                                    getDisplayPrice={getDisplayPrice}
+                                />
                             </ErrorBoundary>
                         )}
                     </div>
-                </div>
             </div>
         </div>
     );
