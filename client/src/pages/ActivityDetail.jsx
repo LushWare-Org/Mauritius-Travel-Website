@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import ActivityImageGallery from '../components/activity-detail/ActivityImageGallery';
 import ActivityInfo from '../components/activity-detail/ActivityInfo';
 import ActivityTabs from '../components/activity-detail/ActivityTabs';
@@ -9,73 +9,90 @@ import { activitiesAPI } from '../utils/api';
 
 const ActivityDetail = () => {
     const { id } = useParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [activity, setActivity] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [relatedActivities, setRelatedActivities] = useState([]);    useEffect(() => {
-        // Fetch excursion from the actual database API
-        const fetchActivity = async () => {
-            setLoading(true);
-            try {
-                // Get the excursion by its ID
-                const activityResponse = await activitiesAPI.getById(id);                const foundActivity = activityResponse?.data?.data;
-                
-                if (foundActivity) {
-                    setActivity(foundActivity);
-                    
-                    // Fetch all excursions to find related ones (same type or location)
-                    const allActivitiesResponse = await activitiesAPI.getAll();
-                    const allActivities = allActivitiesResponse?.data?.data || [];
-                    
-                    // Find related excursions (same type or location)
-                    const related = allActivities
-                        .filter(act => 
-                            act?._id !== foundActivity._id && 
-                            (act?.type === foundActivity.type || act?.location === foundActivity.location)
-                        )
-                        .slice(0, 4); // Limit to 4 related excursions
-                    
-                    setRelatedActivities(related);
-                }
-            } catch (error) {
-                console.error('Error fetching excursion details:', error);
-                // Excursion not found or error will be handled in the UI
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (id) {
-            fetchActivity();
+    const [relatedActivities, setRelatedActivities] = useState([]);
+    const [currency, setCurrency] = useState(() => {
+      // Get currency from URL params or localStorage or default to USD
+      return searchParams.get('currency') || localStorage.getItem('preferredCurrency') || 'USD';
+    });
+    
+    useEffect(() => {
+      const fetchActivity = async () => {
+        setLoading(true);
+        try {
+          // Get the activity by its ID with currency parameter
+          const activityResponse = await activitiesAPI.getById(id, currency);
+          const foundActivity = activityResponse?.data?.data;
+          
+          if (foundActivity) {
+            setActivity(foundActivity);
+            
+            // Fetch related activities with same currency
+            const allActivitiesResponse = await activitiesAPI.getAll({ currency });
+            const allActivities = allActivitiesResponse?.data?.data || [];
+            
+            const related = allActivities
+              .filter(act => 
+                act?._id !== foundActivity._id && 
+                (act?.type === foundActivity.type || act?.location === foundActivity.location)
+              )
+              .slice(0, 4);
+            
+            setRelatedActivities(related);
+          }
+        } catch (error) {
+          console.error('Error fetching activity details:', error);
+        } finally {
+          setLoading(false);
         }
-    }, [id]);
+      };
+
+      if (id) {
+        fetchActivity();
+      }
+    }, [id, currency]);
+
+    // Function to change currency
+    const handleCurrencyChange = (newCurrency) => {
+      setCurrency(newCurrency);
+      localStorage.setItem('preferredCurrency', newCurrency);
+      // Update URL with currency parameter
+      setSearchParams({ currency: newCurrency });
+    };
 
     if (loading) {
-        return (
-            <div className="container mx-auto px-4 py-12 flex justify-center">
-                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
-            </div>
-        );
+      return (
+        <div className="container mx-auto px-4 py-12 flex justify-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      );
     }
 
     if (!activity) {
-        return (
-            <div className="container mx-auto px-4 py-12">
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                    <h2 className="text-xl font-bold mb-2">Excursion Not Found</h2>
-                    <p>Sorry, we couldn't find the excursion you're looking for.</p>
-                </div>
-            </div>
-        );
+      return (
+        <div className="container mx-auto px-4 py-12">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <h2 className="text-xl font-bold mb-2">Activity Not Found</h2>
+            <p>Sorry, we couldn't find the activity you're looking for.</p>
+          </div>
+        </div>
+      );
     }
 
     return (
         <div className="bg-gray-50">
-            {/* Hero Image Gallery */}
+            {/* Activity Image Gallery */}
             <ActivityImageGallery activity={activity} />
             
             <div className="container mx-auto px-4 py-8">
-                {/* Excursion Info (Title, Rating, Location) */}
-                <ActivityInfo activity={activity} />
+                {/* Activity Info with Currency Selector */}
+                <ActivityInfo 
+                  activity={activity} 
+                  currency={currency}
+                  onCurrencyChange={handleCurrencyChange}
+                />
                 
                 <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left Column - Details Tabs */}
@@ -85,13 +102,13 @@ const ActivityDetail = () => {
                     
                     {/* Right Column - Booking Form */}
                     <div>
-                        <BookingForm activity={activity} />
+                        <BookingForm activity={activity} currency={currency} />
                     </div>
                 </div>
                 
-                {/* Related Excursions */}
+                {/* Related Activities */}
                 <div className="mt-16">
-                    <RelatedActivities activities={relatedActivities} />
+                    <RelatedActivities activities={relatedActivities} currency={currency} />
                 </div>
             </div>
         </div>

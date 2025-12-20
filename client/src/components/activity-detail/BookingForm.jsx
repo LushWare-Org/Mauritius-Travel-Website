@@ -1,18 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const BookingForm = ({ activity }) => {
+const BookingForm = ({ activity, currency: propCurrency }) => {
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedDuration, setSelectedDuration] = useState('halfDay');
   const [totalPrice, setTotalPrice] = useState(0);
   const [showCalendar, setShowCalendar] = useState(false);
-
+  const [currency, setCurrency] = useState(propCurrency || activity?.displayCurrency || 'USD');
+  
+  // Airport transfer states
   const [includeAirportTransfer, setIncludeAirportTransfer] = useState(false);
   const [selectedAirportTransfer, setSelectedAirportTransfer] = useState('');
   const [airportTransfers, setAirportTransfers] = useState([]);
   const [airportTransferPrice, setAirportTransferPrice] = useState(0);
   const [tripType, setTripType] = useState('one-way');
+
+  // Calendar navigation states
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+
+  // Get currency symbol
+  const getCurrencySymbol = (curr) => {
+    const symbols = {
+      'USD': '$',
+      'EUR': '€',
+      'MUR': 'Rs'
+    };
+    return symbols[curr] || '$';
+  };
+  
+  // Get price based on currency
+  const getPriceByCurrency = (priceField) => {
+    if (!activity) return 0;
+    
+    const currencySuffix = currency === 'USD' ? '' : currency;
+    const fieldName = currency === 'USD' ? priceField : `${priceField}${currency}`;
+    
+    return activity[fieldName] || activity[priceField] || 0;
+  };
+  
+  // Get airport transfer price based on currency
+  const getTransferPriceByCurrency = (transfer, priceField) => {
+    if (!transfer) return 0;
+    
+    const fieldName = currency === 'USD' ? priceField : `${priceField}${currency}`;
+    return transfer[fieldName] || transfer[priceField] || 0;
+  };
 
   const showDurationSelection = () => {
     return activity.halfDayPrice || activity.fullDayPrice;
@@ -21,10 +55,10 @@ const BookingForm = ({ activity }) => {
   const getCurrentPrice = () => {
     if (showDurationSelection()) {
       return selectedDuration === 'halfDay'
-        ? activity.halfDayPrice || activity.price
-        : activity.fullDayPrice || activity.price;
+        ? getPriceByCurrency('halfDayPrice')
+        : getPriceByCurrency('fullDayPrice');
     }
-    return activity.price;
+    return getPriceByCurrency('price');
   };
 
   // Get selected airport transfer details
@@ -49,8 +83,8 @@ const BookingForm = ({ activity }) => {
             setAirportTransfers(data.data);
             setSelectedAirportTransfer(data.data[0]._id);
             const price = tripType === 'one-way' 
-              ? data.data[0].oneWayPrice 
-              : data.data[0].roundTripPrice;
+              ? getTransferPriceByCurrency(data.data[0], 'oneWayPrice')
+              : getTransferPriceByCurrency(data.data[0], 'roundTripPrice');
             setAirportTransferPrice(price);
           }
         }
@@ -60,7 +94,7 @@ const BookingForm = ({ activity }) => {
     };
 
     fetchAirportTransfers();
-  }, [includeAirportTransfer, tripType]);
+  }, [includeAirportTransfer, tripType, currency]);
 
   const handleAirportTransferChange = (e) => {
     const transferId = e.target.value;
@@ -69,8 +103,8 @@ const BookingForm = ({ activity }) => {
     const selectedTransfer = airportTransfers.find(t => t._id === transferId);
     if (selectedTransfer) {
       const price = tripType === 'one-way' 
-        ? selectedTransfer.oneWayPrice 
-        : selectedTransfer.roundTripPrice;
+        ? getTransferPriceByCurrency(selectedTransfer, 'oneWayPrice')
+        : getTransferPriceByCurrency(selectedTransfer, 'roundTripPrice');
       setAirportTransferPrice(price);
     }
   };
@@ -82,8 +116,8 @@ const BookingForm = ({ activity }) => {
       const selectedTransfer = airportTransfers.find(t => t._id === selectedAirportTransfer);
       if (selectedTransfer) {
         const price = newTripType === 'one-way' 
-          ? selectedTransfer.oneWayPrice 
-          : selectedTransfer.roundTripPrice;
+          ? getTransferPriceByCurrency(selectedTransfer, 'oneWayPrice')
+          : getTransferPriceByCurrency(selectedTransfer, 'roundTripPrice');
         setAirportTransferPrice(price);
       }
     }
@@ -98,7 +132,7 @@ const BookingForm = ({ activity }) => {
     }
     
     setTotalPrice(total);
-  }, [activity, selectedDuration, includeAirportTransfer, airportTransferPrice, tripType]);
+  }, [activity, selectedDuration, includeAirportTransfer, airportTransferPrice, tripType, currency]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -113,6 +147,7 @@ const BookingForm = ({ activity }) => {
         guests: 1,
         selectedDuration,
         selectedPrice: getCurrentPrice(),
+        currency: currency,
         includeAirportTransfer,
         ...(includeAirportTransfer && {
           airportTransferId: selectedAirportTransfer,
@@ -123,63 +158,139 @@ const BookingForm = ({ activity }) => {
     });
   };
 
+  // Calendar generation functions
   const generateCalendarDays = () => {
     const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
+    const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const firstDay = new Date(currentYear, currentMonth, 1);
+    const lastDay = new Date(currentYear, currentMonth + 1, 0);
     const daysInMonth = lastDay.getDate();
     const startDay = firstDay.getDay();
     const days = [];
 
+    const formatDateAsYMD = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     // Previous month days
-    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
     for (let i = startDay - 1; i >= 0; i--) {
-      const date = new Date(year, month - 1, prevMonthLastDay - i);
+      const date = new Date(currentYear, currentMonth - 1, prevMonthLastDay - i);
+      const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const formatted = formatDateAsYMD(dateOnly);
+      const isPast = dateOnly < todayDateOnly;
+      
       days.push({ 
         date, 
+        dateOnly,
         isCurrentMonth: false, 
-        isPast: date < today, 
-        formatted: date.toISOString().split('T')[0] 
+        isPast,
+        isSelected: formatted === selectedDate,
+        formatted
       });
     }
 
     // Current month days
     for (let i = 1; i <= daysInMonth; i++) {
-      const date = new Date(year, month, i);
-      const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const date = new Date(currentYear, currentMonth, i);
+      const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const formatted = formatDateAsYMD(dateOnly);
+      const isPast = dateOnly < todayDateOnly;
+      
       days.push({ 
         date, 
+        dateOnly,
         isCurrentMonth: true, 
-        isPast, 
-        formatted: date.toISOString().split('T')[0] 
+        isPast,
+        isSelected: formatted === selectedDate,
+        formatted
       });
     }
 
-    return days.slice(0, 35); // Show only 5 weeks
+    // Next month days
+    const totalDaysNeeded = 42;
+    const nextMonthDaysNeeded = totalDaysNeeded - days.length;
+    
+    for (let i = 1; i <= nextMonthDaysNeeded; i++) {
+      const date = new Date(currentYear, currentMonth + 1, i);
+      const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const formatted = formatDateAsYMD(dateOnly);
+      
+      days.push({ 
+        date, 
+        dateOnly,
+        isCurrentMonth: false, 
+        isPast: false,
+        isSelected: formatted === selectedDate,
+        formatted
+      });
+    }
+
+    return days;
   };
 
-  const handleDateSelect = (date) => {
-    if (!date.isPast) {
-      setSelectedDate(date.formatted);
+  const handleDateSelect = (day) => {
+    if (!day.isPast) {
+      setSelectedDate(day.formatted);
       setShowCalendar(false);
     }
   };
 
+  const goToPreviousMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+  };
+
+  const goToNextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+  };
+
+  const goToToday = () => {
+    const today = new Date();
+    setCurrentMonth(today.getMonth());
+    setCurrentYear(today.getFullYear());
+  };
+
   const formatDateDisplay = (dateString) => {
     if (!dateString) return 'Select date';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const date = new Date(dateString + 'T00:00:00');
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'short',
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const getMonthName = () => {
+    return new Date(currentYear, currentMonth).toLocaleDateString('en-US', { 
+      month: 'long',
+      year: 'numeric'
+    });
   };
 
   // Function to format airport transfer option display
   const formatAirportTransferOption = (transfer) => {
     const airportCode = transfer.airportCode || '';
     const airportName = transfer.airportName || 'Airport Transfer';
-    const price = tripType === 'one-way' ? transfer.oneWayPrice : transfer.roundTripPrice;
+    const price = tripType === 'one-way' 
+      ? getTransferPriceByCurrency(transfer, 'oneWayPrice')
+      : getTransferPriceByCurrency(transfer, 'roundTripPrice');
+    const symbol = getCurrencySymbol(currency);
     
-    return `${airportCode ? `${airportCode} - ` : ''}${airportName} - $${price}`;
+    return `${airportCode ? `${airportCode} - ` : ''}${airportName} - ${symbol}${price}`;
   };
 
   // Function to get airport code display text
@@ -194,20 +305,34 @@ const BookingForm = ({ activity }) => {
     return selectedAirport.airportName || '';
   };
 
+  const symbol = getCurrencySymbol(currency);
+
   return (
     <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-5 sticky top-24">
-      {/* Price Header */}
+      {/* Price Header with Currency Selector */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-500 rounded-xl p-4 text-white mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-2xl font-bold">${getCurrentPrice()}</div>
+            <div className="text-2xl font-bold">{symbol}{getCurrentPrice()}</div>
             <div className="text-xs opacity-90 mt-1">per person</div>
           </div>
-          {showDurationSelection() && (
-            <div className="bg-white/20 px-3 py-1 rounded-lg text-xs font-medium">
-              {selectedDuration === 'halfDay' ? 'Half Day' : 'Full Day'}
-            </div>
-          )}
+          <div className="flex items-center space-x-2">
+            {showDurationSelection() && (
+              <div className="bg-white/20 px-3 py-1 rounded-lg text-xs font-medium">
+                {selectedDuration === 'halfDay' ? 'Half Day' : 'Full Day'}
+              </div>
+            )}
+            {/* Currency Selector */}
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="bg-white/20 text-white border-0 rounded-lg px-2 py-1 text-xs focus:ring-0 focus:border-0"
+            >
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="MUR">MUR (Rs)</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -235,7 +360,7 @@ const BookingForm = ({ activity }) => {
                   <div className={`text-lg font-bold ${
                     selectedDuration === 'halfDay' ? 'text-blue-600' : 'text-gray-600'
                   }`}>
-                    ${activity.halfDayPrice || activity.price}
+                    {symbol}{getPriceByCurrency('halfDayPrice')}
                   </div>
                 </div>
               </button>
@@ -258,7 +383,7 @@ const BookingForm = ({ activity }) => {
                   <div className={`text-lg font-bold ${
                     selectedDuration === 'fullDay' ? 'text-blue-600' : 'text-gray-600'
                   }`}>
-                    ${activity.fullDayPrice || activity.price}
+                    {symbol}{getPriceByCurrency('fullDayPrice')}
                   </div>
                 </div>
               </button>
@@ -278,44 +403,96 @@ const BookingForm = ({ activity }) => {
                 <svg className="w-4 h-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <span className={selectedDate ? 'text-gray-900' : 'text-gray-500'}>
+                <span className={selectedDate ? 'text-gray-900 font-medium' : 'text-gray-500'}>
                   {selectedDate ? formatDateDisplay(selectedDate) : 'Choose date'}
                 </span>
               </div>
-              <svg className={`w-4 h-4 text-gray-400 ${showCalendar ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`w-4 h-4 text-gray-400 transition-transform ${showCalendar ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
               </svg>
             </div>
 
             {showCalendar && (
-              <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg p-4">
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day) => (
-                    <div key={day} className="text-center text-xs text-gray-500 py-1">
+              <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-xl p-4">
+                {/* Calendar Header with Navigation */}
+                <div className="flex items-center justify-between mb-4">
+                  <button
+                    type="button"
+                    onClick={goToPreviousMonth}
+                    className="p-1 hover:bg-gray-100 rounded-full"
+                  >
+                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  
+                  <div className="flex items-center space-x-2">
+                    <div className="font-semibold text-gray-900">{getMonthName()}</div>
+                    <button
+                      type="button"
+                      onClick={goToToday}
+                      className="px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+                    >
+                      Today
+                    </button>
+                  </div>
+                  
+                  <button
+                    type="button"
+                    onClick={goToNextMonth}
+                    className="p-1 hover:bg-gray-100 rounded-full"
+                  >
+                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Day Headers */}
+                <div className="grid grid-cols-7 gap-1 mb-1">
+                  {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                    <div key={day} className="text-center text-xs font-medium text-gray-500 py-1">
                       {day}
                     </div>
                   ))}
                 </div>
 
+                {/* Calendar Grid */}
                 <div className="grid grid-cols-7 gap-1">
-                  {generateCalendarDays().map((day, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => handleDateSelect(day)}
-                      disabled={day.isPast}
-                      className={`
-                        h-8 text-xs rounded transition-colors
-                        ${day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}
-                        ${day.isPast ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-blue-50'}
-                        ${selectedDate === day.formatted 
-                          ? 'bg-blue-600 text-white' 
-                          : ''}
-                      `}
-                    >
-                      {day.date.getDate()}
-                    </button>
-                  ))}
+                  {generateCalendarDays().map((day, index) => {
+                    const today = new Date();
+                    const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                    const isToday = day.dateOnly && day.dateOnly.getTime() === todayDateOnly.getTime();
+                    
+                    return (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => handleDateSelect(day)}
+                        disabled={day.isPast}
+                        className={`
+                          h-9 text-sm rounded transition-all relative
+                          ${day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}
+                          ${day.isPast ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100'}
+                          ${day.isSelected 
+                            ? 'bg-blue-600 text-white hover:bg-blue-700 font-medium' 
+                            : ''}
+                          ${isToday && !day.isSelected ? 'border border-blue-500' : ''}
+                        `}
+                      >
+                        {day.date.getDate()}
+                        {isToday && !day.isSelected && (
+                          <div className="absolute top-0 right-0 w-1 h-1 bg-blue-500 rounded-full"></div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Today Indicator */}
+                <div className="flex items-center mt-4 pt-3 border-t border-gray-100">
+                  <div className="w-3 h-3 border border-blue-500 rounded mr-2"></div>
+                  <span className="text-xs text-gray-600">Today</span>
                 </div>
               </div>
             )}
@@ -394,7 +571,7 @@ const BookingForm = ({ activity }) => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       </svg>
                       <div className="text-xs text-gray-700">
-                        <span className="font-medium mr-2">Selected airport code:</span>
+                        <span className="font-medium mr-2">Airport code:</span>
                         <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-semibold">
                           {getAirportCodeDisplay()}
                         </span>
@@ -407,7 +584,7 @@ const BookingForm = ({ activity }) => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
                       <div className="text-xs text-gray-700">
-                        <span className="font-medium mr-2">Selected hotel name:</span>
+                        <span className="font-medium mr-2">Airport name:</span>
                         <span className="text-gray-900 font-medium">
                           {getAirportNameDisplay()}
                         </span>
@@ -431,8 +608,11 @@ const BookingForm = ({ activity }) => {
                     {selectedDuration === 'halfDay' ? 'Half Day' : 'Full Day'}
                   </div>
                 )}
+                <div className="text-xs text-blue-600 font-medium mt-1">
+                  {currency} {getCurrencySymbol(currency)}
+                </div>
               </div>
-              <div className="font-semibold text-gray-900">${getCurrentPrice()}</div>
+              <div className="font-semibold text-gray-900">{symbol}{getCurrentPrice()}</div>
             </div>
 
             {includeAirportTransfer && airportTransferPrice > 0 && selectedAirport && (
@@ -449,7 +629,7 @@ const BookingForm = ({ activity }) => {
                       <span>{getAirportNameDisplay()}</span>
                     </div>
                   </div>
-                  <div className="font-semibold text-blue-600">+${airportTransferPrice}</div>
+                  <div className="font-semibold text-blue-600">+{symbol}{airportTransferPrice}</div>
                 </div>
                 
                 {/* Additional transfer details */}
@@ -466,7 +646,7 @@ const BookingForm = ({ activity }) => {
 
             <div className="flex justify-between items-center pt-3 border-t border-gray-300">
               <div className="font-bold text-gray-900">Total</div>
-              <div className="text-2xl font-bold text-blue-600">${totalPrice}</div>
+              <div className="text-2xl font-bold text-blue-600">{symbol}{totalPrice}</div>
             </div>
           </div>
         </div>

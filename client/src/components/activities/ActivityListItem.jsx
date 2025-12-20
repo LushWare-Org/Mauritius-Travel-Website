@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { activityReviewsAPI } from '../../utils/api';
 import { FaStar, FaRegStar } from 'react-icons/fa';
 
-const ActivityListItem = ({ activity }) => {
+const ActivityListItem = ({ activity, currency = 'USD' }) => {
     const [reviewStats, setReviewStats] = useState(null);
     const [loadingReviews, setLoadingReviews] = useState(true);
 
@@ -56,26 +56,88 @@ const ActivityListItem = ({ activity }) => {
         );
     };
 
+    // Get currency symbol
+    const getCurrencySymbol = (curr) => {
+        const symbols = {
+            'USD': '$',
+            'EUR': '€',
+            'MUR': 'Rs'
+        };
+        return symbols[curr] || '$';
+    };
+
+    const symbol = getCurrencySymbol(currency);
+    
+    // Check if activity has half/full day pricing
+    const hasHalfFullDay = activity.halfDayPrice || activity.fullDayPrice;
+    
+    // Get display price based on currency
+    const getDisplayPrice = () => {
+        return activity.price || 0;
+    };
+
+    // Format price with currency symbol
+    const formatPrice = (price) => {
+        return `${symbol}${price}`;
+    };
+
+    // Show pricing details based on pricing type
+    const renderPricingDetails = () => {
+        if (hasHalfFullDay) {
+            return (
+                <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Full Day:</span>
+                        <span className="font-semibold text-blue-700">
+                            {formatPrice(activity.fullDayPrice || getDisplayPrice())}
+                        </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Half Day:</span>
+                        <span className="font-semibold text-green-700">
+                            {formatPrice(activity.halfDayPrice || getDisplayPrice())}
+                        </span>
+                    </div>
+                </div>
+            );
+        }
+        return null;
+    };
+
     return (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col sm:flex-row hover:border-blue-200">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col sm:flex-row hover:border-blue-200 group">
             {/* Activity Image */}
             <div className="sm:w-2/5 h-48 sm:h-auto relative">
                 <img 
                     src={activity.image || '/images/placeholder.jpg'} 
                     alt={activity.title || 'Activity'}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
                 {activity.featured && (
-                    <span className="absolute top-3 left-0 bg-yellow-500 text-blue-900 py-1 px-3 font-semibold text-xs uppercase rounded-r">
+                    <span className="absolute top-3 left-0 bg-gradient-to-r from-yellow-500 to-amber-500 text-white py-1 px-3 font-semibold text-xs uppercase rounded-r shadow-md">
                         Featured
                     </span>
                 )}
+                {/* Currency Badge */}
+                <div className="absolute top-3 right-3 bg-gradient-to-r from-blue-600 to-cyan-500 text-white py-1 px-3 font-semibold text-xs uppercase rounded-lg shadow-md">
+                    {currency} {symbol}
+                </div>
             </div>
             
             {/* Activity Details */}
             <div className="p-5 flex flex-col flex-grow sm:w-3/5">
                 <div className="flex justify-between items-start">
-                    <h2 className="text-xl font-bold text-gray-800">{activity.title || 'Untitled Activity'}</h2>
+                    <div className="flex-1">
+                        <h2 className="text-xl font-bold text-gray-800 group-hover:text-blue-700 transition-colors">
+                            {activity.title || 'Untitled Activity'}
+                        </h2>
+                        <div className="flex items-center mt-1">
+                            <span className="text-sm text-gray-500">
+                                <i className="fas fa-map-marker-alt mr-1"></i>
+                                {activity.location || 'Location TBD'}
+                            </span>
+                        </div>
+                    </div>
                     
                     {/* Rating Section */}
                     <div className="flex flex-col items-end">
@@ -109,15 +171,15 @@ const ActivityListItem = ({ activity }) => {
                 
                 {/* Activity Tags */}
                 <div className="mt-3 flex flex-wrap gap-2">
-                    <span className="bg-blue-50 text-blue-700 text-xs py-1 px-3 rounded-full border border-blue-100">
+                    <span className="bg-blue-50 text-blue-700 text-xs py-1 px-3 rounded-full border border-blue-100 font-medium">
                         {activity.type || 'Unknown'}
                     </span>
-                    <span className="bg-green-50 text-green-700 text-xs py-1 px-3 rounded-full border border-green-100">
+                    <span className="bg-green-50 text-green-700 text-xs py-1 px-3 rounded-full border border-green-100 font-medium">
                         {activity.duration || 0} hour{(activity.duration || 0) !== 1 ? 's' : ''}
                     </span>
-                    <span className="bg-purple-50 text-purple-700 text-xs py-1 px-3 rounded-full border border-purple-100">
-                        <i className="fas fa-map-marker-alt mr-1"></i>
-                        {activity.location || 'Location TBD'}
+                    <span className="bg-purple-50 text-purple-700 text-xs py-1 px-3 rounded-full border border-purple-100 font-medium">
+                        <i className="fas fa-users mr-1"></i>
+                        Max: {activity.maxParticipants || 10}
                     </span>
                 </div>
                 
@@ -126,28 +188,68 @@ const ActivityListItem = ({ activity }) => {
                     {activity.description || activity.shortDescription || 'No description available'}
                 </p>
                 
+                {/* Currency Information */}
+                <div className="mb-3 p-2 bg-blue-50 rounded-lg border border-blue-100">
+                    <div className="flex items-center text-xs text-blue-700">
+                        <i className="fas fa-info-circle mr-2 text-blue-500"></i>
+                        <span>
+                            Prices shown in <strong className="font-semibold">{currency} ({symbol})</strong>
+                            {activity.displayCurrency && activity.displayCurrency !== currency && 
+                                ` • Originally set in ${activity.displayCurrency}`}
+                        </span>
+                    </div>
+                </div>
+                
                 {/* Price and CTA */}
                 <div className="mt-auto flex flex-col sm:flex-row justify-between items-start sm:items-center pt-4 border-t border-gray-100">
-                    <div>
-                        <div className="text-blue-600 font-bold text-xl">
-                            ${activity.price || 0}
-                            <span className="text-gray-500 text-sm font-normal ml-1">per package</span>
+                    <div className="w-full sm:w-auto">
+                        <div className="mb-2">
+                            <div className="text-blue-600 font-bold text-2xl">
+                                {formatPrice(getDisplayPrice())}
+                                <span className="text-gray-500 text-sm font-normal ml-1">per person</span>
+                            </div>
+                            <div className="text-xs text-gray-600">
+                                Final price in {currency} • No conversion fees
+                            </div>
                         </div>
+                        
+                        {renderPricingDetails()}
+                        
                         {activity.pricingNote && (
-                            <div className="text-xs text-gray-500 mt-1">
+                            <div className="text-xs text-gray-500 mt-1 italic">
+                                <i className="fas fa-sticky-note mr-1"></i>
                                 {activity.pricingNote}
                             </div>
                         )}
                     </div>
                     
                     <Link 
-                        to={`/activities/${activity._id || activity.id}`}
-                        className="mt-3 sm:mt-0 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg transition-colors font-medium text-sm inline-flex items-center justify-center"
+                        to={`/activities/${activity._id || activity.id}?currency=${currency}`}
+                        className="mt-4 sm:mt-0 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white px-6 py-3 rounded-lg transition-all duration-300 font-medium text-sm inline-flex items-center justify-center shadow-md hover:shadow-lg hover:-translate-y-0.5 group"
                     >
                         View Details
-                        <i className="fas fa-arrow-right ml-2 text-sm"></i>
+                        <i className="fas fa-arrow-right ml-2 text-sm group-hover:translate-x-1 transition-transform"></i>
                     </Link>
                 </div>
+                
+                {/* Included Highlights */}
+                {activity.included && activity.included.length > 0 && (
+                    <div className="mt-4 pt-3 border-t border-gray-100">
+                        <div className="text-xs font-medium text-gray-700 mb-1">Included:</div>
+                        <div className="flex flex-wrap gap-1">
+                            {activity.included.slice(0, 3).map((item, index) => (
+                                <span key={index} className="bg-gray-50 text-gray-600 text-xs py-0.5 px-2 rounded border border-gray-200">
+                                    {item}
+                                </span>
+                            ))}
+                            {activity.included.length > 3 && (
+                                <span className="text-gray-500 text-xs">
+                                    +{activity.included.length - 3} more
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

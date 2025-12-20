@@ -140,89 +140,68 @@ exports.getBooking = async (req, res, next) => {
 // @desc    Create airport transfer booking
 // @route   POST /api/v1/airport-transfer-bookings
 // @access  Public (both authenticated and guest users)
-exports.createBooking = async (req, res, next) => {
+// controllers/airportTransferBooking.controller.js
+exports.createBooking = async (req, res) => {
   try {
-    // Check if transfer exists and is active
-    const transfer = await AirportTransfer.findById(req.body.transfer);
-
-    if (!transfer || !transfer.isActive) {
-      return res.status(404).json({
-        success: false,
-        error: 'Transfer not found or not available',
-      });
-    }
-
-    // Calculate total price - FLAT RATE, NO MULTIPLICATION BY PASSENGERS
-    let totalPrice = 0;
-    if (req.body.tripType === 'one-way') {
-      totalPrice = transfer.oneWayPrice; // Flat rate - no multiplication
-    } else {
-      totalPrice = transfer.roundTripPrice; // Flat rate - no multiplication
-    }
-
-    // Prepare booking data
-    const bookingData = {
-      ...req.body,
-      totalPrice: totalPrice,
-      arrivalDate: new Date(req.body.arrivalDate),
-      departureDate: req.body.departureDate
-        ? new Date(req.body.departureDate)
-        : null,
-      // Store passengers but don't use for pricing
-      passengers: req.body.passengers || 1,
-    };
-
-    // Add user to booking if authenticated
-    if (req.user) {
-      bookingData.user = req.user.id;
-    }
-    // If not authenticated, user will remain null (guest booking)
-    // The model has default: null for user field
-
+    console.log('📥 Received booking request:', req.body);
+    
     // Validate required fields
-    if (!bookingData.guestName || !bookingData.email || !bookingData.phone) {
+    const requiredFields = [
+      'transfer',
+      'guestName',
+      'email',
+      'phone',
+      'arrivalDate',
+      'arrivalTime',
+      'tripType',
+      'transferType',
+      'passengers',
+      'totalPrice'
+    ];
+    
+    const missingFields = requiredFields.filter(field => !req.body[field]);
+    
+    if (missingFields.length > 0) {
       return res.status(400).json({
         success: false,
-        error: 'Please provide guest name, email, and phone number',
+        error: `Missing required fields: ${missingFields.join(', ')}`
       });
     }
-
-    const booking = await AirportTransferBooking.create(bookingData);
-
-    // Populate transfer details
-    const populatedBooking = await AirportTransferBooking.findById(booking._id)
-      .populate(
-        'transfer',
-        'airportName airportCode oneWayPrice roundTripPrice vehicleType'
-      )
-      .populate('user', 'name email');
-
+    
+    // Generate booking reference
+    const bookingReference = 'ATB-' + Date.now() + Math.random().toString(36).substr(2, 6).toUpperCase();
+    
+    // Create booking
+    const booking = await AirportTransferBooking.create({
+      ...req.body,
+      bookingReference,
+      status: 'pending',
+      // Ensure totalPrice is a number
+      totalPrice: parseFloat(req.body.totalPrice) || 0
+    });
+    
+    console.log('✅ Booking created:', booking._id);
+    
     res.status(201).json({
       success: true,
-      data: populatedBooking,
-      message: 'Booking created successfully',
+      data: booking
     });
+    
   } catch (error) {
-    console.error('Error creating booking:', error);
-
-    // Handle validation errors
+    console.error('❌ Booking creation error:', error);
+    
     if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map((val) => val.message);
+      const messages = Object.values(error.errors).map(val => val.message);
       return res.status(400).json({
         success: false,
-        error: messages.join(', '),
+        error: messages.join(', ')
       });
     }
-
-    // Handle duplicate key error
-    if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        error: 'Duplicate booking reference. Please try again.',
-      });
-    }
-
-    next(error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create booking'
+    });
   }
 };
 // @desc    Update booking status (admin only)

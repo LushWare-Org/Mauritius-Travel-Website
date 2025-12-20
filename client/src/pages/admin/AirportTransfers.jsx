@@ -196,10 +196,10 @@ const AirportTransfers = () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm">
                             <div className="text-gray-900">
-                              One-way: <span className="font-semibold">${transfer.oneWayPrice}</span>
+                              One-way: <span className="font-semibold">Rs{transfer.oneWayPrice}</span>
                             </div>
                             <div className="text-gray-500">
-                              Round-trip: <span className="font-semibold">${transfer.roundTripPrice}</span>
+                              Round-trip: <span className="font-semibold">Rs{transfer.roundTripPrice}</span>
                             </div>
                           </div>
                         </td>

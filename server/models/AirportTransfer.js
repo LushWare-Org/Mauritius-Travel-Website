@@ -12,16 +12,31 @@ const AirportTransferSchema = new mongoose.Schema({
     uppercase: true,
     trim: true
   },
-  oneWayPrice: {
+  
+  // One-way prices in both currencies
+  oneWayPriceMUR: {
     type: Number,
-    required: [true, 'Please add one-way price'],
+    required: [true, 'Please add one-way price in MUR'],
     min: [0, 'Price cannot be negative']
   },
-  roundTripPrice: {
+  oneWayPriceEUR: {
     type: Number,
-    required: [true, 'Please add round-trip price'],
+    required: [true, 'Please add one-way price in EUR'],
     min: [0, 'Price cannot be negative']
   },
+  
+  // Round-trip prices in both currencies
+  roundTripPriceMUR: {
+    type: Number,
+    required: [true, 'Please add round-trip price in MUR'],
+    min: [0, 'Price cannot be negative']
+  },
+  roundTripPriceEUR: {
+    type: Number,
+    required: [true, 'Please add round-trip price in EUR'],
+    min: [0, 'Price cannot be negative']
+  },
+  
   description: {
     type: String,
     trim: true
@@ -54,10 +69,6 @@ const AirportTransferSchema = new mongoose.Schema({
   }
 });
 
-// Update the updatedAt field on save
-AirportTransferSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
-  next();
-});
+
 
 module.exports = mongoose.model('AirportTransfer', AirportTransferSchema);

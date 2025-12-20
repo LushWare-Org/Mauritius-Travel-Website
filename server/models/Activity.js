@@ -14,23 +14,71 @@ const activitySchema = new mongoose.Schema({
     type: String,
     maxlength: [200, 'Short description cannot exceed 200 characters'],
   },
-  // Keep price for backward compatibility
+  
+  // Dual Currency Pricing Fields
+  // USD Prices (existing)
   price: {
     type: Number,
-    required: [true, 'Please add a price'],
+    required: [true, 'Please add USD price'],
     min: [0, 'Price cannot be negative'],
   },
-  // Add new price fields
   fullDayPrice: {
     type: Number,
-    required: [true, 'Please add full day price'],
+    required: [true, 'Please add USD full day price'],
     min: [0, 'Full day price cannot be negative'],
   },
   halfDayPrice: {
     type: Number,
-    required: [true, 'Please add half day price'],
+    required: [true, 'Please add USD half day price'],
     min: [0, 'Half day price cannot be negative'],
   },
+  
+  // EUR Prices (new)
+  priceEUR: {
+    type: Number,
+    required: [true, 'Please add EUR price'],
+    min: [0, 'EUR price cannot be negative'],
+  },
+  fullDayPriceEUR: {
+    type: Number,
+    required: [true, 'Please add EUR full day price'],
+    min: [0, 'EUR full day price cannot be negative'],
+  },
+  halfDayPriceEUR: {
+    type: Number,
+    required: [true, 'Please add EUR half day price'],
+    min: [0, 'EUR half day price cannot be negative'],
+  },
+  
+  // MUR Prices (new)
+  priceMUR: {
+    type: Number,
+    required: [true, 'Please add MUR price'],
+    min: [0, 'MUR price cannot be negative'],
+  },
+  fullDayPriceMUR: {
+    type: Number,
+    required: [true, 'Please add MUR full day price'],
+    min: [0, 'MUR full day price cannot be negative'],
+  },
+  halfDayPriceMUR: {
+    type: Number,
+    required: [true, 'Please add MUR half day price'],
+    min: [0, 'MUR half day price cannot be negative'],
+  },
+  
+  // Currency configuration
+  currency: {
+    type: String,
+    enum: ['USD', 'EUR', 'MUR'],
+    default: 'USD'
+  },
+  displayCurrency: {
+    type: String,
+    enum: ['USD', 'EUR', 'MUR'],
+    default: 'USD'
+  },
+  
   duration: {
     type: Number,
     required: [true, 'Please add duration'],
@@ -111,7 +159,7 @@ activitySchema.pre('save', function(next) {
   next();
 });
 
-// Middleware to set price from fullDayPrice if not provided
+// Middleware to set USD price as default if not provided
 activitySchema.pre('save', function(next) {
   if (!this.price && this.fullDayPrice) {
     this.price = this.fullDayPrice;

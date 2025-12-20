@@ -1,7 +1,26 @@
 import React from 'react';
 import ActivityListItem from './ActivityListItem';
 
-const ActivityList = ({ activities }) => {
+const ActivityList = ({ activities, currency = 'USD' }) => {
+    // Get currency symbol
+    const getCurrencySymbol = (curr) => {
+        const symbols = {
+            'USD': '$',
+            'EUR': '€',
+            'MUR': 'Rs'
+        };
+        return symbols[curr] || '$';
+    };
+
+    const symbol = getCurrencySymbol(currency);
+    
+    // Calculate average price
+    const calculateAveragePrice = () => {
+        if (!activities || activities.length === 0) return 0;
+        const total = activities.reduce((sum, activity) => sum + (activity.price || 0), 0);
+        return Math.round(total / activities.length);
+    };
+
     // Handle undefined or null activities
     if (!activities || activities.length === 0) {
         return (
@@ -18,9 +37,17 @@ const ActivityList = ({ activities }) => {
                         </svg>
                     </div>
                     <h3 className="text-2xl font-bold text-gray-900 mb-4">No Excursions Found</h3>
-                    <p className="text-gray-600 text-lg mb-8 max-w-md mx-auto">
+                    <p className="text-gray-600 text-lg mb-6 max-w-md mx-auto">
                         We couldn't find any excursions matching your current filters.
                     </p>
+                    <div className="mb-8 p-4 bg-blue-50 rounded-lg border border-blue-200 max-w-md mx-auto">
+                        <div className="flex items-center justify-center text-blue-700">
+                            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                            </svg>
+                            <span className="text-sm font-medium">Current currency: {currency} ({symbol})</span>
+                        </div>
+                    </div>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <div className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium rounded-xl hover:from-blue-700 hover:to-cyan-600 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
                             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -42,23 +69,55 @@ const ActivityList = ({ activities }) => {
     
     return (
         <div className="relative">
+            {/* Currency Info Banner */}
+            <div className="mb-6 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center mr-3">
+                            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-blue-800">Showing prices in {currency} ({symbol})</h3>
+                            <p className="text-sm text-blue-600 mt-1">
+                                Admin has set separate prices for each currency. No automatic conversion.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white/70 px-3 py-2 rounded-lg border border-blue-100">
+                        <span className="text-blue-700 font-medium">Avg. Price:</span>
+                        <span className="text-xl font-bold text-blue-800">{symbol}{calculateAveragePrice()}</span>
+                    </div>
+                </div>
+            </div>
+            
             {/* Grid Header */}
             <div className="mb-8">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                     <div>
                         <h2 className="text-2xl font-bold text-gray-900">
                             Found <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">{activities.length}</span> Excursions
                         </h2>
                         <p className="text-gray-600 mt-2">Amazing experiences waiting for you</p>
+                        <div className="flex items-center mt-3 text-sm text-blue-600">
+                            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                            <span>All prices in {currency} ({symbol}) • Separate prices for each currency</span>
+                        </div>
                     </div>
                     <div className="flex items-center space-x-4">
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-gray-500 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
                             <span className="font-medium text-gray-900">Sorted by:</span>
                             <span className="ml-2 text-blue-600 font-medium">Popularity</span>
                         </div>
                         <div className="w-px h-6 bg-gray-200"></div>
                         <div className="text-sm text-gray-500">
-                            Showing 1-{activities.length} of {activities.length}
+                            <span className="font-medium text-gray-900">Currency:</span>
+                            <span className="ml-2 bg-blue-100 text-blue-700 px-2 py-1 rounded-md font-medium">
+                                {currency} {symbol}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -73,14 +132,14 @@ const ActivityList = ({ activities }) => {
                         className="group animate-fadeIn"
                         style={{ animationDelay: `${index * 50}ms` }}
                     >
-                        <ActivityListItem activity={activity} />
+                        <ActivityListItem activity={activity} currency={currency} />
                     </div>
                 ))}
             </div>
             
             {/* Footer */}
             <div className="mt-12 pt-8 border-t border-gray-100">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                     <div className="text-gray-600">
                         <div className="flex items-center">
                             <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -88,22 +147,53 @@ const ActivityList = ({ activities }) => {
                             </svg>
                             <span>All excursions are verified</span>
                         </div>
+                        <div className="flex items-center mt-3 text-sm text-blue-600">
+                            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clipRule="evenodd" />
+                            </svg>
+                            <span>Fixed prices in {currency} - no currency conversion fees</span>
+                        </div>
                     </div>
                     
                     <div className="flex items-center space-x-6">
                         <div className="text-center">
                             <div className="text-2xl font-bold text-blue-600">{activities.length}</div>
                             <div className="text-sm text-gray-600">Activities</div>
+                            <div className="text-xs text-blue-500 mt-1">in {currency}</div>
                         </div>
                         <div className="w-px h-10 bg-gray-200"></div>
                         <div className="text-center">
-                            <div className="text-2xl font-bold text-green-600">5★</div>
-                            <div className="text-sm text-gray-600">Average Rating</div>
+                            <div className="text-2xl font-bold text-green-600">
+                                {symbol}{calculateAveragePrice()}
+                            </div>
+                            <div className="text-sm text-gray-600">Avg. Price</div>
+                            <div className="text-xs text-green-500 mt-1">per person</div>
                         </div>
                         <div className="w-px h-10 bg-gray-200"></div>
                         <div className="text-center">
                             <div className="text-2xl font-bold text-purple-600">24/7</div>
                             <div className="text-sm text-gray-600">Support</div>
+                            <div className="text-xs text-purple-500 mt-1">in {currency}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                {/* Currency Explanation */}
+                <div className="mt-8 p-4 bg-gradient-to-r from-blue-50/50 to-cyan-50/50 rounded-xl border border-blue-100">
+                    <div className="flex items-start">
+                        <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 className="font-semibold text-blue-800 mb-2">About our currency system</h4>
+                            <p className="text-sm text-blue-700">
+                                Our admin sets separate prices for each currency (USD, EUR, MUR/Rs). 
+                                When you select a currency, you see the exact price in that currency. 
+                                There's no automatic conversion - what you see is what you'll pay. 
+                                This ensures transparent pricing with no hidden fees.
+                            </p>
                         </div>
                     </div>
                 </div>

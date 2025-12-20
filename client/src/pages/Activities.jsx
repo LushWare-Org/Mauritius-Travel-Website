@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import ActivityList from '../components/activities/ActivityList';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import { activitiesAPI } from '../utils/api';
 
 const Activities = () => {
     const location = useLocation();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [allActivities, setAllActivities] = useState([]);
     const [filteredActivities, setFilteredActivities] = useState([]);
     const [sortOption, setSortOption] = useState('popularity');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [currency, setCurrency] = useState(() => {
+        // Get currency from URL params, localStorage, or default to USD
+        return searchParams.get('currency') || localStorage.getItem('preferredCurrency') || 'USD';
+    });
     
     // Parse URL search parameters
     const queryParams = new URLSearchParams(location.search);
@@ -18,6 +23,16 @@ const Activities = () => {
     const typeParam = queryParams.get('type');
     const locationParam = queryParams.get('location');
     const categoryParam = queryParams.get('category');
+
+    // Get currency symbol
+    const getCurrencySymbol = (curr) => {
+        const symbols = {
+            'USD': '$',
+            'EUR': '€',
+            'MUR': 'Rs'
+        };
+        return symbols[curr] || '$';
+    };
 
     // Fetch activities from the backend API with search params
     useEffect(() => {
@@ -27,6 +42,7 @@ const Activities = () => {
                 setError(null);
                 
                 console.log('🔍 Activities Page: Starting to fetch activities...');
+                console.log('💰 Currency selected:', currency);
                 
                 // Build params object from URL query parameters
                 const params = {};
@@ -38,6 +54,9 @@ const Activities = () => {
                 // Handle location search
                 if (locationParam) params.location = locationParam;
                 
+                // Add currency parameter
+                params.currency = currency;
+                
                 console.log('📋 Activities Page: Request params:', params);
                 
                 // If there's a search term, we'll filter results client-side
@@ -47,13 +66,15 @@ const Activities = () => {
                 
                 // Set initial data - ensure response data exists and has the expected structure
                 const activitiesData = response?.data?.data || [];
+                const responseCurrency = response?.data?.currency || currency;
                 
                 console.log('📊 Activities Page: Activities data:', activitiesData);
                 console.log('📈 Activities Page: Total activities count:', activitiesData.length);
+                console.log('💰 Activities Page: Response currency:', responseCurrency);
                 
                 // Log activity details for debugging
                 activitiesData.forEach((activity, index) => {
-                    console.log(`${index + 1}. ${activity.title} - $${activity.price} - ${activity.duration}h - Type: ${activity.type || 'N/A'}`);
+                    console.log(`${index + 1}. ${activity.title} - ${getCurrencySymbol(responseCurrency)}${activity.price} - ${activity.duration}h - Type: ${activity.type || 'N/A'}`);
                 });
                 
                 setAllActivities(activitiesData);
@@ -90,7 +111,7 @@ const Activities = () => {
         };
         
         fetchActivities();
-    }, [location.search]);
+    }, [location.search, currency]);
 
     // Helper function to apply sorting
     const applySorting = (activities, option) => {
@@ -126,19 +147,52 @@ const Activities = () => {
         }
     };
 
+    // Handle currency changes
+    const handleCurrencyChange = (newCurrency) => {
+        setCurrency(newCurrency);
+        localStorage.setItem('preferredCurrency', newCurrency);
+        // Update URL with currency parameter
+        const newSearchParams = new URLSearchParams(location.search);
+        newSearchParams.set('currency', newCurrency);
+        setSearchParams(newSearchParams);
+    };
+
     // Show all activities (clear search filter)
     const handleShowAll = () => {
         const sorted = applySorting(allActivities, sortOption);
         setFilteredActivities(sorted);
     };
 
+    const currencySymbol = getCurrencySymbol(currency);
+
     return (
         <div className="bg-gray-50 py-8">
             <div className="container mx-auto px-4">
                 {/* Page Header */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-blue-700 font-display">Our Excursions</h1>
-                    <p className="text-gray-600 mt-2">Discover and book the best experiences in the Mauritius</p>
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold text-blue-700 font-display">Our Excursions</h1>
+                            <p className="text-gray-600 mt-2">Discover and book the best experiences in the Mauritius</p>
+                        </div>
+                        <div className="mt-4 md:mt-0">
+                            <div className="flex items-center space-x-2">
+                                <span className="text-gray-700 font-medium">Currency:</span>
+                                <select
+                                    value={currency}
+                                    onChange={(e) => handleCurrencyChange(e.target.value)}
+                                    className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                                >
+                                    <option value="USD">USD ($)</option>
+                                    <option value="EUR">EUR (€)</option>
+                                    <option value="MUR">MUR (Rs)</option>
+                                </select>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                                All prices shown in {currency} {currencySymbol}
+                            </p>
+                        </div>
+                    </div>
                 </div>
                 
                 <div className="flex flex-col lg:flex-row gap-8">
@@ -160,6 +214,23 @@ const Activities = () => {
                             </div>
                         )}
                         
+                        {/* Currency Info */}
+                        <div className="bg-white p-4 rounded-lg shadow mb-6">
+                            <h3 className="font-medium text-gray-700 mb-3">Currency Information</h3>
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-gray-600">Selected:</span>
+                                    <span className="font-medium text-blue-600">
+                                        {currency} ({currencySymbol})
+                                    </span>
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                    <p>All prices are displayed in {currency}. The admin has set separate prices for each currency.</p>
+                                    <p className="mt-2">No automatic conversion is applied.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
                         {/* Activity Count Info */}
                         <div className="bg-white p-4 rounded-lg shadow">
                             <h3 className="font-medium text-gray-700 mb-3">Excursions Overview</h3>
@@ -171,6 +242,15 @@ const Activities = () => {
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Currently Showing:</span>
                                     <span className="font-medium text-blue-600">{filteredActivities.length}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">Average Price:</span>
+                                    <span className="font-medium text-green-600">
+                                        {filteredActivities.length > 0 
+                                            ? `${currencySymbol}${Math.round(filteredActivities.reduce((sum, act) => sum + (act.price || 0), 0) / filteredActivities.length)}`
+                                            : `${currencySymbol}0`
+                                        }
+                                    </span>
                                 </div>
                                 {filteredActivities.length < allActivities.length && (
                                     <div className="pt-2 border-t border-gray-100">
@@ -217,24 +297,46 @@ const Activities = () => {
                                         </span>
                                     )}
                                 </p>
+                                <p className="text-sm text-gray-600 mt-1">
+                                    <i className="fas fa-money-bill-wave mr-1"></i>
+                                    Prices shown in <span className="font-medium">{currency} {currencySymbol}</span>
+                                </p>
                             </div>
                             
-                            {/* Sorting Dropdown */}
-                            <div className="relative">
-                                <select
-                                    value={sortOption}
-                                    onChange={(e) => handleSortChange(e.target.value)}
-                                    className="border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
-                                >
-                                    <option value="popularity">Sort by: Popularity</option>
-                                    <option value="price-asc">Sort by: Price (Low to High)</option>
-                                    <option value="price-desc">Sort by: Price (High to Low)</option>
-                                    <option value="duration">Sort by: Duration</option>
-                                </select>
-                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                    </svg>
+                            <div className="flex flex-col sm:flex-row gap-3 mt-3 sm:mt-0">
+                                {/* Currency Selector */}
+                                <div className="relative">
+                                    <select
+                                        value={currency}
+                                        onChange={(e) => handleCurrencyChange(e.target.value)}
+                                        className="border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+                                    >
+                                        <option value="USD">USD ($)</option>
+                                        <option value="EUR">EUR (€)</option>
+                                        <option value="MUR">MUR (Rs)</option>
+                                    </select>
+                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                        <i className="fas fa-money-bill-wave text-gray-400"></i>
+                                    </div>
+                                </div>
+                                
+                                {/* Sorting Dropdown */}
+                                <div className="relative">
+                                    <select
+                                        value={sortOption}
+                                        onChange={(e) => handleSortChange(e.target.value)}
+                                        className="border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+                                    >
+                                        <option value="popularity">Sort by: Popularity</option>
+                                        <option value="price-asc">Sort by: Price (Low to High)</option>
+                                        <option value="price-desc">Sort by: Price (High to Low)</option>
+                                        <option value="duration">Sort by: Duration</option>
+                                    </select>
+                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                                        </svg>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -247,6 +349,9 @@ const Activities = () => {
                                 {searchQuery && (
                                     <p className="text-gray-500 mt-2">Searching for "{searchQuery}"</p>
                                 )}
+                                <p className="text-sm text-gray-500 mt-1">
+                                    Loading prices in {currency} {currencySymbol}...
+                                </p>
                             </div>
                         ) : error ? (
                             <div className="bg-red-50 text-red-700 p-6 rounded-lg shadow-md text-center">
@@ -265,6 +370,10 @@ const Activities = () => {
                                 <p className="text-gray-500 mb-6">
                                     {searchQuery ? `No results found for "${searchQuery}". Try a different search term.` : 'No activities available at the moment.'}
                                 </p>
+                                <p className="text-sm text-gray-500 mb-4">
+                                    <i className="fas fa-money-bill-wave mr-1"></i>
+                                    Current currency: {currency} {currencySymbol}
+                                </p>
                                 {searchQuery && (
                                     <button
                                         onClick={handleShowAll}
@@ -276,8 +385,24 @@ const Activities = () => {
                             </div>
                         ) : (
                             <ErrorBoundary>
-                                <ActivityList activities={filteredActivities} />
+                                <ActivityList activities={filteredActivities} currency={currency} />
                             </ErrorBoundary>
+                        )}
+                        
+                        {/* Currency Disclaimer */}
+                        {filteredActivities.length > 0 && (
+                            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <div className="flex items-start">
+                                    <i className="fas fa-info-circle text-blue-500 mt-1 mr-2"></i>
+                                    <div>
+                                        <p className="text-sm text-blue-800 font-medium mb-1">Currency Information</p>
+                                        <p className="text-xs text-blue-700">
+                                            Prices are shown in {currency} ({currencySymbol}). The admin has manually entered separate prices for USD, EUR, and MUR (Rs) currencies. 
+                                            There is no automatic currency conversion. When you book, the price will be in your selected currency.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>

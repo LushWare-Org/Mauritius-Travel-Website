@@ -1,5 +1,7 @@
 const Activity = require('../models/Activity');
 
+// In your activityController.js - update the getActivities function
+
 // @desc    Get all activities
 // @route   GET /api/v1/activities
 // @access  Public
@@ -7,7 +9,7 @@ exports.getActivities = async (req, res, next) => {
   try {
     // Build query
     const queryObj = { ...req.query };
-    const excludedFields = ['page', 'sort', 'limit', 'fields'];
+    const excludedFields = ['page', 'sort', 'limit', 'fields', 'currency'];
     excludedFields.forEach(el => delete queryObj[el]);
 
     // Filter by status (only show active by default)
@@ -66,21 +68,51 @@ exports.getActivities = async (req, res, next) => {
       };
     }
 
-    // Ensure price is set properly based on pricingType
-    const activitiesWithPrice = activities.map(activity => {
+    // Get currency from query parameter or use default
+    const displayCurrency = req.query.currency || 'USD';
+
+    // Helper function to get currency symbol
+    const getCurrencySymbol = (currency) => {
+      const symbols = {
+        'USD': '$',
+        'EUR': '€',
+        'MUR': 'Rs'
+      };
+      return symbols[currency] || '$';
+    };
+
+    // Format activities with selected currency
+    const activitiesWithCurrency = activities.map(activity => {
       const activityObj = activity.toObject();
       
-      // For backward compatibility and proper price display
-      if (activityObj.pricingType === 'half-full-day') {
-        // If it's half-full-day pricing, ensure price is set from halfDayPrice
-        if (!activityObj.price && activityObj.halfDayPrice) {
-          activityObj.price = activityObj.halfDayPrice;
-        }
+      // Add currency information
+      activityObj.displayCurrency = displayCurrency;
+      activityObj.symbol = getCurrencySymbol(displayCurrency);
+      
+      // Check if activity has half/full day pricing
+      const hasHalfFullDay = activity.pricingType === 'half-full-day';
+      
+      // Set prices based on selected currency
+      if (displayCurrency === 'EUR') {
+        // Use EUR prices with fallback to USD
+        activityObj.price = activity.priceEUR || activity.price || 0;
+        activityObj.fullDayPrice = activity.fullDayPriceEUR || activity.fullDayPrice || activity.price || 0;
+        activityObj.halfDayPrice = activity.halfDayPriceEUR || activity.halfDayPrice || activity.price || 0;
+      } else if (displayCurrency === 'MUR') {
+        // Use MUR (Rs) prices with fallback to USD
+        activityObj.price = activity.priceMUR || activity.price || 0;
+        activityObj.fullDayPrice = activity.fullDayPriceMUR || activity.fullDayPrice || activity.price || 0;
+        activityObj.halfDayPrice = activity.halfDayPriceMUR || activity.halfDayPrice || activity.price || 0;
       } else {
-        // For other pricing types, use fullDayPrice if price is not set
-        if (!activityObj.price && activityObj.fullDayPrice) {
-          activityObj.price = activityObj.fullDayPrice;
-        }
+        // Use USD prices
+        activityObj.price = activity.price || 0;
+        activityObj.fullDayPrice = activity.fullDayPrice || activity.price || 0;
+        activityObj.halfDayPrice = activity.halfDayPrice || activity.price || 0;
+      }
+      
+      // For backward compatibility - ensure price is set properly
+      if (hasHalfFullDay) {
+        activityObj.price = activityObj.halfDayPrice;
       }
       
       return activityObj;
@@ -90,15 +122,27 @@ exports.getActivities = async (req, res, next) => {
       success: true,
       count: activities.length,
       pagination,
-      data: activitiesWithPrice,
+      data: activitiesWithCurrency,
+      currency: displayCurrency
     });
   } catch (err) {
+    console.error('Error in getActivities:', err);
     res.status(400).json({
       success: false,
       error: err.message,
     });
   }
 };
+
+// Helper function to get currency symbol
+function getCurrencySymbol(currency) {
+  const symbols = {
+    'USD': '$',
+    'EUR': '€',
+    'MUR': 'Rs'
+  };
+  return symbols[currency] || '$';
+}
 
 // @desc    Get single activity
 // @route   GET /api/v1/activities/:id
@@ -114,24 +158,56 @@ exports.getActivity = async (req, res, next) => {
       });
     }
 
-    // Ensure price is set properly based on pricingType
+    // Get currency from query parameter or use default
+    const displayCurrency = req.query.currency || 'USD';
+
+    // Ensure price is set properly based on pricingType and currency
     const activityObj = activity.toObject();
     
-    if (activityObj.pricingType === 'half-full-day') {
-      // If it's half-full-day pricing, ensure price is set from halfDayPrice
-      if (!activityObj.price && activityObj.halfDayPrice) {
-        activityObj.price = activityObj.halfDayPrice;
+    // Add currency information
+    activityObj.displayCurrency = displayCurrency;
+    activityObj.symbol = getCurrencySymbol(displayCurrency);
+    
+    // Set prices based on selected currency
+    if (displayCurrency === 'EUR') {
+      // Use EUR prices
+      if (activityObj.pricingType === 'half-full-day') {
+        activityObj.price = activityObj.halfDayPriceEUR || activityObj.priceEUR;
+        activityObj.fullDayPrice = activityObj.fullDayPriceEUR;
+        activityObj.halfDayPrice = activityObj.halfDayPriceEUR;
+      } else {
+        activityObj.price = activityObj.priceEUR;
+        activityObj.fullDayPrice = activityObj.fullDayPriceEUR;
+        activityObj.halfDayPrice = activityObj.halfDayPriceEUR;
+      }
+    } else if (displayCurrency === 'MUR') {
+      // Use MUR (Rs) prices
+      if (activityObj.pricingType === 'half-full-day') {
+        activityObj.price = activityObj.halfDayPriceMUR || activityObj.priceMUR;
+        activityObj.fullDayPrice = activityObj.fullDayPriceMUR;
+        activityObj.halfDayPrice = activityObj.halfDayPriceMUR;
+      } else {
+        activityObj.price = activityObj.priceMUR;
+        activityObj.fullDayPrice = activityObj.fullDayPriceMUR;
+        activityObj.halfDayPrice = activityObj.halfDayPriceMUR;
       }
     } else {
-      // For other pricing types, use fullDayPrice if price is not set
-      if (!activityObj.price && activityObj.fullDayPrice) {
-        activityObj.price = activityObj.fullDayPrice;
+      // Use USD prices (default)
+      if (activityObj.pricingType === 'half-full-day') {
+        activityObj.price = activityObj.halfDayPrice || activityObj.price;
+        activityObj.fullDayPrice = activityObj.fullDayPrice;
+        activityObj.halfDayPrice = activityObj.halfDayPrice;
+      } else {
+        activityObj.price = activityObj.price;
+        activityObj.fullDayPrice = activityObj.fullDayPrice;
+        activityObj.halfDayPrice = activityObj.halfDayPrice;
       }
     }
 
     res.status(200).json({
       success: true,
       data: activityObj,
+      currency: displayCurrency
     });
   } catch (err) {
     res.status(400).json({
@@ -148,40 +224,26 @@ exports.createActivity = async (req, res, next) => {
   try {
     const activityData = { ...req.body };
     
-    // Handle pricing based on pricingType
-    if (activityData.pricingType === 'half-full-day') {
-      // For half-full-day pricing, set price from halfDayPrice
-      if (activityData.halfDayPrice && !activityData.price) {
-        activityData.price = activityData.halfDayPrice;
-      }
-      
-      // Ensure both halfDayPrice and fullDayPrice are provided
-      if (!activityData.halfDayPrice || !activityData.fullDayPrice) {
+    // Validate all currency prices are provided
+    const requiredPrices = [
+      'price', 'fullDayPrice', 'halfDayPrice',
+      'priceEUR', 'fullDayPriceEUR', 'halfDayPriceEUR',
+      'priceMUR', 'fullDayPriceMUR', 'halfDayPriceMUR'
+    ];
+    
+    for (const priceField of requiredPrices) {
+      if (!activityData[priceField] && activityData[priceField] !== 0) {
         return res.status(400).json({
           success: false,
-          error: 'Both halfDayPrice and fullDayPrice are required for half-full-day pricing'
+          error: `${priceField} is required for all currencies`
         });
-      }
-    } else if (activityData.pricingType === 'full-day') {
-      // For full-day pricing, set price from fullDayPrice
-      if (activityData.fullDayPrice && !activityData.price) {
-        activityData.price = activityData.fullDayPrice;
-      }
-      
-      // Ensure fullDayPrice is provided
-      if (!activityData.fullDayPrice) {
-        return res.status(400).json({
-          success: false,
-          error: 'fullDayPrice is required for full-day pricing'
-        });
-      }
-    } else {
-      // For other pricing types (like 'fixed'), ensure price is provided
-      if (!activityData.price && activityData.fullDayPrice) {
-        activityData.price = activityData.fullDayPrice;
       }
     }
-
+    
+    // Set default currency values
+    activityData.currency = activityData.currency || 'USD';
+    activityData.displayCurrency = activityData.displayCurrency || 'USD';
+    
     const activity = await Activity.create(activityData);
 
     res.status(201).json({
@@ -203,38 +265,19 @@ exports.updateActivity = async (req, res, next) => {
   try {
     const activityData = { ...req.body };
     
-    // Handle pricing based on pricingType
-    if (activityData.pricingType === 'half-full-day') {
-      // For half-full-day pricing, set price from halfDayPrice
-      if (activityData.halfDayPrice && !activityData.price) {
-        activityData.price = activityData.halfDayPrice;
-      }
-      
-      // If updating to half-full-day, ensure both prices are provided
-      if (activityData.pricingType === 'half-full-day' && 
-          (!activityData.halfDayPrice || !activityData.fullDayPrice)) {
+    // Validate all currency prices if provided
+    const requiredPrices = [
+      'price', 'fullDayPrice', 'halfDayPrice',
+      'priceEUR', 'fullDayPriceEUR', 'halfDayPriceEUR',
+      'priceMUR', 'fullDayPriceMUR', 'halfDayPriceMUR'
+    ];
+    
+    for (const priceField of requiredPrices) {
+      if (activityData[priceField] !== undefined && activityData[priceField] < 0) {
         return res.status(400).json({
           success: false,
-          error: 'Both halfDayPrice and fullDayPrice are required for half-full-day pricing'
+          error: `${priceField} cannot be negative`
         });
-      }
-    } else if (activityData.pricingType === 'full-day') {
-      // For full-day pricing, set price from fullDayPrice
-      if (activityData.fullDayPrice && !activityData.price) {
-        activityData.price = activityData.fullDayPrice;
-      }
-      
-      // If updating to full-day, ensure fullDayPrice is provided
-      if (activityData.pricingType === 'full-day' && !activityData.fullDayPrice) {
-        return res.status(400).json({
-          success: false,
-          error: 'fullDayPrice is required for full-day pricing'
-        });
-      }
-    } else {
-      // For other pricing types, ensure price is provided
-      if (!activityData.price && activityData.fullDayPrice) {
-        activityData.price = activityData.fullDayPrice;
       }
     }
 

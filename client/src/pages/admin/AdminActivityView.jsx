@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { activitiesAPI } from '../../utils/api';
+
 const AdminActivityView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activity, setActivity] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
   useEffect(() => {
     const fetchActivity = async () => {
       try {
@@ -15,6 +17,7 @@ const AdminActivityView = () => {
         console.log(`📡 Fetching activity with ID: ${id}`);
         const response = await activitiesAPI.getById(id);
         console.log('📦 API Response:', response.data);
+        
         if (response.data && response.data.success) {
           setActivity(response.data.data);
           console.log('✅ Activity loaded successfully');
@@ -46,6 +49,7 @@ const AdminActivityView = () => {
         setLoading(false);
       }
     };
+
     if (id) {
       fetchActivity();
     } else {
@@ -53,6 +57,7 @@ const AdminActivityView = () => {
       setLoading(false);
     }
   }, [id]);
+
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this excursion?')) {
       try {
@@ -77,6 +82,7 @@ const AdminActivityView = () => {
       }
     }
   };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -90,6 +96,7 @@ const AdminActivityView = () => {
       </AdminLayout>
     );
   }
+
   if (error || !activity) {
     return (
       <AdminLayout>
@@ -166,7 +173,9 @@ const AdminActivityView = () => {
       </AdminLayout>
     );
   }
+
   const editPath = `/admin/activities/${activity._id}`;
+
   return (
     <AdminLayout>
       <div className="pb-5 border-b border-gray-200 sm:flex sm:items-center sm:justify-between mb-6">
@@ -239,6 +248,7 @@ const AdminActivityView = () => {
           </Link>
         </div>
       </div>
+
       {/* Debug banner - can remove in production */}
       <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
         <div className="flex justify-between items-center">
@@ -254,6 +264,7 @@ const AdminActivityView = () => {
           </button>
         </div>
       </div>
+
       <div className="bg-white shadow overflow-hidden sm:rounded-lg">
         <div className="px-4 py-5 sm:px-6 flex justify-between items-start">
           <div>
@@ -325,6 +336,7 @@ const AdminActivityView = () => {
                   />
                 </div>
               </div>
+
               {/* Gallery Images */}
               {activity.galleryImages && activity.galleryImages.length > 0 && (
                 <div className="mb-6">
@@ -352,6 +364,7 @@ const AdminActivityView = () => {
                   </div>
                 </div>
               )}
+
               {/* Basic Details Card */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <h4 className="text-sm font-medium text-gray-500 mb-3">
@@ -403,6 +416,7 @@ const AdminActivityView = () => {
                 </dl>
               </div>
             </div>
+
             {/* Right Column - Details */}
             <div className="lg:col-span-2">
               {/* Pricing Information */}
@@ -418,19 +432,20 @@ const AdminActivityView = () => {
                         Base Price
                       </div>
                       <div className="text-2xl font-bold text-blue-700 mt-1">
-                        ${activity.price || 0}
+                        RS{activity.price || 0}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
                         Standard pricing
                       </div>
                     </div>
+
                     {/* Half Day Price */}
                     <div className="text-center p-3 bg-white rounded-lg shadow-sm border-2 border-purple-200">
                       <div className="text-sm text-gray-500 font-medium">
                         Half Day Price
                       </div>
                       <div className="text-2xl font-bold text-purple-700 mt-1">
-                        ${activity.halfDayPrice || activity.price || 0}
+                        RS{activity.halfDayPrice || activity.price || 0}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
                         {activity.halfDayPrice
@@ -438,13 +453,14 @@ const AdminActivityView = () => {
                           : 'Uses base price'}
                       </div>
                     </div>
+
                     {/* Full Day Price */}
                     <div className="text-center p-3 bg-white rounded-lg shadow-sm border-2 border-indigo-200">
                       <div className="text-sm text-gray-500 font-medium">
                         Full Day Price
                       </div>
                       <div className="text-2xl font-bold text-indigo-700 mt-1">
-                        ${activity.fullDayPrice || activity.price || 0}
+                        RS{activity.fullDayPrice || activity.price || 0}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
                         {activity.fullDayPrice
@@ -453,6 +469,7 @@ const AdminActivityView = () => {
                       </div>
                     </div>
                   </div>
+
                   {/* Pricing Type Badge */}
                   <div className="mt-4 flex items-center justify-center">
                     <span
@@ -476,6 +493,7 @@ const AdminActivityView = () => {
                   </div>
                 </div>
               </div>
+
               {/* Description */}
               <div className="mb-8">
                 <h4 className="text-sm font-medium text-gray-500 mb-2">
@@ -487,6 +505,7 @@ const AdminActivityView = () => {
                   </p>
                 </div>
               </div>
+
               {/* Short Description */}
               {activity.shortDescription && (
                 <div className="mb-8">
@@ -498,6 +517,7 @@ const AdminActivityView = () => {
                   </div>
                 </div>
               )}
+
               {/* Included & Not Included */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 {/* Included */}
@@ -528,6 +548,7 @@ const AdminActivityView = () => {
                     </ul>
                   </div>
                 )}
+
                 {/* Not Included */}
                 {activity.notIncluded && activity.notIncluded.length > 0 && (
                   <div>
@@ -557,6 +578,7 @@ const AdminActivityView = () => {
                   </div>
                 )}
               </div>
+
               {/* Requirements */}
               {activity.requirements && activity.requirements.length > 0 && (
                 <div className="mb-8">
@@ -585,6 +607,7 @@ const AdminActivityView = () => {
                   </ul>
                 </div>
               )}
+
               {/* Activity ID */}
               <div className="mt-8 pt-6 border-t border-gray-200">
                 <div className="flex justify-between items-center">
@@ -627,4 +650,5 @@ const AdminActivityView = () => {
     </AdminLayout>
   );
 };
+
 export default AdminActivityView;

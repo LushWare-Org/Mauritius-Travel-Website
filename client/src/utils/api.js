@@ -177,9 +177,11 @@ export const activitiesAPI = {
     console.log('📋 Activities API: Fetching all activities...', params);
     
     try {
-      // Clear any cached response
+      // Add currency parameter if not present
+      const queryParams = { ...params };
+      
       const response = await API.get('/activities', {
-        params,
+        params: queryParams,
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
@@ -190,6 +192,7 @@ export const activitiesAPI = {
       console.log('✅ Activities API Response:', {
         success: response.data.success,
         count: response.data.data?.length || 0,
+        currency: response.data.currency,
         hasData: !!response.data.data
       });
       
@@ -202,21 +205,23 @@ export const activitiesAPI = {
         data: error.response?.data
       });
       
-      // Return a structured error response
       return {
         data: {
           success: false,
           error: error.message,
-          data: []
+          data: [],
+          currency: params.currency || 'USD'
         }
       };
     }
   },
   
-  getById: async (id) => {
-    console.log(`🔍 Activities API: Fetching activity ${id}`);
+  getById: async (id, currency = 'USD') => {
+    console.log(`🔍 Activities API: Fetching activity ${id} with currency ${currency}`);
     try {
-      const response = await API.get(`/activities/${id}`);
+      const response = await API.get(`/activities/${id}`, {
+        params: { currency }
+      });
       return response;
     } catch (error) {
       console.error(`❌ Error fetching activity ${id}:`, error);
@@ -225,7 +230,7 @@ export const activitiesAPI = {
   },
   
   create: async (data) => {
-    console.log('➕ Activities API: Creating new activity');
+    console.log('➕ Activities API: Creating new activity with dual currencies');
     try {
       const response = await API.post('/activities', data);
       return response;
@@ -236,7 +241,7 @@ export const activitiesAPI = {
   },
   
   update: async (id, data) => {
-    console.log(`✏️ Activities API: Updating activity ${id}`);
+    console.log(`✏️ Activities API: Updating activity ${id} with dual currencies`);
     try {
       const response = await API.put(`/activities/${id}`, data);
       return response;
@@ -517,11 +522,11 @@ export const airportTransferAPI = {
   getById: (id) => API.get(`/airport-transfers/${id}`),
   create: (data) => API.post('/airport-transfers', data),
   update: (id, data) => API.put(`/airport-transfers/${id}`, data),
+  updateExchangeRate: (data) => API.put('/airport-transfers/update-exchange-rate', data),
   delete: (id) => API.delete(`/airport-transfers/${id}`),
   getBookingsByDateRange: (startDate, endDate) => 
-  API.get(`/airport-transfer-bookings/report?startDate=${startDate}&endDate=${endDate}`),
+    API.get(`/airport-transfer-bookings/report?startDate=${startDate}&endDate=${endDate}`),
 };
-
 // Airport Transfer Booking API
 export const airportTransferBookingAPI = {
   createBooking: (data) => API.post('/airport-transfer-bookings', data),

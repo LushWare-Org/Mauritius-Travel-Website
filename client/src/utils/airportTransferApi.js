@@ -1,26 +1,18 @@
 import API from './api';
 
 // Airport Transfer API
+// Airport Transfer API
 export const airportTransferAPI = {
-  // Get all airport transfers (admin)
   getAll: (params) => API.get('/airport-transfers', { params }),
-  
-  // Get active airport transfers (public)
   getActive: () => API.get('/airport-transfers/active'),
-  
-  // Get single transfer
   getById: (id) => API.get(`/airport-transfers/${id}`),
-  
-  // Create transfer (admin)
   create: (data) => API.post('/airport-transfers', data),
-  
-  // Update transfer (admin)
   update: (id, data) => API.put(`/airport-transfers/${id}`, data),
-  
-  // Delete transfer (admin)
-  delete: (id) => API.delete(`/airport-transfers/${id}`)
+  updateExchangeRate: (data) => API.put('/airport-transfers/update-exchange-rate', data),
+  delete: (id) => API.delete(`/airport-transfers/${id}`),
+  getBookingsByDateRange: (startDate, endDate) => 
+    API.get(`/airport-transfer-bookings/report?startDate=${startDate}&endDate=${endDate}`),
 };
-
 // Airport Transfer Booking API
 export const airportTransferBookingAPI = {
   // Create booking (public)
