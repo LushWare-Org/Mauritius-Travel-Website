@@ -5,7 +5,7 @@ import axios from 'axios';
 const envApiUrl = import.meta.env.VITE_API_URL;
 const API_URL = (typeof envApiUrl === 'string' && !envApiUrl.startsWith('VITE_API_URL=')) 
   ? envApiUrl 
-  : 'https://maldives-activity-booking-backend.onrender.com/api/v1';
+  : 'https://api.holidayvibestour.com/api/v1';
 
 // Debug logging
 if (import.meta.env.DEV) {

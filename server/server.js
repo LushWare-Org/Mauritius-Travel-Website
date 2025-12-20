@@ -85,10 +85,9 @@ const allowedOrigins = corsOriginValue
     ? '*'
     : corsOriginValue.split(',').map((origin) => origin.trim())
   : [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:5173',
-      'https://maldives-activity-booking-frontend.onrender.com',
+      'https://holidayvibestour.com',
+      'https://www.holidayvibestour.com'
+      
     ];
 
 // Enhanced CORS configuration for debugging
