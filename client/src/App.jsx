@@ -63,7 +63,7 @@ import Footer from './components/common/Footer';
 import Navbar from './components/common/Navbar';
 import ContactHistory from './pages/UserContactHistory';
 import DashboardLayout from './components/dashboard/DashboardLayout';
-import HelpCenter from './pages/HelpCenter';
+import HelpCenter from './pages/helpcenter';
 import TourPackages from './pages/TourPackages';
 import TourPackageDetail from './pages/TourPackageDetail.jsx';
 import TourPackageBookingRequest from './pages/TourPackageBookingRequest';
@@ -71,8 +71,6 @@ import MyTourPackageBookings from './pages/dashboard/MyTourPackageBookings.jsx';
 import UserTourPackageBookingDetail from './pages/dashboard/TourPackageBookingDetail';
 import TourPackageBookingConfirmation from './components/tour-detail/TourPackageBookingConfirmation';
 import BookingConfirmation from './pages/BookingConfirmation';
-
-
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -82,7 +80,6 @@ import AdminBookings from './pages/admin/Bookings';
 import AdminBookingDetail from './pages/admin/BookingDetail';
 import AdminUsers from './pages/admin/Users';
 import AdminActivityView from './pages/admin/AdminActivityView';
-
 
 import AirportTransferList from './components/AirportTransferList';
 import AirportTransferBookingForm from './components/AirportTransferBookingForm';
@@ -97,9 +94,8 @@ import AdminTourPackageBooking from './pages/admin/AdminTourPackageBooking';
 import AdminTourPackageBookingDetail from './pages/admin/TourPackageBookingDetail';
 
 // Import Activity Review Admin Pages
-import AdminActivityReviews from './pages/admin/activity/ActivityReviews'; 
+import AdminActivityReviews from './pages/admin/activity/ActivityReviews';
 import ActivityReviewDetail from './pages/admin/activity/ActivityReviewDetail';
-
 
 const AppContent = () => {
   const location = useLocation();
@@ -163,7 +159,6 @@ const AppContent = () => {
             }
           />
 
-         
           <Route
             path="/dashboard/profile"
             element={
@@ -250,12 +245,12 @@ const AppContent = () => {
             path="/admin/activity-reviews/:id"
             element={
               <AdminRoute>
-                <ActivityReviewDetail /> 
+                <ActivityReviewDetail />
               </AdminRoute>
             }
           />
 
-     {/*    <Route
+          {/*    <Route
             path="/admin/reviews"
             element={
               <AdminRoute>
