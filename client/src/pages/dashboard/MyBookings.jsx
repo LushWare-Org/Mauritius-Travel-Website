@@ -5,6 +5,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import BookingStatusBadge from '../../components/dashboard/BookingStatusBadge';
 import DashboardDebugger from '../../components/dashboard/DashboardDebugger';
 import { userBookingsAPI, airportTransferBookingAPI } from '../../utils/api';
+import { jsPDF } from 'jspdf';
+import logo from '../../assets/logo.png'; // Make sure this path is correct
 
 const MyBookings = () => {
   const { currentUser } = useAuth();
@@ -17,7 +19,29 @@ const MyBookings = () => {
   const [generatingPDF, setGeneratingPDF] = useState(false);
   const [selectedBookingForPDF, setSelectedBookingForPDF] = useState(null);
   const [sortOrder, setSortOrder] = useState('newest'); // 'newest' or 'oldest'
+  const [imageLoaded, setImageLoaded] = useState(false);
   const navigate = useNavigate();
+
+  // Load logo as base64
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        // Convert logo to base64
+        const response = await fetch(logo);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          localStorage.setItem('company_logo', reader.result);
+          setImageLoaded(true);
+        };
+        reader.readAsDataURL(blob);
+      } catch (error) {
+        console.error('Error loading logo:', error);
+        setImageLoaded(true); // Continue even if logo fails
+      }
+    };
+    loadLogo();
+  }, []);
 
   useEffect(() => {
     fetchBookings();
@@ -93,8 +117,21 @@ const MyBookings = () => {
                       status: linkedTransfer.status,
                       transferType: linkedTransfer.transferType,
                       tripType: linkedTransfer.tripType,
-                      airportName: linkedTransfer.transfer?.airportName || 'N/A',
-                      airportCode: linkedTransfer.transfer?.airportCode || 'N/A',
+                      airportName:
+                        linkedTransfer.transfer?.airportName || 'N/A',
+                      airportCode:
+                        linkedTransfer.transfer?.airportCode || 'N/A',
+                      vehicleType: linkedTransfer.transfer?.vehicleType,
+                      guestName: linkedTransfer.guestName,
+                      email: linkedTransfer.email,
+                      phone: linkedTransfer.phone,
+                      arrivalDate: linkedTransfer.arrivalDate,
+                      arrivalTime: linkedTransfer.arrivalTime,
+                      departureDate: linkedTransfer.departureDate,
+                      departureTime: linkedTransfer.departureTime,
+                      flightNumber: linkedTransfer.flightNumber,
+                      specialRequests: linkedTransfer.specialRequests,
+                      adminNotes: linkedTransfer.adminNotes,
                     },
                   };
                 }
@@ -247,207 +284,267 @@ const MyBookings = () => {
     return total;
   };
 
+  // Function to get transfer type text
+  const getTransferTypeText = (transferType) => {
+    switch (transferType) {
+      case 'airport-to-hotel':
+        return 'Airport → Hotel';
+      case 'hotel-to-airport':
+        return 'Hotel → Airport';
+      case 'both':
+        return 'Both Directions';
+      default:
+        return 'N/A';
+    }
+  };
+
+  // Extracted PDF generation function with improved styling
+  const generateCombinedPDF = (booking) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // Add blue header background
+    doc.setFillColor(59, 130, 246); // Blue-600
+    doc.rect(0, 0, pageWidth, 40, 'F');
+
+    // Try to add logo if available
+    try {
+      const logoBase64 = localStorage.getItem('company_logo');
+      if (logoBase64) {
+        doc.addImage(logoBase64, 'PNG', 10, 5, 30, 30);
+      }
+    } catch (error) {
+      console.log('Could not add logo, continuing without it');
+    }
+
+    // Add company name
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Holiday Vibes Tour Ltd', pageWidth / 2, 20, { align: 'center' });
+
+    // Add subheader
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Booking Confirmation', pageWidth / 2, 30, {
+      align: 'center',
+    });
+
+    // Add booking details title
+    doc.setTextColor(0, 0, 0); // Black
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('BOOKING INVOICE', pageWidth / 2, 50, { align: 'center' });
+
+    // Add booking reference
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'normal');
+    doc.text(
+      `Booking Reference: ${booking.bookingReference}`,
+      pageWidth / 2,
+      60,
+      { align: 'center' }
+    );
+
+    // Add line separator
+    doc.setDrawColor(59, 130, 246); // Blue-600
+    doc.setLineWidth(0.5);
+    doc.line(20, 65, pageWidth - 20, 65);
+
+    // Customer Information Section
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CUSTOMER INFORMATION', 20, 75);
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Name: ${booking.fullName}`, 20, 85);
+    doc.text(`Email: ${booking.email}`, 20, 92);
+    doc.text(`Phone: ${booking.phone}`, 20, 99);
+
+    // Activity Details Section
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('ACTIVITY DETAILS', 20, 115);
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Activity: ${booking.activity?.title || 'N/A'}`, 20, 125);
+    doc.text(`Date: ${formatDateForPDF(booking.date)}`, 20, 132);
+    doc.text(
+      `Status: ${booking.status?.toUpperCase() || 'CONFIRMED'}`,
+      20,
+      139
+    );
+    doc.text(`Location: ${booking.activity?.location || 'N/A'}`, 20, 146);
+
+    // Airport Transfer Section (if exists)
+    let currentY = 165;
+    if (booking.airportTransfer) {
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('AIRPORT TRANSFER DETAILS', 20, currentY);
+      currentY += 10;
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      
+      if (booking.airportTransfer.airportName) {
+        doc.text(
+          `Airport: ${booking.airportTransfer.airportName} (${booking.airportTransfer.airportCode})`,
+          20,
+          currentY
+        );
+        currentY += 7;
+      }
+      
+      doc.text(
+        `Vehicle Type: ${booking.airportTransfer.vehicleType?.toUpperCase() || 'N/A'}`,
+        20,
+        currentY
+      );
+      currentY += 7;
+      
+      doc.text(
+        `Trip Type: ${booking.airportTransfer.type?.toUpperCase() || 'N/A'}`,
+        20,
+        currentY
+      );
+      currentY += 7;
+      
+      doc.text(
+        `Transfer Type: ${getTransferTypeText(booking.airportTransfer.transferType)}`,
+        20,
+        currentY
+      );
+      currentY += 7;
+      
+      if (booking.airportTransfer.arrivalDate) {
+        doc.text(
+          `Arrival: ${formatDate(booking.airportTransfer.arrivalDate)} ${booking.airportTransfer.arrivalTime || ''}`,
+          20,
+          currentY
+        );
+        currentY += 7;
+      }
+      
+      if (booking.airportTransfer.departureDate) {
+        doc.text(
+          `Departure: ${formatDate(booking.airportTransfer.departureDate)} ${booking.airportTransfer.departureTime || ''}`,
+          20,
+          currentY
+        );
+        currentY += 7;
+      }
+      
+      if (booking.airportTransfer.flightNumber) {
+        doc.text(
+          `Flight Number: ${booking.airportTransfer.flightNumber}`,
+          20,
+          currentY
+        );
+        currentY += 7;
+      }
+      
+      currentY += 5;
+    }
+
+    // Payment Details Section
+    const paymentY = booking.airportTransfer ? currentY + 5 : 180;
+    
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAYMENT DETAILS', 20, paymentY);
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    const priceY = paymentY + 10;
+    
+    doc.text(`Activity Amount: Rs${booking.totalPrice || 0}`, 20, priceY);
+    
+    if (booking.airportTransfer && booking.airportTransfer.price) {
+      doc.text(
+        `Transfer Amount: Rs${booking.airportTransfer.price || 0}`,
+        20,
+        priceY + 7
+      );
+    }
+    
+    // Add line separator for total
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.3);
+    const lineY = booking.airportTransfer ? priceY + 14 : priceY + 7;
+    doc.line(20, lineY, pageWidth - 20, lineY);
+    
+    // Total
+    doc.setFont('helvetica', 'bold');
+    doc.text(
+      `Total Amount: Rs${calculateTotalPrice(booking).toFixed(2)}`,
+      20,
+      lineY + 8
+    );
+    
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Payment Date: ${formatDate(new Date())}`, 20, lineY + 15);
+
+    // Add special notes section
+    if (booking.specialRequests || booking.airportTransfer?.specialRequests) {
+      const notesY = lineY + 25;
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ADDITIONAL NOTES', 20, notesY);
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      const notes = booking.specialRequests || booking.airportTransfer?.specialRequests || '';
+      const splitNotes = doc.splitTextToSize(notes, pageWidth - 40);
+      doc.text(splitNotes, 20, notesY + 10);
+    }
+
+    // Add footer with company info
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+
+    // Add footer border
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    const footerLineY = pageHeight - 30;
+    doc.line(20, footerLineY, pageWidth - 20, footerLineY);
+
+    // Company contact info
+    doc.text('Holiday Vibes Tour Ltd', pageWidth / 2, pageHeight - 25, {
+      align: 'center',
+    });
+    doc.text(
+      'www.holidayvibestour.com',
+      pageWidth / 2,
+      pageHeight - 20,
+      { align: 'center' }
+    );
+    doc.text(
+      'Email: Mervbn01@gmail.com | Phone: +230 5813 7644',
+      pageWidth / 2,
+      pageHeight - 15,
+      { align: 'center' }
+    );
+    doc.text(
+      'Thank you for choosing our services!',
+      pageWidth / 2,
+      pageHeight - 10,
+      { align: 'center' }
+    );
+
+    // Save the PDF
+    doc.save(`booking-invoice-${booking.bookingReference}.pdf`);
+  };
+
   const generateBookingPDF = async (booking) => {
     setSelectedBookingForPDF(booking._id);
     setGeneratingPDF(true);
 
     try {
-      const { jsPDF } = await import('jspdf');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const margin = 25;
-      let y = 30;
-
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(26);
-      pdf.setTextColor(30, 64, 175);
-      pdf.text('Booking Invoice', margin, y);
-
-      y += 10;
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(75, 85, 99);
-      pdf.text(`Invoice #${booking.bookingReference}`, margin, y);
-      y += 6;
-      pdf.text(`Issued on ${new Date().toLocaleDateString()}`, margin, y);
-
-      y += 14;
-      pdf.setDrawColor(209, 213, 219);
-      pdf.line(margin, y, pageWidth - margin, y);
-      y += 12;
-
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(17, 24, 39);
-      pdf.text('Holiday Vibes Tour Ltd', margin, y);
-
-      y += 8;
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(75, 85, 99);
-      pdf.text('info@holidayvibestour.com', margin, y);
-      y += 5;
-      pdf.text('+1 (234) 567-8900', margin, y);
-
-      y += 14;
-
-      pdf.setFontSize(13);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(17, 24, 39);
-      pdf.text('Customer Information', margin, y);
-
-      y += 8;
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(55, 65, 81);
-      pdf.text(booking.fullName, margin, y);
-      y += 6;
-      pdf.text(booking.email, margin, y);
-      y += 6;
-      pdf.text(booking.phone, margin, y);
-
-      y += 14;
-      pdf.line(margin, y, pageWidth - margin, y);
-      y += 12;
-
-      pdf.setFontSize(13);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Booking Details', margin, y);
-      y += 10;
-
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'normal');
-
-      pdf.text(`Activity: ${booking.activity?.title || 'N/A'}`, margin, y);
-      y += 6;
-      pdf.text(`Date: ${formatDateForPDF(booking.date)}`, margin, y);
-      
-      // REMOVED: Number of guests line
-      // pdf.text(`Guests: ${booking.guests}`, margin, y);
-      // y += 6;
-      
-      pdf.text(
-        `Status: ${
-          booking.status.charAt(0).toUpperCase() + booking.status.slice(1)
-        }`,
-        margin,
-        y
-      );
-      y += 6;
-      pdf.text(`Booked on: ${formatDateTime(booking.createdAt)}`, margin, y);
-
-      y += 14;
-
-      if (booking.airportTransfer) {
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Airport Transfer', margin, y);
-        y += 8;
-
-        pdf.setFont('helvetica', 'normal');
-        
-        // ADDED: Airport Name and Code
-        if (booking.airportTransfer.airportName && booking.airportTransfer.airportCode) {
-          pdf.text(`Airport: ${booking.airportTransfer.airportName} (${booking.airportTransfer.airportCode})`, margin, y);
-          y += 6;
-        }
-        
-        pdf.text(
-          `Type: ${
-            booking.airportTransfer.tripType === 'one-way'
-              ? 'One Way'
-              : 'Round Trip'
-          }`,
-          margin,
-          y
-        );
-        y += 6;
-        pdf.text(
-          `Details: ${booking.airportTransfer.details || 'Airport Transfer'}`,
-          margin,
-          y
-        );
-        y += 6;
-        pdf.text(
-          `Transfer Status: ${
-            booking.airportTransfer.status.charAt(0).toUpperCase() +
-            booking.airportTransfer.status.slice(1)
-          }`,
-          margin,
-          y
-        );
-
-        y += 14;
-      }
-
-      pdf.line(margin, y, pageWidth - margin, y);
-      y += 12;
-
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(13);
-      pdf.text('Price Summary', margin, y);
-      y += 10;
-
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(11);
-
-      pdf.text('Activity Total', margin, y);
-      pdf.text(`$${booking.totalPrice}`, pageWidth - margin, y, {
-        align: 'right',
-      });
-      y += 7;
-
-      if (booking.airportTransfer && booking.airportTransfer.price) {
-        pdf.text('Airport Transfer', margin, y);
-        pdf.text(`$${booking.airportTransfer.price}`, pageWidth - margin, y, {
-          align: 'right',
-        });
-        y += 7;
-      }
-
-      y += 6;
-      pdf.setDrawColor(30, 64, 175);
-      pdf.setLineWidth(0.8);
-      pdf.line(margin, y, pageWidth - margin, y);
-      y += 8;
-
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(14);
-      pdf.text('Grand Total', margin, y);
-      pdf.text(
-        `$${calculateTotalPrice(booking).toFixed(2)}`,
-        pageWidth - margin,
-        y,
-        {
-          align: 'right',
-        }
-      );
-
-      y += 20;
-
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(107, 114, 128);
-      pdf.text(
-        'Thank you for traveling with Holiday Vibes Tour Ltd.',
-        pageWidth / 2,
-        y,
-        { align: 'center' }
-      );
-
-      y += 6;
-      pdf.text(
-        `Generated on ${new Date().toLocaleString()}`,
-        pageWidth / 2,
-        y,
-        { align: 'center' }
-      );
-
-      pdf.save(
-        `Booking_${booking.bookingReference}_${
-          new Date().toISOString().split('T')[0]
-        }.pdf`
-      );
+      generateCombinedPDF(booking);
     } catch (err) {
       console.error('Error generating PDF:', err);
       setError('Failed to generate PDF');
@@ -642,29 +739,31 @@ const MyBookings = () => {
                 className="bg-white border border-gray-200 rounded-lg overflow-hidden"
               >
                 <div className="flex flex-col md:flex-row">
-                  {/* Activity Image */}
-                  <div className="md:w-1/4 h-48 md:h-auto relative">
-                    <img
-                      src={booking.activity?.image}
-                      alt={booking.activity?.title}
-                      className="w-full h-full object-cover"
-                    />
-                    {/* New Booking Badge - Show if booking is less than 24 hours old */}
-                    {new Date() - new Date(booking.createdAt) <
-                      24 * 60 * 60 * 1000 && (
-                      <div className="absolute top-3 left-3">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          <svg
-                            className="mr-1.5 h-2 w-2 text-green-600"
-                            fill="currentColor"
-                            viewBox="0 0 8 8"
-                          >
-                            <circle cx="4" cy="4" r="3" />
-                          </svg>
-                          New Booking
-                        </span>
-                      </div>
-                    )}
+                  {/* Activity Image - UPDATED: Fixed size container */}
+                  <div className="md:w-1/4">
+                    <div className="relative h-64 w-full overflow-hidden bg-gray-100">
+                      <img
+                        src={booking.activity?.image}
+                        alt={booking.activity?.title}
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                      {/* New Booking Badge - Show if booking is less than 24 hours old */}
+                      {new Date() - new Date(booking.createdAt) <
+                        24 * 60 * 60 * 1000 && (
+                        <div className="absolute top-3 left-3">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <svg
+                              className="mr-1.5 h-2 w-2 text-green-600"
+                              fill="currentColor"
+                              viewBox="0 0 8 8"
+                            >
+                              <circle cx="4" cy="4" r="3" />
+                            </svg>
+                            New Booking
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Booking Details */}
@@ -709,7 +808,7 @@ const MyBookings = () => {
                           Total Price
                         </p>
                         <p className="font-medium mt-1">
-                          ${calculateTotalPrice(booking).toFixed(2)}
+                          Rs{calculateTotalPrice(booking).toFixed(2)}
                           {booking.airportTransfer &&
                             booking.airportTransfer.price && (
                               <span className="text-xs text-green-600 ml-2">
@@ -743,7 +842,7 @@ const MyBookings = () => {
                                 Airport Transfer:{' '}
                               </span>
                               <span className="text-blue-600 ml-1">
-                                $
+                                Rs
                                 {parseFloat(
                                   booking.airportTransfer.price
                                 ).toFixed(2)}
@@ -754,7 +853,7 @@ const MyBookings = () => {
                                 </span>
                               )}
                             </div>
-                            
+
                             {/* ADDED: Airport Name and Code */}
                             {booking.airportTransfer.airportName && (
                               <div className="ml-6 flex items-center text-sm">
@@ -790,7 +889,7 @@ const MyBookings = () => {
                                 </span>
                               </div>
                             )}
-                            
+
                             {booking.airportTransfer.details && (
                               <p className="text-sm text-blue-600 ml-6">
                                 {booking.airportTransfer.details}
@@ -809,7 +908,8 @@ const MyBookings = () => {
                                     : booking.airportTransfer.status ===
                                       'confirmed'
                                     ? 'bg-blue-100 text-blue-800'
-                                    : booking.airportTransfer.status === 'pending'
+                                    : booking.airportTransfer.status ===
+                                      'pending'
                                     ? 'bg-yellow-100 text-yellow-800'
                                     : booking.airportTransfer.status ===
                                       'cancelled'
@@ -912,7 +1012,6 @@ const MyBookings = () => {
                       )}
 
                     <div className="mt-auto flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
-                      {/* REMOVED: Number of guests section */}
                       <div className="text-sm text-gray-500">
                         {/* This section intentionally left empty after removing number of guests */}
                       </div>
@@ -1078,15 +1177,16 @@ const MyBookings = () => {
                 <i className="fas fa-phone text-green-600"></i>
               </span>
               <span>
-                <strong>Contact:</strong> +1 (234) 567-890 <br />
-                <span className="text-blue-700">admin@example.com</span>
+                <strong>Contact:</strong> +230 5813 7644
+                <br />
+                <span className="text-blue-700">Mervbn01@gmail.com</span>
               </span>
             </li>
           </ul>
 
           <div className="mt-4 p-3 bg-blue-100 rounded-lg text-sm text-blue-900">
-            <strong>Important:</strong> Cancellation fees may apply depending on
-            the timing. Please contact our admin team for assistance.
+            <strong>Important:</strong> Please contact our admin team for
+            assistance.
           </div>
         </div>
       </div>

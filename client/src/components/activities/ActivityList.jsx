@@ -69,57 +69,16 @@ const ActivityList = ({ activities, currency = 'USD' }) => {
     
     return (
         <div className="relative">
-            {/* Currency Info Banner */}
-            <div className="mb-6 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-4">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center mr-3">
-                            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 className="font-semibold text-blue-800">Showing prices in {currency} ({symbol})</h3>
-                            <p className="text-sm text-blue-600 mt-1">
-                                Admin has set separate prices for each currency. No automatic conversion.
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-white/70 px-3 py-2 rounded-lg border border-blue-100">
-                        <span className="text-blue-700 font-medium">Avg. Price:</span>
-                        <span className="text-xl font-bold text-blue-800">{symbol}{calculateAveragePrice()}</span>
-                    </div>
-                </div>
-            </div>
+            
             
             {/* Grid Header */}
             <div className="mb-8">
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                     <div>
-                        <h2 className="text-2xl font-bold text-gray-900">
-                            Found <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">{activities.length}</span> Excursions
-                        </h2>
-                        <p className="text-gray-600 mt-2">Amazing experiences waiting for you</p>
-                        <div className="flex items-center mt-3 text-sm text-blue-600">
-                            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                            <span>All prices in {currency} ({symbol}) • Separate prices for each currency</span>
-                        </div>
+                        
+                       
                     </div>
-                    <div className="flex items-center space-x-4">
-                        <div className="text-sm text-gray-500 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
-                            <span className="font-medium text-gray-900">Sorted by:</span>
-                            <span className="ml-2 text-blue-600 font-medium">Popularity</span>
-                        </div>
-                        <div className="w-px h-6 bg-gray-200"></div>
-                        <div className="text-sm text-gray-500">
-                            <span className="font-medium text-gray-900">Currency:</span>
-                            <span className="ml-2 bg-blue-100 text-blue-700 px-2 py-1 rounded-md font-medium">
-                                {currency} {symbol}
-                            </span>
-                        </div>
-                    </div>
+                    
                 </div>
                 <div className="w-24 h-1 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full mt-4"></div>
             </div>
@@ -186,15 +145,7 @@ const ActivityList = ({ activities, currency = 'USD' }) => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
-                        <div>
-                            <h4 className="font-semibold text-blue-800 mb-2">About our currency system</h4>
-                            <p className="text-sm text-blue-700">
-                                Our admin sets separate prices for each currency (USD, EUR, MUR/Rs). 
-                                When you select a currency, you see the exact price in that currency. 
-                                There's no automatic conversion - what you see is what you'll pay. 
-                                This ensures transparent pricing with no hidden fees.
-                            </p>
-                        </div>
+                       
                     </div>
                 </div>
             </div>
@@ -202,23 +153,6 @@ const ActivityList = ({ activities, currency = 'USD' }) => {
     );
 };
 
-// Add CSS animation
-const style = `
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
 
-.animate-fadeIn {
-    animation: fadeIn 0.6s ease-out forwards;
-    opacity: 0;
-}
-`;
 
 export default ActivityList;

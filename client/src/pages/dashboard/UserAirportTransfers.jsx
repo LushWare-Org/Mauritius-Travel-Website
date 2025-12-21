@@ -45,18 +45,18 @@ const UserAirportTransfers = () => {
 
       if (response.data.success) {
         // Filter out transfers that are linked with activities
-        const filteredBookings = response.data.data.filter(booking => {
+        const filteredBookings = response.data.data.filter((booking) => {
           // If toggle is ON, show all transfers
           if (showLinkedTransfers) {
             return true;
           }
-          
+
           // Check for various patterns that indicate activity linkage
-          
+
           // 1. Check special requests for booking references
           if (booking.specialRequests) {
             const specialRequests = booking.specialRequests.toLowerCase();
-            
+
             // Common patterns indicating activity linkage
             if (
               specialRequests.includes('booking ref:') ||
@@ -72,27 +72,29 @@ const UserAirportTransfers = () => {
               return false; // Skip this booking (it's linked to an activity)
             }
           }
-          
+
           // 2. Check for dedicated activity booking reference fields
           if (booking.activityBookingReference || booking.activityBookingId) {
             return false; // Skip this booking (it's linked to an activity)
           }
-          
+
           // 3. Check for patterns in booking reference itself
           if (booking.bookingReference) {
             // If booking reference starts with ACT- (activity) or similar pattern
-            if (booking.bookingReference.startsWith('ACT-') || 
-                booking.bookingReference.startsWith('AB-') ||
-                booking.bookingReference.includes('-ACT-')) {
+            if (
+              booking.bookingReference.startsWith('ACT-') ||
+              booking.bookingReference.startsWith('AB-') ||
+              booking.bookingReference.includes('-ACT-')
+            ) {
               return false;
             }
           }
-          
+
           // 4. Check if transfer has an associated activity
           if (booking.activityId || booking.linkedActivityId) {
             return false;
           }
-          
+
           // 5. Return true for standalone airport transfers
           return true;
         });
@@ -100,7 +102,7 @@ const UserAirportTransfers = () => {
         console.log('Filtered airport transfers:', {
           total: response.data.data.length,
           standalone: filteredBookings.length,
-          linked: response.data.data.length - filteredBookings.length
+          linked: response.data.data.length - filteredBookings.length,
         });
 
         setBookings(filteredBookings);
@@ -197,7 +199,13 @@ const UserAirportTransfers = () => {
 
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Airport: ${booking.transfer?.airportName || 'N/A'} (${booking.transfer?.airportCode || 'N/A'})`, 20, 125);
+    doc.text(
+      `Airport: ${booking.transfer?.airportName || 'N/A'} (${
+        booking.transfer?.airportCode || 'N/A'
+      })`,
+      20,
+      125
+    );
     doc.text(
       `Vehicle Type: ${booking.transfer?.vehicleType?.toUpperCase() || 'N/A'}`,
       20,
@@ -275,7 +283,7 @@ const UserAirportTransfers = () => {
       { align: 'center' }
     );
     doc.text(
-      'Email: info@holidayvibestour.com | Phone: +960 123 4567',
+      'Email: Mervbn01@gmail.com | Phone: +230 5813 7644',
       pageWidth / 2,
       pageHeight - 15,
       { align: 'center' }
@@ -358,7 +366,7 @@ const UserAirportTransfers = () => {
             View and manage your airport transfer bookings
           </p>
         </div>
-        
+
         <div className="flex items-center">
           <span className="mr-2 text-sm text-gray-600">
             Show linked transfers
@@ -382,13 +390,29 @@ const UserAirportTransfers = () => {
       <div className="mb-4">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
           <div className="flex items-center">
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              className="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
             {showLinkedTransfers ? (
-              <span>Showing ALL airport transfers (including those linked to activities)</span>
+              <span>
+                Showing ALL airport transfers (including those linked to
+                activities)
+              </span>
             ) : (
-              <span>Showing only standalone airport transfers (excluding those linked to activities)</span>
+              <span>
+                Showing only standalone airport transfers (excluding those
+                linked to activities)
+              </span>
             )}
           </div>
         </div>
@@ -419,22 +443,22 @@ const UserAirportTransfers = () => {
 
               <div className="flex gap-3">
                 <a
-                  href="mailto:admin@example.com?subject=Cancellation Request"
+                  href="mailto:Mervbn01@gmail.com?subject=Cancellation Request"
                   className="inline-flex items-center gap-2 px-3 py-1.5
-                 text-sm font-medium text-gray-700
-                 border border-gray-300 rounded-md
-                 hover:bg-gray-100 transition"
+              text-sm font-medium text-gray-700
+              border border-gray-300 rounded-md
+              hover:bg-gray-100 transition"
                 >
                   <i className="fas fa-envelope text-gray-500"></i>
                   Email Admin
                 </a>
 
                 <a
-                  href="tel:+1234567890"
+                  href="tel:+23058137644"
                   className="inline-flex items-center gap-2 px-3 py-1.5
-                 text-sm font-medium text-gray-700
-                 border border-gray-300 rounded-md
-                 hover:bg-gray-100 transition"
+              text-sm font-medium text-gray-700
+              border border-gray-300 rounded-md
+              hover:bg-gray-100 transition"
                 >
                   <i className="fas fa-phone text-gray-500"></i>
                   Call Admin
@@ -474,8 +498,8 @@ const UserAirportTransfers = () => {
             No airport transfer bookings
           </h3>
           <p className="text-gray-500 mb-4">
-            {showLinkedTransfers 
-              ? "You haven't made any airport transfers (including linked ones)." 
+            {showLinkedTransfers
+              ? "You haven't made any airport transfers (including linked ones)."
               : "You haven't made any standalone airport transfers."}
           </p>
           <a
@@ -496,7 +520,8 @@ const UserAirportTransfers = () => {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
-                    {booking.transfer?.airportName} ({booking.transfer?.airportCode}) Transfer
+                    {booking.transfer?.airportName} (
+                    {booking.transfer?.airportCode}) Transfer
                   </h3>
                   <p className="text-sm text-gray-500">
                     Booking Reference: {booking.bookingReference}
@@ -506,18 +531,30 @@ const UserAirportTransfers = () => {
                     <div className="mt-2">
                       {(() => {
                         // Check if this transfer is linked to an activity
-                        const isLinked = 
-                          (booking.specialRequests && 
-                           (booking.specialRequests.includes('Booking Ref:') || 
-                            booking.specialRequests.match(/[A-Z]{3}-[0-9]{6}/))) ||
+                        const isLinked =
+                          (booking.specialRequests &&
+                            (booking.specialRequests.includes('Booking Ref:') ||
+                              booking.specialRequests.match(
+                                /[A-Z]{3}-[0-9]{6}/
+                              ))) ||
                           booking.activityBookingReference ||
                           booking.activityBookingId;
-                        
+
                         if (isLinked) {
                           return (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                              <svg
+                                className="w-3 h-3 mr-1"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                                />
                               </svg>
                               Linked to Activity
                             </span>
@@ -684,7 +721,8 @@ const UserAirportTransfers = () => {
                 <div>
                   <p className="text-xs text-gray-500">Transfer Service</p>
                   <p className="text-sm font-medium text-gray-900">
-                    {selectedBooking.transfer?.airportName} ({selectedBooking.transfer?.airportCode})
+                    {selectedBooking.transfer?.airportName} (
+                    {selectedBooking.transfer?.airportCode})
                   </p>
                 </div>
 
@@ -817,8 +855,8 @@ const UserAirportTransfers = () => {
               <li className="flex items-start">
                 <i className="fas fa-phone text-green-500 mt-0.5 mr-2"></i>
                 <span>
-                  <strong>Contact:</strong> Call +1 (234) 567-890 or email
-                  admin@example.com
+                  <strong>Contact:</strong> Call +230 5813 7644 or email
+                  Mervbn01@gmail.com
                 </span>
               </li>
             </ul>

@@ -2,35 +2,42 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 const Header = () => {
-    return (
-        <header className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white py-2 px-4 shadow-sm border-b border-blue-700">
-            {/* Mauritius Color Strip */}
-            <div className="h-1 bg-gradient-to-r from-red-500 via-blue-400 to-green-500"></div>
-            
-            <div className="container mx-auto flex justify-between items-center text-sm">
-                <div className="flex items-center space-x-4">
-                    <div className="flex items-center group">
-                        <i className="fas fa-phone-alt mr-2 text-yellow-400 group-hover:text-yellow-300 transition-colors"></i>
-                        <span className="group-hover:text-yellow-100 transition-colors">+230 123 4567</span>
-                    </div>
-                    <div className="hidden md:flex items-center group">
-                        <i className="fas fa-envelope mr-2 text-yellow-400 group-hover:text-yellow-300 transition-colors"></i>
-                        <span className="group-hover:text-yellow-100 transition-colors">info@mauritiusadventures.com</span>
-                    </div>
-                </div>
-                
-                <div className="flex items-center space-x-4">
-                    <div className="hidden md:block">
-                        <Link to="/help" className="text-white hover:text-yellow-300 transition-colors mr-4 relative group">
-                            Help Center
-                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-yellow-400 group-hover:w-full transition-all duration-300"></span>
-                        </Link>
-                   {/*   <Link to="/currency" className="text-white hover:text-yellow-300 transition-colors relative group">
+  return (
+    <header className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white py-2 px-4 shadow-sm border-b border-blue-700">
+      {/* Mauritius Color Strip */}
+      <div className="h-1 bg-gradient-to-r from-red-500 via-blue-400 to-green-500"></div>
+
+      <div className="container mx-auto flex justify-between items-center text-sm">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center group">
+            <i className="fas fa-phone-alt mr-2 text-yellow-400 group-hover:text-yellow-300 transition-colors"></i>
+            <span className="group-hover:text-yellow-100 transition-colors">
+              +230 5813 7644
+            </span>
+          </div>
+          <div className="hidden md:flex items-center group">
+            <i className="fas fa-envelope mr-2 text-yellow-400 group-hover:text-yellow-300 transition-colors"></i>
+            <span className="group-hover:text-yellow-100 transition-colors">
+              Mervbn01@gmail.com
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-4">
+          <div className="hidden md:block">
+            <Link
+              to="/help"
+              className="text-white hover:text-yellow-300 transition-colors mr-4 relative group"
+            >
+              Help Center
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-yellow-400 group-hover:w-full transition-all duration-300"></span>
+            </Link>
+            {/*   <Link to="/currency" className="text-white hover:text-yellow-300 transition-colors relative group">
                             MUR <i className="fas fa-chevron-down ml-1 text-xs"></i>
                             <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-yellow-400 group-hover:w-full transition-all duration-300"></span>
                         </Link>*/}
-                    </div>
-                    <div className="flex space-x-3">
+          </div>
+          {/*     <div className="flex space-x-3">
                         <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="hover:text-yellow-400 transition-colors transform hover:scale-110" aria-label="Visit our Facebook page" title="Facebook">
                             <i className="fab fa-facebook-f"></i>
                             <span className="sr-only">Facebook</span>
@@ -43,11 +50,11 @@ const Header = () => {
                             <i className="fab fa-instagram"></i>
                             <span className="sr-only">Instagram</span>
                         </a>
-                    </div>
-                </div>
-            </div>
-        </header>
-    );
+                    </div>     */}
+        </div>
+      </div>
+    </header>
+  );
 };
 
 export default Header;

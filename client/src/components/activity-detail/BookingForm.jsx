@@ -314,7 +314,7 @@ const BookingForm = ({ activity, currency: propCurrency }) => {
         <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-bold">{symbol}{getCurrentPrice()}</div>
-            <div className="text-xs opacity-90 mt-1">per person</div>
+            <div className="text-xs opacity-90 mt-1">per package</div>
           </div>
           <div className="flex items-center space-x-2">
             {showDurationSelection() && (

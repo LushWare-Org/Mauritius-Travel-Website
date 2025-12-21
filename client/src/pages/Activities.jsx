@@ -224,10 +224,7 @@ const Activities = () => {
                                         {currency} ({currencySymbol})
                                     </span>
                                 </div>
-                                <div className="text-xs text-gray-500">
-                                    <p>All prices are displayed in {currency}. The admin has set separate prices for each currency.</p>
-                                    <p className="mt-2">No automatic conversion is applied.</p>
-                                </div>
+                               
                             </div>
                         </div>
                         
@@ -243,15 +240,7 @@ const Activities = () => {
                                     <span className="text-gray-600">Currently Showing:</span>
                                     <span className="font-medium text-blue-600">{filteredActivities.length}</span>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Average Price:</span>
-                                    <span className="font-medium text-green-600">
-                                        {filteredActivities.length > 0 
-                                            ? `${currencySymbol}${Math.round(filteredActivities.reduce((sum, act) => sum + (act.price || 0), 0) / filteredActivities.length)}`
-                                            : `${currencySymbol}0`
-                                        }
-                                    </span>
-                                </div>
+                                
                                 {filteredActivities.length < allActivities.length && (
                                     <div className="pt-2 border-t border-gray-100">
                                         <button
@@ -297,10 +286,7 @@ const Activities = () => {
                                         </span>
                                     )}
                                 </p>
-                                <p className="text-sm text-gray-600 mt-1">
-                                    <i className="fas fa-money-bill-wave mr-1"></i>
-                                    Prices shown in <span className="font-medium">{currency} {currencySymbol}</span>
-                                </p>
+                             
                             </div>
                             
                             <div className="flex flex-col sm:flex-row gap-3 mt-3 sm:mt-0">
@@ -317,25 +303,6 @@ const Activities = () => {
                                     </select>
                                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                                         <i className="fas fa-money-bill-wave text-gray-400"></i>
-                                    </div>
-                                </div>
-                                
-                                {/* Sorting Dropdown */}
-                                <div className="relative">
-                                    <select
-                                        value={sortOption}
-                                        onChange={(e) => handleSortChange(e.target.value)}
-                                        className="border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
-                                    >
-                                        <option value="popularity">Sort by: Popularity</option>
-                                        <option value="price-asc">Sort by: Price (Low to High)</option>
-                                        <option value="price-desc">Sort by: Price (High to Low)</option>
-                                        <option value="duration">Sort by: Duration</option>
-                                    </select>
-                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                        </svg>
                                     </div>
                                 </div>
                             </div>
@@ -389,21 +356,7 @@ const Activities = () => {
                             </ErrorBoundary>
                         )}
                         
-                        {/* Currency Disclaimer */}
-                        {filteredActivities.length > 0 && (
-                            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                                <div className="flex items-start">
-                                    <i className="fas fa-info-circle text-blue-500 mt-1 mr-2"></i>
-                                    <div>
-                                        <p className="text-sm text-blue-800 font-medium mb-1">Currency Information</p>
-                                        <p className="text-xs text-blue-700">
-                                            Prices are shown in {currency} ({currencySymbol}). The admin has manually entered separate prices for USD, EUR, and MUR (Rs) currencies. 
-                                            There is no automatic currency conversion. When you book, the price will be in your selected currency.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                       
                     </div>
                 </div>
             </div>

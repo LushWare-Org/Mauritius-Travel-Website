@@ -217,200 +217,238 @@ const BookingDetail = () => {
     }
   };
 
+  // Enhanced PDF generation with improved styling
   const generatePDF = async () => {
-  setGeneratingPDF(true);
+    setGeneratingPDF(true);
 
-  try {
-    const jsPDF = (await import('jspdf')).default;
-    const pdf = new jsPDF('p', 'mm', 'a4');
+    try {
+      const jsPDF = (await import('jspdf')).default;
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
 
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const margin = 25;
-    let y = 30;
+      let y = 30;
 
-    /* =========================
-       BOOK COVER TITLE
-    ========================= */
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(26);
-    pdf.setTextColor(30, 64, 175); // calm blue
-    pdf.text('Booking Invoice', margin, y);
+      // Add blue header background
+      doc.setFillColor(59, 130, 246); // Blue-600
+      doc.rect(0, 0, pageWidth, 40, 'F');
 
-    y += 10;
+      // Try to add logo if available
+      try {
+        if (logoImage) {
+          doc.addImage(logoImage, 'PNG', margin, 5, 30, 30);
+        }
+      } catch (error) {
+        console.log('Could not add logo, continuing without it');
+      }
 
-    pdf.setFontSize(11);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(75, 85, 99);
-    pdf.text(`Invoice #${booking.bookingReference}`, margin, y);
-    y += 6;
-    pdf.text(`Issued on ${new Date().toLocaleDateString()}`, margin, y);
+      // Add company name
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Holiday Vibes Tour Ltd', pageWidth / 2, 20, { align: 'center' });
 
-    y += 14;
-    pdf.setDrawColor(209, 213, 219);
-    pdf.line(margin, y, pageWidth - margin, y);
-    y += 12;
+      // Add subheader
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Booking Invoice & Receipt', pageWidth / 2, 30, {
+        align: 'center',
+      });
 
-    /* =========================
-       COMPANY INFO
-    ========================= */
-    pdf.setFontSize(14);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(17, 24, 39);
-    pdf.text('Holiday Vibes Tour Ltd', margin, y);
+      // Add booking details title
+      doc.setTextColor(0, 0, 0); // Black
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('BOOKING CONFIRMATION', pageWidth / 2, 50, { align: 'center' });
 
-    y += 8;
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(75, 85, 99);
-    pdf.text('info@holidayvibestour.com', margin, y);
-    y += 5;
-    pdf.text('+1 (234) 567-8900', margin, y);
-
-    y += 14;
-
-    /* =========================
-       CUSTOMER SECTION
-    ========================= */
-    pdf.setFontSize(13);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(17, 24, 39);
-    pdf.text('Customer', margin, y);
-
-    y += 8;
-    pdf.setFontSize(11);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(55, 65, 81);
-    pdf.text(booking.fullName, margin, y);
-    y += 6;
-    pdf.text(booking.email, margin, y);
-    y += 6;
-    pdf.text(booking.phone, margin, y);
-
-    y += 14;
-    pdf.line(margin, y, pageWidth - margin, y);
-    y += 12;
-
-    /* =========================
-       BOOKING DETAILS
-    ========================= */
-    pdf.setFontSize(13);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Booking Details', margin, y);
-    y += 10;
-
-    pdf.setFontSize(11);
-    pdf.setFont('helvetica', 'normal');
-
-    pdf.text(`Excursion: ${booking.activity?.title}`, margin, y);
-    y += 6;
-    pdf.text(`Date: ${formatDate(booking.date)}`, margin, y);
-    y += 6;
-    pdf.text(`Guests: ${booking.guests}`, margin, y);
-    y += 6;
-    pdf.text(`Duration: ${getDurationTypeDisplay()}`, margin, y);
-
-    y += 14;
-
-    /* =========================
-       AIRPORT TRANSFER (OPTIONAL)
-    ========================= */
-    if (airportTransferBooking) {
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Airport Transfer', margin, y);
-      y += 8;
-
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(
-        `${getTransferTypeDisplay(airportTransferBooking.transferType)} · ${getTripTypeDisplay(
-          airportTransferBooking.tripType
-        )}`,
-        margin,
-        y
-      );
-      y += 6;
-      pdf.text(
-        `Passengers: ${airportTransferBooking.passengers || booking.guests}`,
-        margin,
-        y
+      // Add booking reference
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'normal');
+      doc.text(
+        `Booking Reference: ${booking.bookingReference}`,
+        pageWidth / 2,
+        60,
+        { align: 'center' }
       );
 
-      y += 14;
-    }
+      // Add line separator
+      doc.setDrawColor(59, 130, 246); // Blue-600
+      doc.setLineWidth(0.5);
+      doc.line(margin, 65, pageWidth - margin, 65);
 
-    pdf.line(margin, y, pageWidth - margin, y);
-    y += 12;
+      y = 75;
 
-    /* =========================
-       PRICING SUMMARY
-    ========================= */
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(13);
-    pdf.text('Summary', margin, y);
-    y += 10;
+      // Customer Information Section
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('CUSTOMER INFORMATION', margin, y);
+      y += 10;
 
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(11);
-
-    pdf.text('Excursion Total', margin, y);
-    pdf.text(`RS${booking.totalPrice}`, pageWidth - margin, y, { align: 'right' });
-    y += 7;
-
-    if (airportTransferBooking) {
-      const transferPrice =
-        airportTransferBooking.totalPrice || airportTransferBooking.price;
-      pdf.text('Airport Transfer', margin, y);
-      pdf.text(`RS${transferPrice}`, pageWidth - margin, y, { align: 'right' });
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Name: ${booking.fullName}`, margin, y);
       y += 7;
+      doc.text(`Email: ${booking.email}`, margin, y);
+      y += 7;
+      doc.text(`Phone: ${booking.phone}`, margin, y);
+      y += 7;
+      if (booking.specialRequests) {
+        const notes = `Special Requests: ${booking.specialRequests}`;
+        const splitNotes = doc.splitTextToSize(notes, pageWidth - 2 * margin);
+        doc.text(splitNotes, margin, y);
+        y += splitNotes.length * 6;
+      }
+
+      // Activity Booking Details Section
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('EXCURSION DETAILS', margin, y);
+      y += 10;
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Activity: ${booking.activity?.title || 'N/A'}`, margin, y);
+      y += 7;
+      doc.text(`Date: ${formatDate(booking.date)}`, margin, y);
+      y += 7;
+      doc.text(`Guests: ${booking.guests}`, margin, y);
+      y += 7;
+      doc.text(`Duration: ${getDurationTypeDisplay()}`, margin, y);
+      y += 7;
+      doc.text(`Price Per Person: ${getPricePerPersonDisplay()}`, margin, y);
+      y += 10;
+
+      // Airport Transfer Details Section (if exists)
+      if (airportTransferBooking) {
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('AIRPORT TRANSFER DETAILS', margin, y);
+        y += 10;
+
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Airport: ${airportTransferBooking.transfer?.airportName || 'N/A'}`, margin, y);
+        y += 7;
+        doc.text(`Vehicle Type: ${airportTransferBooking.transfer?.vehicleType?.toUpperCase() || 'N/A'}`, margin, y);
+        y += 7;
+        doc.text(`Trip Type: ${getTripTypeDisplay(airportTransferBooking.tripType)}`, margin, y);
+        y += 7;
+        doc.text(`Transfer Type: ${getTransferTypeDisplay(airportTransferBooking.transferType)}`, margin, y);
+        y += 7;
+        doc.text(`Date: ${formatDate(airportTransferBooking.arrivalDate)}`, margin, y);
+        y += 7;
+        doc.text(`Time: ${formatTime(airportTransferBooking.arrivalTime)}`, margin, y);
+        y += 7;
+        doc.text(`Passengers: ${airportTransferBooking.passengers || booking.guests}`, margin, y);
+        y += 10;
+      }
+
+      // Payment Details Section
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PAYMENT DETAILS', margin, y);
+      y += 10;
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+
+      // Activity Total
+      doc.text(`Excursion Total:`, margin, y);
+      doc.text(`RS ${booking.totalPrice || 0}`, pageWidth - margin, y, { align: 'right' });
+      y += 7;
+
+      // Airport Transfer Total
+      if (airportTransferBooking) {
+        const transferPrice = airportTransferBooking.totalPrice || airportTransferBooking.price || 0;
+        doc.text(`Airport Transfer:`, margin, y);
+        doc.text(`RS ${transferPrice}`, pageWidth - margin, y, { align: 'right' });
+        y += 7;
+      }
+
+      // Grand Total
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text(`Grand Total:`, margin, y);
+      doc.text(`RS ${getGrandTotal().toFixed(2)}`, pageWidth - margin, y, { align: 'right' });
+      y += 10;
+
+      // Status and Notes
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Status: ${booking.status?.toUpperCase() || 'PENDING'}`, margin, y);
+      y += 7;
+      doc.text(`Payment Date: ${formatDate(new Date())}`, margin, y);
+      y += 10;
+
+      // Check if we need a new page
+      if (y > pageHeight - 50) {
+        doc.addPage();
+        y = 30;
+      }
+
+      // Add notes section
+      const allNotes = [];
+      if (booking.adminNotes) allNotes.push(`Admin Notes: ${booking.adminNotes}`);
+      if (airportTransferBooking?.specialRequests) allNotes.push(`Transfer Notes: ${airportTransferBooking.specialRequests}`);
+      if (airportTransferBooking?.adminNotes) allNotes.push(`Transfer Admin Notes: ${airportTransferBooking.adminNotes}`);
+
+      if (allNotes.length > 0) {
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('ADDITIONAL NOTES', margin, y);
+        y += 10;
+
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        allNotes.forEach(note => {
+          const splitNote = doc.splitTextToSize(note, pageWidth - 2 * margin);
+          doc.text(splitNote, margin, y);
+          y += splitNote.length * 5 + 2;
+        });
+      }
+
+      // Add footer with company info
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+
+      // Add footer border
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.line(margin, pageHeight - 30, pageWidth - margin, pageHeight - 30);
+
+      // Company contact info
+      doc.text('Holiday Vibes Tour Ltd', pageWidth / 2, pageHeight - 25, {
+        align: 'center',
+      });
+      doc.text(
+        'Excursions & Airport Transfer Services | www.holidayvibestour.com',
+        pageWidth / 2,
+        pageHeight - 20,
+        { align: 'center' }
+      );
+      doc.text(
+        'Email: info@holidayvibestour.com | Phone: +960 123 4567',
+        pageWidth / 2,
+        pageHeight - 15,
+        { align: 'center' }
+      );
+      doc.text(
+        'Thank you for choosing our services!',
+        pageWidth / 2,
+        pageHeight - 10,
+        { align: 'center' }
+      );
+
+      // Save the PDF
+      doc.save(`booking-invoice-${booking.bookingReference}.pdf`);
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      setError('Failed to generate PDF. Please try again.');
+    } finally {
+      setGeneratingPDF(false);
     }
-
-    y += 6;
-    pdf.setDrawColor(30, 64, 175);
-    pdf.setLineWidth(0.8);
-    pdf.line(margin, y, pageWidth - margin, y);
-    y += 8;
-
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(14);
-    pdf.text('Grand Total', margin, y);
-    pdf.text(`RS${getGrandTotal().toFixed(2)}`, pageWidth - margin, y, {
-      align: 'right',
-    });
-
-    y += 20;
-
-    /* =========================
-       FOOTER
-    ========================= */
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(107, 114, 128);
-    pdf.text(
-      'Thank you for traveling with Holiday Vibes Tour Ltd.',
-      pageWidth / 2,
-      y,
-      { align: 'center' }
-    );
-
-    y += 6;
-    pdf.text(
-      `Generated on ${new Date().toLocaleString()}`,
-      pageWidth / 2,
-      y,
-      { align: 'center' }
-    );
-
-    pdf.save(
-      `Invoice_${booking.bookingReference}_${new Date()
-        .toISOString()
-        .split('T')[0]}.pdf`
-    );
-  } catch (err) {
-    console.error(err);
-    setError('Failed to generate PDF');
-  } finally {
-    setGeneratingPDF(false);
-  }
-};
+  };
 
   const handleGeneratePDF = () => {
     generatePDF();
@@ -506,25 +544,25 @@ const BookingDetail = () => {
           <span className="ml-2 text-gray-500 text-lg font-normal">#{booking.bookingReference}</span>
         </h1>
         <div className="mt-3 sm:mt-0 flex items-center space-x-3">
-          {/* Only show PDF button if airport transfer status is "completed" */}
-          {showPDFButton && (
+          {/* Show PDF button for completed bookings */}
+          {(airportTransferBooking?.status === 'completed' || booking.status === 'completed') && (
             <button
               onClick={handleGeneratePDF}
               disabled={generatingPDF}
-              className="inline-flex items-center gap-2 px-5 py-3 
-             border border-purple-600 rounded-lg shadow-md 
-             text-sm font-medium text-white 
-             bg-purple-600 hover:bg-purple-700 
-             focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500
-             transition"
+              className="inline-flex items-center gap-2 px-4 py-2.5 
+               border border-blue-600 rounded-md shadow-sm 
+               text-sm font-medium text-white 
+               bg-blue-600 hover:bg-blue-700 
+               focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
+               transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {generatingPDF ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Generating PDF...
+                  Generating...
                 </>
               ) : (
                 <>

@@ -577,7 +577,7 @@ const handleSubmit = async (e) => {
                     />
                   </div>
                   <div className="text-xs text-gray-500 mt-2 bg-gray-50 p-2 rounded">
-                    Complete number: <span className="font-mono">{formData.phone || 'Not set'}</span>
+                    Complete number : <span className="font-mono">{formData.phone || 'Not set'}</span>
                   </div>
                 </div>
               </div>
@@ -849,14 +849,7 @@ const handleSubmit = async (e) => {
                       </div>
                     </div>
                     
-                    <div className="text-xs text-blue-700 mb-4 bg-blue-50 p-3 rounded-lg">
-                      <div className="flex items-start">
-                        <svg className="w-4 h-4 mr-2 mt-0.5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>Flat rate for up to {transfer.capacity} passengers. Includes all taxes and fees.</span>
-                      </div>
-                    </div>
+                    
 
                     <div className="flex justify-between items-center text-xl pt-4 border-t border-gray-200">
                       <span className="text-blue-900 font-bold">Total Amount:</span>
@@ -867,54 +860,8 @@ const handleSubmit = async (e) => {
                   </div>
                 </div>
 
-                {/* What's Included */}
-                <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-                  <h3 className="font-semibold text-green-800 mb-3 flex items-center">
-                    <svg className="w-4 h-4 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    What's Included
-                  </h3>
-                  <ul className="space-y-2 text-sm text-green-700">
-                    <li className="flex items-center">
-                      <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      Meet & greet at airport/hotel
-                    </li>
-                    <li className="flex items-center">
-                      <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      Bottled water included
-                    </li>
-                    <li className="flex items-center">
-                      <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      Free waiting time (30 mins)
-                    </li>
-                    <li className="flex items-center">
-                      <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      All taxes and parking fees
-                    </li>
-                  </ul>
-                </div>
+               
 
-                {/* Cancellation Policy */}
-                <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-                  <h3 className="font-semibold text-amber-800 mb-2 flex items-center">
-                    <svg className="w-4 h-4 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.732 0L4.242 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                    Cancellation Policy
-                  </h3>
-                  <p className="text-sm text-amber-700">
-                    Free cancellation up to 24 hours before pickup. No refund for cancellations within 24 hours.
-                  </p>
-                </div>
 
                 {/* Mauritius Flag */}
                 <div className="pt-4 border-t border-gray-200">

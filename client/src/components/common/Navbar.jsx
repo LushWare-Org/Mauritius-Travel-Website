@@ -73,14 +73,18 @@ const Navbar = () => {
                 alt="Holiday Vibes Logo"
                 className="h-10 w-10 mr-2 group-hover:scale-110 transition-transform duration-300"
               />
-              <span className="hidden sm:inline group-hover:text-yellow-100 transition-colors">
-                Holiday Vibes
-              </span>
-              <span className="text-yellow-400 ml-1 group-hover:scale-105 transition-transform duration-300">
-               Tour Ltd
-              </span>
+              {/* FIXED: Show full name on mobile */}
+              <div className="flex flex-col md:flex-row md:items-baseline">
+                <span className="text-white group-hover:text-yellow-100 transition-colors whitespace-nowrap">
+                  Holiday Vibes
+                </span>
+                <span className="text-yellow-400 md:ml-2 group-hover:scale-105 transition-transform duration-300 whitespace-nowrap text-lg md:text-2xl">
+                  Tour Ltd
+                </span>
+              </div>
             </div>
           </Link>
+          
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-6">
             <Link
@@ -181,7 +185,8 @@ const Navbar = () => {
               )}
             </Link>
           </div>
-          {/* User Authentication Section */}
+          
+          {/* User Authentication Section (Desktop) */}
           <div className="hidden md:flex items-center">
             {currentUser ? (
               <div className="relative profile-dropdown">
@@ -489,8 +494,30 @@ const Navbar = () => {
               </>
             )}
           </div>
+          
           {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
+          <div className="md:hidden flex items-center space-x-4">
+            {/* Show Book Now button for non-logged in users on mobile */}
+            {!currentUser && (
+              <Link
+                to="/activities"
+                className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-blue-900 px-4 py-2 rounded-full font-semibold text-sm transition-all transform hover:scale-105 shadow-md hover:shadow-yellow-400/50 border border-yellow-300/50 whitespace-nowrap"
+              >
+                Book Now
+              </Link>
+            )}
+            
+            {/* User profile icon for logged in users on mobile */}
+            {currentUser && (
+              <div className="flex items-center justify-center w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full shadow-md border border-yellow-400/30">
+                <span className="text-white font-bold text-sm">
+                  {currentUser.name
+                    ? currentUser.name.charAt(0).toUpperCase()
+                    : currentUser.email.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
+            
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="text-white p-2 focus:outline-none transition-all transform hover:scale-110 active:scale-95"

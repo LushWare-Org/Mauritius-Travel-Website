@@ -23,14 +23,14 @@ const RelatedActivities = ({ activities }) => {
                     <Link 
                         to={`/activities/${activity._id}`} 
                         key={activity._id}
-                        className="group relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100"
+                        className="group relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100 flex flex-col h-full"
                     >
-                        {/* Image Container */}
-                        <div className="relative h-56 overflow-hidden">
+                        {/* Image Container - Fixed Height */}
+                        <div className="relative h-48 w-full overflow-hidden">
                             <img 
                                 src={activity.image} 
                                 alt={activity.title}
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                 loading="lazy"
                             />
                             {/* Price Badge */}
@@ -41,8 +41,8 @@ const RelatedActivities = ({ activities }) => {
                             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                         </div>
                         
-                        {/* Content */}
-                        <div className="p-5">
+                        {/* Content - Flex grow to fill remaining space */}
+                        <div className="p-5 flex flex-col flex-grow">
                             {/* Title */}
                             <h3 className="font-bold text-gray-900 text-lg mb-3 group-hover:text-blue-600 transition-colors line-clamp-1">
                                 {activity.title}
@@ -67,13 +67,13 @@ const RelatedActivities = ({ activities }) => {
                                 <span className="ml-1 text-sm text-gray-500">({activity.reviewCount})</span>
                             </div>
                             
-                            {/* Description */}
-                            <p className="text-gray-600 text-sm line-clamp-2 mb-6 leading-relaxed">
+                            {/* Description - Flex-grow to push button to bottom */}
+                            <p className="text-gray-600 text-sm line-clamp-3 mb-6 leading-relaxed flex-grow">
                                 {activity.description}
                             </p>
                             
-                            {/* CTA Button */}
-                            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                            {/* CTA Button - Stays at bottom */}
+                            <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
                                 <span className="text-blue-600 font-semibold group-hover:text-blue-700 transition-colors">
                                     View Details
                                 </span>

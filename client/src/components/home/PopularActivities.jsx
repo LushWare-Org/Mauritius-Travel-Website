@@ -1,50 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { activitiesAPI } from '../../utils/api';
+import { Star, MapPin, Clock, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const PopularActivities = () => {
     const carouselRef = useRef(null);
     const [activities, setActivities] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);    useEffect(() => {
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
         const fetchPopularActivities = async () => {
             try {
                 setLoading(true);
-                setError(null);                console.log('🔍 PopularActivities: Starting to fetch activities...');
-                // Don't log the raw env variable, log the processed URL from the API utility
-                console.log('🌐 API Base URL:', activitiesAPI.baseUrl || 'Using default API configuration');
+                setError(null);
                 
                 const response = await activitiesAPI.getAll();
-                
-                console.log('📡 PopularActivities: API Response received:', response);
-                
-                // Ensure response data exists and has the expected structure
                 const activitiesData = response?.data?.data || [];
                 
-                console.log('📊 PopularActivities: Activities data:', activitiesData);
-                console.log('📈 PopularActivities: Total activities count:', activitiesData.length);
-                
-                // Filter for active activities and sort by rating
                 const popularActivities = activitiesData
                     .filter(activity => activity?.status === 'active')
                     .sort((a, b) => (b.rating || 0) - (a.rating || 0))
                     .slice(0, 6);
                 
-                console.log('⭐ PopularActivities: Popular activities (filtered & sorted):', popularActivities);
-                
                 setActivities(popularActivities);
                 setLoading(false);
             } catch (err) {
-                console.error('❌ PopularActivities: Error fetching activities:', err);
-                console.error('❌ PopularActivities: Error details:', {
-                    message: err.message,
-                    status: err.response?.status,
-                    statusText: err.response?.statusText,
-                    data: err.response?.data,
-                    config: err.config
-                });
-                
-                setError(`Failed to load activities: ${err.message}`);
+                console.error('Error fetching activities:', err);
+                setError(`Unable to load excursions at this time.`);
                 setLoading(false);
             }
         };
@@ -52,35 +35,31 @@ const PopularActivities = () => {
         fetchPopularActivities();
     }, []);
 
-    const handleBookNow = (id) => {
-        window.location.href = `/activities/${id}`;
-    };
-    
     const scrollLeft = () => {
         if (carouselRef.current) {
-            carouselRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+            const scrollAmount = carouselRef.current.clientWidth * 0.8;
+            carouselRef.current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
         }
     };
     
     const scrollRight = () => {
         if (carouselRef.current) {
-            carouselRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+            const scrollAmount = carouselRef.current.clientWidth * 0.8;
+            carouselRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
         }
     };
 
-    // Enhanced loading skeleton
     const LoadingSkeleton = () => (
-        <div className="flex space-x-6 pb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[...Array(4)].map((_, i) => (
-                <div key={i} className="flex-none w-full sm:w-1/2 md:w-1/3 lg:w-1/4 bg-white rounded-xl shadow-lg overflow-hidden animate-pulse">
-                    <div className="h-48 bg-gray-200"></div>
-                    <div className="p-4 space-y-3">
-                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div key={i} className="bg-white rounded-2xl shadow-sm overflow-hidden border border-blue-100">
+                    <div className="h-56 bg-gradient-to-br from-blue-50 to-blue-100"></div>
+                    <div className="p-6 space-y-4">
                         <div className="space-y-2">
-                            <div className="h-3 bg-gray-200 rounded"></div>
-                            <div className="h-3 bg-gray-200 rounded w-5/6"></div>
+                            <div className="h-4 bg-blue-100 rounded w-3/4"></div>
+                            <div className="h-4 bg-blue-100 rounded w-1/2"></div>
                         </div>
-                        <div className="h-8 bg-gray-200 rounded w-full"></div>
+                        <div className="h-10 bg-blue-100 rounded w-full"></div>
                     </div>
                 </div>
             ))}
@@ -88,123 +67,183 @@ const PopularActivities = () => {
     );
 
     return (
-        <section className="py-20 bg-gradient-to-br from-blue-50 via-white to-cyan-50">
-            <div className="container mx-auto px-4">
-                <div className="flex justify-between items-center mb-12">
-                    <div>
-                        <h2 className="text-4xl font-bold text-blue-700 font-display mb-2">Most Popular Excursions</h2>
-                        <p className="text-gray-600 text-lg">Discover what makes our guests come back for more</p>
-                    </div>
-                    <Link 
-                        to="/activities" 
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-semibold flex items-center space-x-2 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-                    >
-                        <span>View All</span>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                        </svg>
-                    </Link>
-                </div>
-                
-                {loading ? (
-                    <LoadingSkeleton />                ) : error ? (
-                    <div className="bg-red-50 border border-red-200 text-red-600 p-8 rounded-xl text-center">
-                        <svg className="w-16 h-16 mx-auto mb-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <h3 className="text-xl font-semibold mb-3">Unable to Load Excursions</h3>
-                        <p className="text-red-600 mb-4">{error}</p>
-                        <div className="space-y-2 text-sm text-red-500 mb-6">
-                            <p>Please check:</p>
-                            <ul className="list-disc list-inside space-y-1">
-                                <li>Your internet connection</li>
-                                <li>Browser console for detailed errors</li>
-                                <li>Try refreshing the page</li>
-                            </ul>
+        <section className="py-24 bg-gradient-to-b from-white to-blue-50/30">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
+                    <div className="md:flex-1">
+                        <div className="inline-flex items-center gap-2 mb-6">
+                            <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
+                                <MapPin className="w-6 h-6 text-white" />
+                            </div>
+                            <span className="text-blue-600 text-sm font-medium uppercase tracking-wider">
+                                Featured Experiences
+                            </span>
                         </div>
+                        
+                        <h2 className="text-4xl md:text-5xl font-light text-gray-900 mb-6">
+                            Popular <span className="font-bold text-blue-700">Activities</span>
+                        </h2>
+                        
+                        <p className="text-lg text-gray-600 leading-relaxed max-w-2xl">
+                            Discover our most cherished excursions, selected for their exceptional quality and unforgettable experiences
+                        </p>
+                    </div>
+                    
+                    <div className="md:self-center">
+                        <Link 
+                            to="/activities" 
+                            className="group relative inline-flex items-center gap-3 px-8 py-4 border-2 border-blue-600 text-blue-600 rounded-xl font-medium hover:bg-blue-50 transition-all duration-300 overflow-hidden active:scale-95"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-50/0 to-blue-50/0 group-hover:from-blue-50/100 group-hover:to-blue-100/100 transition-all duration-300"></div>
+                            <span className="relative z-10">Explore All</span>
+                            <ArrowRight className="w-5 h-5 relative z-10 transition-transform group-hover:translate-x-1" />
+                        </Link>
+                    </div>
+                </div>
+
+                {/* Content */}
+                {loading ? (
+                    <LoadingSkeleton />
+                ) : error ? (
+                    <div className="py-12 text-center">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-50 mb-6">
+                            <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-3">Connection Issue</h3>
+                        <p className="text-gray-600 mb-8 max-w-md mx-auto">{error}</p>
                         <button 
                             onClick={() => window.location.reload()} 
-                            className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200"
+                            className="px-8 py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 cursor-pointer relative overflow-hidden group"
                         >
-                            Retry
+                            <span className="relative z-10 flex items-center justify-center">
+                                Try Again
+                                <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                            </span>
                         </button>
                     </div>
                 ) : (
                     <div className="relative">
-                        <button 
-                            onClick={scrollLeft} 
-                            className="absolute left-0 top-1/2 -translate-y-1/2 -ml-6 z-20 bg-white w-12 h-12 rounded-full shadow-xl flex items-center justify-center text-blue-700 hover:bg-blue-50 hover:text-blue-800 focus:outline-none transition-all duration-300 hover:scale-110"
-                            aria-label="Scroll left"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                            </svg>
-                        </button>
-                        
+                        {/* Navigation Buttons - Enhanced */}
+                        <div className="absolute -top-20 right-4 flex space-x-3 z-10">
+                            <button 
+                                onClick={scrollLeft}
+                                className="group w-14 h-14 rounded-full border-2 border-blue-200 bg-white flex items-center justify-center text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 cursor-pointer relative overflow-hidden"
+                                aria-label="Previous activities"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-blue-100/0 group-hover:from-blue-50/100 group-hover:to-blue-100/100 transition-all duration-300"></div>
+                                <ChevronLeft className="w-6 h-6 relative z-10 group-hover:scale-110 transition-transform" />
+                            </button>
+                            <button 
+                                onClick={scrollRight}
+                                className="group w-14 h-14 rounded-full border-2 border-blue-200 bg-white flex items-center justify-center text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95 cursor-pointer relative overflow-hidden"
+                                aria-label="Next activities"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-blue-100/0 group-hover:from-blue-50/100 group-hover:to-blue-100/100 transition-all duration-300"></div>
+                                <ChevronRight className="w-6 h-6 relative z-10 group-hover:scale-110 transition-transform" />
+                            </button>
+                        </div>
+
+                        {/* Carousel */}
                         <div 
-                            ref={carouselRef} 
-                            className="flex overflow-x-auto pb-6 space-x-6 hide-scrollbar scroll-smooth"
+                            ref={carouselRef}
+                            className="flex overflow-x-auto pb-8 gap-8 scroll-smooth cursor-grab active:cursor-grabbing"
+                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                         >
-                            {activities.map((activity, index) => (
+                            {activities.map((activity) => (
                                 <div 
-                                    key={activity._id} 
-                                    className="flex-none w-full sm:w-1/2 md:w-1/3 lg:w-1/4 bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-500 flex flex-col group transform hover:scale-105"
-                                    style={{ animationDelay: `${index * 0.1}s` }}
+                                    key={activity._id}
+                                    className="flex-none w-full md:w-[calc(50%-16px)] lg:w-[calc(33.333%-16px)] xl:w-[calc(25%-16px)]"
                                 >
-                                    <div className="relative h-48 overflow-hidden">                                        <img 
-                                            src={activity.image.includes('?') ? activity.image : `${activity.image}?v=1.0.0`} 
-                                            alt={activity.title} 
-                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                                            loading="lazy"
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                        <div className="absolute top-3 right-3 bg-gradient-to-r from-orange-400 to-orange-500 text-white px-4 py-2 rounded-full font-bold shadow-lg transform group-hover:scale-110 transition-transform duration-200">
-                                            ${activity.price}
-                                        </div>
-                                        <div className="absolute top-3 left-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                                            Popular
-                                        </div>
-                                    </div>
-                                    <div className="p-6 flex flex-col flex-grow">
-                                        <div className="flex justify-between items-start mb-3">
-                                            <h3 className="text-xl font-bold text-blue-700 group-hover:text-blue-800 transition-colors leading-tight">{activity.title}</h3>
-                                        </div>
-                                        <div className="flex items-center mb-4">
-                                            <div className="flex items-center">
-                                                {[...Array(5)].map((_, i) => (
-                                                    <svg key={i} className={`w-4 h-4 ${i < Math.floor(activity.rating) ? 'text-yellow-400' : 'text-gray-300'}`} fill="currentColor" viewBox="0 0 20 20">
-                                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                                    </svg>
-                                                ))}
-                                                <span className="text-sm ml-2 text-gray-600 font-semibold">{activity.rating}</span>
-                                                <span className="ml-1 text-xs text-gray-500">({activity.reviewCount || Math.floor(Math.random() * 100) + 50})</span>
+                                    <div className="bg-white rounded-2xl overflow-hidden shadow-lg border border-blue-100 h-full flex flex-col hover:shadow-2xl transition-all duration-500 group active:scale-[0.98]">
+                                        {/* Image */}
+                                        <div className="relative h-64 overflow-hidden">
+                                            <img 
+                                                src={`${activity.image}?v=1.0.0`}
+                                                alt={activity.title}
+                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                                loading="lazy"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                                            
+                                            {/* Price */}
+                                            <div className="absolute top-4 right-4 z-10">
+                                                <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2.5 rounded-full shadow-lg group-hover:shadow-2xl transition-shadow duration-300">
+                                                    <span className="text-white font-bold text-lg">${activity.price}</span>
+                                                    <span className="text-blue-100 text-xs ml-1">/person</span>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Popular Badge */}
+                                            <div className="absolute top-4 left-4 z-10">
+                                                <span className="px-3 py-1.5 bg-white/95 backdrop-blur-sm text-blue-700 text-xs font-bold rounded-full border border-blue-100 group-hover:border-blue-200 transition-colors">
+                                                    POPULAR
+                                                </span>
                                             </div>
                                         </div>
-                                        <div className="h-20 overflow-hidden mb-6">
-                                            <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">
+
+                                        {/* Content */}
+                                        <div className="p-6 flex-grow flex flex-col">
+                                            {/* Rating */}
+                                            <div className="flex items-center mb-4">
+                                                <div className="flex items-center bg-gradient-to-r from-blue-50 to-blue-100 px-3 py-1.5 rounded-full group-hover:from-blue-100 group-hover:to-blue-200 transition-all duration-300">
+                                                    <div className="flex items-center">
+                                                        {[...Array(5)].map((_, i) => (
+                                                            <Star 
+                                                                key={i}
+                                                                className={`w-4 h-4 ${i < Math.floor(activity.rating) ? 'fill-yellow-400 text-yellow-400' : 'fill-blue-200 text-blue-200'}`}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                    <span className="ml-2 text-sm font-medium text-blue-700">
+                                                        {activity.rating || '0.0'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Title */}
+                                            <h3 className="text-xl font-semibold text-gray-900 mb-3 leading-tight line-clamp-2 group-hover:text-blue-700 transition-colors">
+                                                {activity.title}
+                                            </h3>
+                                            
+                                            {/* Duration */}
+                                            <div className="flex items-center gap-2 text-gray-600 mb-4">
+                                                <Clock className="w-4 h-4" />
+                                                <span className="text-sm">4-6 hours</span>
+                                            </div>
+                                            
+                                            {/* Description */}
+                                            <p className="text-gray-600 text-sm leading-relaxed mb-6 line-clamp-2 flex-grow">
                                                 {activity.shortDescription || activity.description}
                                             </p>
+                                            
+                                            {/* Button */}
+                                            <Link
+                                                to={`/activities/${activity._id}`}
+                                                className="group/btn w-full py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl active:scale-95 cursor-pointer relative overflow-hidden"
+                                            >
+                                                <div className="absolute inset-0 bg-gradient-to-r from-blue-700/0 to-blue-800/0 group-hover/btn:from-blue-700/100 group-hover/btn:to-blue-800/100 transition-all duration-300"></div>
+                                                <span className="relative z-10">Book Experience</span>
+                                                <ArrowRight className="w-4 h-4 relative z-10 transition-transform group-hover/btn:translate-x-1" />
+                                            </Link>
                                         </div>
-                                        <button 
-                                            onClick={() => handleBookNow(activity._id)}
-                                            className="mt-auto bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
-                                        >
-                                            Book Experience
-                                        </button>
                                     </div>
                                 </div>
                             ))}
                         </div>
-                        
-                        <button 
-                            onClick={scrollRight} 
-                            className="absolute right-0 top-1/2 -translate-y-1/2 -mr-6 z-20 bg-white w-12 h-12 rounded-full shadow-xl flex items-center justify-center text-blue-700 hover:bg-blue-50 hover:text-blue-800 focus:outline-none transition-all duration-300 hover:scale-110"
-                            aria-label="Scroll right"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                        </button>
+
+                        {/* Scroll Indicator */}
+                        {activities.length > 4 && (
+                            <div className="flex justify-center mt-8">
+                                <div className="w-32 h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                                    <div className="w-1/3 h-full bg-gradient-to-r from-blue-600 to-blue-700 rounded-full group-hover:w-1/2 transition-all duration-500"></div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

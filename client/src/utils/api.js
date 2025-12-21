@@ -217,17 +217,34 @@ export const activitiesAPI = {
   },
   
   getById: async (id, currency = 'USD') => {
-    console.log(`🔍 Activities API: Fetching activity ${id} with currency ${currency}`);
-    try {
-      const response = await API.get(`/activities/${id}`, {
-        params: { currency }
-      });
-      return response;
-    } catch (error) {
-      console.error(`❌ Error fetching activity ${id}:`, error);
-      throw error;
-    }
-  },
+  console.log(`🔍 Activities API: Fetching activity ${id} with currency ${currency}`);
+  try {
+    const response = await API.get(`/activities/${id}`, {
+      params: { 
+        currency,
+        _t: Date.now() // Add timestamp to bypass cache
+      },
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
+    
+    console.log('✅ Activity fetch response:', {
+      hasGalleryImages: !!response.data.data?.galleryImages,
+      galleryType: typeof response.data.data?.galleryImages,
+      galleryLength: Array.isArray(response.data.data?.galleryImages) 
+        ? response.data.data.galleryImages.length 
+        : 'N/A'
+    });
+    
+    return response;
+  } catch (error) {
+    console.error(`❌ Error fetching activity ${id}:`, error);
+    throw error;
+  }
+},
   
   create: async (data) => {
     console.log('➕ Activities API: Creating new activity with dual currencies');
