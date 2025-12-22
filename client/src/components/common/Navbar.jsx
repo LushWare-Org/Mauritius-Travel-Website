@@ -66,19 +66,19 @@ const Navbar = () => {
     >
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center">
+          {/* Logo */}
           <Link to="/" className="flex items-center group">
-            <div className="text-2xl font-bold text-white font-display flex items-center">
+            <div className="flex items-center">
               <img
                 src={logo}
                 alt="Holiday Vibes Logo"
-                className="h-10 w-10 mr-2 group-hover:scale-110 transition-transform duration-300"
+                className="h-9 w-9 mr-2 group-hover:scale-110 transition-transform duration-300"
               />
-              {/* FIXED: Show full name on mobile */}
-              <div className="flex flex-col md:flex-row md:items-baseline">
-                <span className="text-white group-hover:text-yellow-100 transition-colors whitespace-nowrap">
+              <div className="flex flex-col">
+                <span className="text-white font-bold text-sm sm:text-base group-hover:text-yellow-100 transition-colors whitespace-nowrap">
                   Holiday Vibes
                 </span>
-                <span className="text-yellow-400 md:ml-2 group-hover:scale-105 transition-transform duration-300 whitespace-nowrap text-lg md:text-2xl">
+                <span className="text-yellow-400 text-xs sm:text-sm group-hover:scale-105 transition-transform duration-300 whitespace-nowrap">
                   Tour Ltd
                 </span>
               </div>
@@ -211,9 +211,8 @@ const Navbar = () => {
                   <div className="absolute right-0 mt-2 w-48 bg-white/95 backdrop-blur-md rounded-md shadow-lg z-10 border border-blue-200/20 overflow-hidden animate-fade-in-down">
                     <div className="py-1">
                       {currentUser.role === 'admin' ? (
-                        /* Admin specific links */
                         <>
-                          {/* Menu Items Grid */}
+                          {/* Admin specific links */}
                           <div className="space-y-0.5 px-2">
                             <Link
                               to="/admin/dashboard"
@@ -377,8 +376,8 @@ const Navbar = () => {
                           </div>
                         </>
                       ) : (
-                        /* Regular user links */
                         <>
+                          {/* Regular user links */}
                           <div className="grid grid-cols-2 gap-2 px-3 py-2">
                             {/* Dashboard */}
                             <Link
@@ -496,21 +495,21 @@ const Navbar = () => {
           </div>
           
           {/* Mobile menu button */}
-          <div className="md:hidden flex items-center space-x-4">
-            {/* Show Book Now button for non-logged in users on mobile */}
-            {!currentUser && (
-              <Link
-                to="/activities"
-                className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-blue-900 px-4 py-2 rounded-full font-semibold text-sm transition-all transform hover:scale-105 shadow-md hover:shadow-yellow-400/50 border border-yellow-300/50 whitespace-nowrap"
-              >
-                Book Now
-              </Link>
-            )}
+          <div className="md:hidden flex items-center space-x-3">
+            {/* Book Now button for mobile - always visible */}
+            <Link
+              to="/activities"
+              className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-blue-900 px-3 py-1.5 rounded-full font-semibold text-xs transition-all transform hover:scale-105 shadow-md hover:shadow-yellow-400/50 border border-yellow-300/50 whitespace-nowrap flex items-center"
+            >
+              <i className="fas fa-calendar-check mr-1 text-[10px]"></i>
+              <span className="hidden xs:inline">Book</span>
+              <span className="xs:hidden">B</span>
+            </Link>
             
             {/* User profile icon for logged in users on mobile */}
             {currentUser && (
-              <div className="flex items-center justify-center w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full shadow-md border border-yellow-400/30">
-                <span className="text-white font-bold text-sm">
+              <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full shadow-md border border-yellow-400/30">
+                <span className="text-white font-bold text-xs">
                   {currentUser.name
                     ? currentUser.name.charAt(0).toUpperCase()
                     : currentUser.email.charAt(0).toUpperCase()}
@@ -534,200 +533,220 @@ const Navbar = () => {
 
         {/* Mobile menu */}
         <div
-          className={`md:hidden ${
-            isOpen ? 'block' : 'hidden'
-          } pt-4 animate-fade-in-down`}
+          className={`md:hidden transition-all duration-300 ${
+            isOpen 
+              ? 'max-h-[80vh] opacity-100 overflow-y-auto' 
+              : 'max-h-0 opacity-0 overflow-hidden'
+          }`}
         >
-          <div className="flex flex-col space-y-4 pb-4 bg-blue-900/90 backdrop-blur-sm mt-4 px-4 py-3 rounded-lg shadow-lg border border-blue-800/50">
-            <Link
-              to="/"
-              className={`text-white hover:text-yellow-400 transition-colors flex items-center ${
-                location.pathname === '/' ? 'font-semibold text-yellow-400' : ''
-              }`}
-            >
-              <i className="fas fa-home mr-2"></i> Home
-              {location.pathname === '/' && (
-                <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
-              )}
-            </Link>
-            <Link
-              to="/tour-packages"
-              className={`text-white hover:text-yellow-400 transition-colors flex items-center ${
-                location.pathname === '/tour-packages'
-                  ? 'font-semibold text-yellow-400'
-                  : ''
-              }`}
-            >
-              <i className="fas fa-suitcase-rolling mr-2"></i> Tour Packages
-              {location.pathname === '/tour-packages' && (
-                <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
-              )}
-            </Link>
-            <Link
-              to="/activities"
-              className={`text-white hover:text-yellow-400 transition-colors flex items-center ${
-                location.pathname === '/activities'
-                  ? 'font-semibold text-yellow-400'
-                  : ''
-              }`}
-            >
-              <i className="fas fa-water mr-2"></i> Excursions
-              {location.pathname === '/activities' && (
-                <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
-              )}
-            </Link>
-            <Link
-              to="/airport-transfers"
-              className={`text-white hover:text-yellow-400 transition-colors flex items-center ${
-                location.pathname === '/airport-transfers'
-                  ? 'font-semibold text-yellow-400'
-                  : ''
-              }`}
-            >
-              <i className="fas fa-plane mr-2"></i> Airport Transfers
-              {location.pathname === '/airport-transfers' && (
-                <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
-              )}
-            </Link>
-            <Link
-              to="/about"
-              className={`text-white hover:text-yellow-400 transition-colors flex items-center ${
-                location.pathname === '/about'
-                  ? 'font-semibold text-yellow-400'
-                  : ''
-              }`}
-            >
-              <i className="fas fa-info-circle mr-2"></i> About
-              {location.pathname === '/about' && (
-                <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
-              )}
-            </Link>
-            <Link
-              to="/contact"
-              className={`text-white hover:text-yellow-400 transition-colors flex items-center ${
-                location.pathname === '/contact'
-                  ? 'font-semibold text-yellow-400'
-                  : ''
-              }`}
-            >
-              <i className="fas fa-envelope mr-2"></i> Contact
-              {location.pathname === '/contact' && (
-                <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
-              )}
-            </Link>
+          <div className="pt-3 pb-4 bg-gradient-to-b from-blue-900/95 to-blue-950/95 backdrop-blur-md mt-3 px-4 py-4 rounded-lg shadow-xl border border-blue-700/50">
+            {/* Navigation Links */}
+            <div className="space-y-2">
+              <Link
+                to="/"
+                className={`flex items-center py-2.5 px-3 rounded-lg transition-all ${
+                  location.pathname === '/' 
+                    ? 'bg-blue-800/50 text-yellow-400 font-semibold' 
+                    : 'text-white hover:bg-blue-800/30 hover:text-yellow-300'
+                }`}
+                onClick={() => setIsOpen(false)}
+              >
+                <i className="fas fa-home w-5 mr-3 text-center"></i>
+                <span>Home</span>
+                {location.pathname === '/' && (
+                  <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
+                )}
+              </Link>
+              
+              <Link
+                to="/tour-packages"
+                className={`flex items-center py-2.5 px-3 rounded-lg transition-all ${
+                  location.pathname === '/tour-packages'
+                    ? 'bg-blue-800/50 text-yellow-400 font-semibold'
+                    : 'text-white hover:bg-blue-800/30 hover:text-yellow-300'
+                }`}
+                onClick={() => setIsOpen(false)}
+              >
+                <i className="fas fa-suitcase-rolling w-5 mr-3 text-center"></i>
+                <span>Tour Packages</span>
+                {location.pathname === '/tour-packages' && (
+                  <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
+                )}
+              </Link>
+              
+              <Link
+                to="/activities"
+                className={`flex items-center py-2.5 px-3 rounded-lg transition-all ${
+                  location.pathname === '/activities'
+                    ? 'bg-blue-800/50 text-yellow-400 font-semibold'
+                    : 'text-white hover:bg-blue-800/30 hover:text-yellow-300'
+                }`}
+                onClick={() => setIsOpen(false)}
+              >
+                <i className="fas fa-water w-5 mr-3 text-center"></i>
+                <span>Excursions</span>
+                {location.pathname === '/activities' && (
+                  <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
+                )}
+              </Link>
+              
+              <Link
+                to="/airport-transfers"
+                className={`flex items-center py-2.5 px-3 rounded-lg transition-all ${
+                  location.pathname === '/airport-transfers'
+                    ? 'bg-blue-800/50 text-yellow-400 font-semibold'
+                    : 'text-white hover:bg-blue-800/30 hover:text-yellow-300'
+                }`}
+                onClick={() => setIsOpen(false)}
+              >
+                <i className="fas fa-plane w-5 mr-3 text-center"></i>
+                <span>Airport Transfers</span>
+                {location.pathname === '/airport-transfers' && (
+                  <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
+                )}
+              </Link>
+              
+              <Link
+                to="/about"
+                className={`flex items-center py-2.5 px-3 rounded-lg transition-all ${
+                  location.pathname === '/about'
+                    ? 'bg-blue-800/50 text-yellow-400 font-semibold'
+                    : 'text-white hover:bg-blue-800/30 hover:text-yellow-300'
+                }`}
+                onClick={() => setIsOpen(false)}
+              >
+                <i className="fas fa-info-circle w-5 mr-3 text-center"></i>
+                <span>About</span>
+                {location.pathname === '/about' && (
+                  <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
+                )}
+              </Link>
+              
+              <Link
+                to="/contact"
+                className={`flex items-center py-2.5 px-3 rounded-lg transition-all ${
+                  location.pathname === '/contact'
+                    ? 'bg-blue-800/50 text-yellow-400 font-semibold'
+                    : 'text-white hover:bg-blue-800/30 hover:text-yellow-300'
+                }`}
+                onClick={() => setIsOpen(false)}
+              >
+                <i className="fas fa-envelope w-5 mr-3 text-center"></i>
+                <span>Contact</span>
+                {location.pathname === '/contact' && (
+                  <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
+                )}
+              </Link>
+            </div>
 
+            {/* Authentication Section */}
             {currentUser ? (
               <>
-                <div className="border-t border-blue-700 pt-4 mt-2"></div>
-                {currentUser.role === 'admin' ? (
-                  /* Mobile Admin links */
-                  <>
+                <div className="border-t border-blue-700 pt-3 mt-3">
+                  <div className="text-xs font-semibold text-yellow-300/80 uppercase tracking-wider px-3 py-2">
+                    My Account
+                  </div>
+                  
+                  {currentUser.role === 'admin' ? (
                     <Link
                       to="/admin/dashboard"
-                      className="text-white hover:text-yellow-300 transition-colors flex items-center"
+                      className="flex items-center py-2.5 px-3 rounded-lg text-white hover:bg-blue-800/30 hover:text-yellow-300 transition-all"
+                      onClick={() => setIsOpen(false)}
                     >
-                      <i className="fas fa-user-shield mr-2"></i> Admin Panel
+                      <i className="fas fa-user-shield w-5 mr-3 text-center"></i>
+                      <span className="flex-1">Admin Panel</span>
                     </Link>
-                    <Link
-                      to="/admin/activities"
-                      className="text-white hover:text-yellow-300 transition-colors flex items-center"
-                    >
-                      <i className="fas fa-water mr-2"></i> Manage Excursions
-                    </Link>
-                    <Link
-                      to="/admin/tour-packages"
-                      className="text-white hover:text-yellow-300 transition-colors flex items-center"
-                    >
-                      <i className="fas fa-suitcase-rolling mr-2"></i> Manage
-                      Tour Packages
-                    </Link>
-                    <Link
-                      to="/admin/bookings"
-                      className="text-white hover:text-yellow-300 transition-colors flex items-center"
-                    >
-                      <i className="fas fa-calendar-check mr-2"></i> Manage
-                      Excursion Bookings
-                    </Link>
-                    <Link
-                      to="/admin/tour-package-bookings"
-                      className="text-white hover:text-yellow-300 transition-colors flex items-center"
-                    >
-                      <i className="fas fa-ticket-alt mr-2"></i> Tour Package
-                      Bookings
-                    </Link>
-                    <Link
-                      to="/admin/users"
-                      className="text-white hover:text-yellow-300 transition-colors flex items-center"
-                    >
-                      <i className="fas fa-users mr-2"></i> Manage Users
-                    </Link>
-                  </>
-                ) : (
-                  /* Mobile user links */
-                  <>
-                    <Link
-                      to="/dashboard"
-                      className="text-white hover:text-yellow-300 transition-colors flex items-center"
-                    >
-                      <i className="fas fa-tachometer-alt mr-2"></i> Dashboard
-                    </Link>
-                    <Link
-                      to="/profile"
-                      className="text-white hover:text-yellow-300 transition-colors flex items-center"
-                    >
-                      <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center mr-2">
-                        <span className="text-white text-xs font-bold">
-                          {currentUser.name
-                            ? currentUser.name.charAt(0).toUpperCase()
-                            : currentUser.email.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      My Profile
-                    </Link>
-                    <Link
-                      to="/dashboard/bookings"
-                      className="text-white hover:text-yellow-300 transition-colors flex items-center"
-                    >
-                      <i className="fas fa-calendar-check mr-2"></i> My Bookings
-                    </Link>
-                    <Link
-                      to="/dashboard/tour-package-bookings"
-                      className="text-white hover:text-yellow-300 transition-colors flex items-center"
-                    >
-                      <i className="fas fa-suitcase-rolling mr-2"></i> Tour
-                      Package Bookings
-                    </Link>
-                  </>
-                )}
-                <button
-                  onClick={handleSignOut}
-                  className="text-white hover:text-yellow-300 transition-colors text-left flex items-center"
-                >
-                  <i className="fas fa-sign-out-alt mr-2"></i> Sign Out
-                </button>
+                  ) : (
+                    <>
+                      <Link
+                        to="/dashboard"
+                        className="flex items-center py-2.5 px-3 rounded-lg text-white hover:bg-blue-800/30 hover:text-yellow-300 transition-all"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <i className="fas fa-tachometer-alt w-5 mr-3 text-center"></i>
+                        <span>Dashboard</span>
+                      </Link>
+                      <Link
+                        to="/profile"
+                        className="flex items-center py-2.5 px-3 rounded-lg text-white hover:bg-blue-800/30 hover:text-yellow-300 transition-all"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <div className="w-5 h-5 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full flex items-center justify-center mr-3">
+                          <span className="text-white text-xs font-bold">
+                            {currentUser.name
+                              ? currentUser.name.charAt(0).toUpperCase()
+                              : currentUser.email.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <span>My Profile</span>
+                      </Link>
+                      <Link
+                        to="/dashboard/bookings"
+                        className="flex items-center py-2.5 px-3 rounded-lg text-white hover:bg-blue-800/30 hover:text-yellow-300 transition-all"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <i className="fas fa-calendar-check w-5 mr-3 text-center"></i>
+                        <span>Excursion Bookings</span>
+                      </Link>
+                      <Link
+                        to="/dashboard/tour-package-bookings"
+                        className="flex items-center py-2.5 px-3 rounded-lg text-white hover:bg-blue-800/30 hover:text-yellow-300 transition-all"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <i className="fas fa-suitcase-rolling w-5 mr-3 text-center"></i>
+                        <span>Tour Package Bookings</span>
+                      </Link>
+                    </>
+                  )}
+                  
+                  <button
+                    onClick={() => {
+                      handleSignOut();
+                      setIsOpen(false);
+                    }}
+                    className="w-full flex items-center py-2.5 px-3 rounded-lg text-red-300 hover:bg-red-900/30 hover:text-red-200 transition-all"
+                  >
+                    <i className="fas fa-sign-out-alt w-5 mr-3 text-center"></i>
+                    <span>Sign Out</span>
+                  </button>
+                </div>
               </>
             ) : (
               <>
-                <Link
-                  to="/login"
-                  className="text-white hover:text-yellow-300 transition-colors flex items-center"
-                >
-                  <i className="fas fa-user mr-2"></i> Login
-                </Link>
-                <Link
-                  to="/signup"
-                  className="text-white hover:text-yellow-300 transition-colors flex items-center"
-                >
-                  <i className="fas fa-user-plus mr-2"></i> Sign Up
-                </Link>
-                <Link
-                  to="/activities"
-                  className="bg-yellow-500 hover:bg-yellow-600 text-blue-900 px-4 py-2 rounded-full font-semibold transition-colors inline-block text-center mt-2"
-                >
-                  Book Now
-                </Link>
+                <div className="border-t border-blue-700 pt-3 mt-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link
+                      to="/login"
+                      className="flex items-center justify-center py-2.5 px-3 rounded-lg bg-blue-800/40 text-white hover:bg-blue-700/60 hover:text-yellow-300 transition-all"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <i className="fas fa-user mr-2"></i>
+                      <span>Login</span>
+                    </Link>
+                    <Link
+                      to="/signup"
+                      className="flex items-center justify-center py-2.5 px-3 rounded-lg bg-yellow-500/90 hover:bg-yellow-400 text-blue-900 font-semibold transition-all"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <i className="fas fa-user-plus mr-2"></i>
+                      <span>Sign Up</span>
+                    </Link>
+                  </div>
+                </div>
               </>
             )}
+            
+            {/* Prominent Book Now Button at bottom */}
+            <div className="mt-4 pt-3 border-t border-yellow-500/30">
+              <Link
+                to="/activities"
+                className="block w-full bg-gradient-to-r from-yellow-500 to-yellow-400 hover:from-yellow-400 hover:to-yellow-500 text-blue-900 px-4 py-3 rounded-lg font-bold text-center transition-all transform hover:scale-[1.02] shadow-lg hover:shadow-yellow-400/50"
+                onClick={() => setIsOpen(false)}
+              >
+                <i className="fas fa-calendar-check mr-2"></i>
+                Book Now
+              </Link>
+            </div>
           </div>
         </div>
       </div>
