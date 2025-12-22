@@ -185,7 +185,7 @@ const TourPackageDetail = () => {
                                     </div>
                                 )}
                                 
-                                <div className="text-sm opacity-90 mb-4">per person</div>
+                                <div className="text-sm opacity-90 mb-4">per package</div>
                                 
                                 {/* Currency Type Badge */}
                                 <div className="mb-4">
@@ -207,7 +207,7 @@ const TourPackageDetail = () => {
                                 <div className="text-xs opacity-75">
                                     <div className="flex items-center">
                                         <FaCheckCircle className="mr-2" size={12} />
-                                        Free cancellation up to 24 hours
+                                          Contact us
                                     </div>
                                     <div className="flex items-center mt-1">
                                         <FaCheckCircle className="mr-2" size={12} />

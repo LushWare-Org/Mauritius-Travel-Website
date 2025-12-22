@@ -161,6 +161,16 @@ const TourPackages = () => {
         return Math.round(total / filteredTours.length);
     };
 
+    // Get currency label
+    const getCurrencyLabel = (currencyType) => {
+        switch(currencyType) {
+            case 'all': return 'All Currencies';
+            case 'rs': return 'Rupees Only';
+            case 'euro': return 'Euro Only';
+            default: return 'All Currencies';
+        }
+    };
+
     return (
         <div className="bg-gray-50 py-8">
             <div className="container mx-auto px-4">
@@ -170,40 +180,6 @@ const TourPackages = () => {
                         <div>
                             <h1 className="text-3xl font-bold text-blue-700 font-display">Mauritius Tour Packages</h1>
                             <p className="text-gray-600 mt-2">Discover and book the best tour packages in Mauritius</p>
-                        </div>
-                        <div className="mt-4 md:mt-0">
-                            <div className="flex flex-wrap gap-2">
-                                <button
-                                    onClick={() => handleCurrencyFilterChange('all')}
-                                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                                        currencyFilter === 'all' 
-                                        ? 'bg-blue-600 text-white' 
-                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                    }`}
-                                >
-                                    All Currencies
-                                </button>
-                                <button
-                                    onClick={() => handleCurrencyFilterChange('rs')}
-                                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                                        currencyFilter === 'rs' 
-                                        ? 'bg-green-600 text-white' 
-                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                    }`}
-                                >
-                                    Rs Only
-                                </button>
-                                <button
-                                    onClick={() => handleCurrencyFilterChange('euro')}
-                                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                                        currencyFilter === 'euro' 
-                                        ? 'bg-yellow-600 text-white' 
-                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                    }`}
-                                >
-                                    Euro Only
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -227,7 +203,6 @@ const TourPackages = () => {
                                 </button>
                             </div>
                         )}
-                        
                         
                         {/* Tour Packages Info */}
                         <div className="bg-white p-4 rounded-lg shadow">
@@ -259,6 +234,18 @@ const TourPackages = () => {
                                         <span className="text-gray-600">Max:</span>
                                         <span className="font-medium">
                                             Rs {filteredTours.length > 0 ? Math.max(...filteredTours.map(t => Number(t?.priceRs) || Number(t?.price) || 0)).toLocaleString() : 0}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="pt-2 border-t border-gray-100">
+                                    <div className="text-xs text-gray-500 mb-2">Currency Filter:</div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Selected:</span>
+                                        <span className={`font-medium ${
+                                            currencyFilter === 'rs' ? 'text-green-600' :
+                                            currencyFilter === 'euro' ? 'text-yellow-600' : 'text-blue-600'
+                                        }`}>
+                                            {getCurrencyLabel(currencyFilter)}
                                         </span>
                                     </div>
                                 </div>
@@ -323,10 +310,30 @@ const TourPackages = () => {
                                         currencyFilter === 'rs' ? 'text-green-600' :
                                         currencyFilter === 'euro' ? 'text-yellow-600' : 'text-blue-600'
                                     }`}>
-                                        {currencyFilter === 'all' ? 'All Currencies' :
-                                         currencyFilter === 'rs' ? 'Rupees Only' : 'Euro Only'}
+                                        {getCurrencyLabel(currencyFilter)}
                                     </span>
                                 </p>
+                            </div>
+                            
+                            {/* Currency Filter Dropdown */}
+                            <div className="mt-4 sm:mt-0">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Filter by:</label>
+                                    <div className="relative">
+                                        <select
+                                            value={currencyFilter}
+                                            onChange={(e) => handleCurrencyFilterChange(e.target.value)}
+                                            className="border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white text-sm"
+                                        >
+                                            <option value="all">All Currencies</option>
+                                            <option value="rs">Rupees Only (Rs)</option>
+                                            <option value="euro">Euro Only (€)</option>
+                                        </select>
+                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-700">
+                                            <i className="fas fa-money-bill-wave text-gray-400"></i>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -384,7 +391,17 @@ const TourPackages = () => {
                                     <i className="fas fa-info-circle text-blue-500 mt-1 mr-2"></i>
                                     <div>
                                         <p className="text-sm text-blue-800 font-medium mb-1">About Tour Package Prices</p>
-                                        
+                                        <p className="text-xs text-blue-700">
+                                            Tour packages can be priced in multiple currencies:
+                                        </p>
+                                        <ul className="text-xs text-blue-700 mt-1 list-disc list-inside">
+                                            <li><span className="font-medium">Both currencies:</span> Shows both Rs and € prices</li>
+                                            <li><span className="font-medium">Rs Only:</span> Only shows Rupees price</li>
+                                            <li><span className="font-medium">€ Only:</span> Only shows Euro price</li>
+                                        </ul>
+                                        <p className="text-xs text-blue-700 mt-1">
+                                            Use the currency filter to show only packages available in your preferred currency.
+                                        </p>
                                     </div>
                                 </div>
                             </div>

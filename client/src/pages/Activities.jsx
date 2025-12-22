@@ -175,23 +175,7 @@ const Activities = () => {
                             <h1 className="text-3xl font-bold text-blue-700 font-display">Our Excursions</h1>
                             <p className="text-gray-600 mt-2">Discover and book the best experiences in the Mauritius</p>
                         </div>
-                        <div className="mt-4 md:mt-0">
-                            <div className="flex items-center space-x-2">
-                                <span className="text-gray-700 font-medium">Currency:</span>
-                                <select
-                                    value={currency}
-                                    onChange={(e) => handleCurrencyChange(e.target.value)}
-                                    className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                                >
-                                    <option value="USD">USD ($)</option>
-                                    <option value="EUR">EUR (€)</option>
-                                    <option value="MUR">MUR (Rs)</option>
-                                </select>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-1">
-                                All prices shown in {currency} {currencySymbol}
-                            </p>
-                        </div>
+                        
                     </div>
                 </div>
                 

@@ -188,7 +188,7 @@ const TourPackageListItem = ({ pkg }) => {
                             </div>
                         )}
                         
-                        <div className="text-gray-500 text-sm mt-1">per person</div>
+                        <div className="text-gray-500 text-sm mt-1">per package</div>
                         
                         {/* Currency Option Info */}
                         {priceDisplay.currencyType === 'both' && (
