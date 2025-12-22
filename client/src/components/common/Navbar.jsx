@@ -72,19 +72,19 @@ const Navbar = () => {
               <img
                 src={logo}
                 alt="Holiday Vibes Logo"
-                className="h-9 w-9 mr-2 group-hover:scale-110 transition-transform duration-300"
+                className="h-12 w-12 mr-2 group-hover:scale-110 transition-transform duration-300"
               />
               <div className="flex flex-col">
-                <span className="text-white font-bold text-sm sm:text-base group-hover:text-yellow-100 transition-colors whitespace-nowrap">
+                <span className="text-white font-bold text-base sm:text-lg group-hover:text-yellow-100 transition-colors whitespace-nowrap">
                   Holiday Vibes
                 </span>
-                <span className="text-yellow-400 text-xs sm:text-sm group-hover:scale-105 transition-transform duration-300 whitespace-nowrap">
+                <span className="text-yellow-400 text-sm sm:text-base group-hover:scale-105 transition-transform duration-300 whitespace-nowrap">
                   Tour Ltd
                 </span>
               </div>
             </div>
           </Link>
-          
+
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-6">
             <Link
@@ -185,7 +185,7 @@ const Navbar = () => {
               )}
             </Link>
           </div>
-          
+
           {/* User Authentication Section (Desktop) */}
           <div className="hidden md:flex items-center">
             {currentUser ? (
@@ -493,19 +493,19 @@ const Navbar = () => {
               </>
             )}
           </div>
-          
+
           {/* Mobile menu button */}
           <div className="md:hidden flex items-center space-x-3">
             {/* Book Now button for mobile - always visible */}
             <Link
               to="/activities"
-              className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-blue-900 px-3 py-1.5 rounded-full font-semibold text-xs transition-all transform hover:scale-105 shadow-md hover:shadow-yellow-400/50 border border-yellow-300/50 whitespace-nowrap flex items-center"
+              className="bg-gradient-to-r from-yellow-500 to-yellow-400 text-blue-900 px-2 py-1.5 rounded-full font-semibold text-xs transition-all transform hover:scale-105 shadow-md hover:shadow-yellow-400/50 border border-yellow-300/50 whitespace-nowrap flex items-center"
             >
               <i className="fas fa-calendar-check mr-1 text-[10px]"></i>
               <span className="hidden xs:inline">Book</span>
-              <span className="xs:hidden">B</span>
+              <span className="xs:hidden">Book</span>
             </Link>
-            
+
             {/* User profile icon for logged in users on mobile */}
             {currentUser && (
               <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full shadow-md border border-yellow-400/30">
@@ -516,7 +516,7 @@ const Navbar = () => {
                 </span>
               </div>
             )}
-            
+
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="text-white p-2 focus:outline-none transition-all transform hover:scale-110 active:scale-95"
@@ -534,8 +534,8 @@ const Navbar = () => {
         {/* Mobile menu */}
         <div
           className={`md:hidden transition-all duration-300 ${
-            isOpen 
-              ? 'max-h-[80vh] opacity-100 overflow-y-auto' 
+            isOpen
+              ? 'max-h-[80vh] opacity-100 overflow-y-auto'
               : 'max-h-0 opacity-0 overflow-hidden'
           }`}
         >
@@ -545,8 +545,8 @@ const Navbar = () => {
               <Link
                 to="/"
                 className={`flex items-center py-2.5 px-3 rounded-lg transition-all ${
-                  location.pathname === '/' 
-                    ? 'bg-blue-800/50 text-yellow-400 font-semibold' 
+                  location.pathname === '/'
+                    ? 'bg-blue-800/50 text-yellow-400 font-semibold'
                     : 'text-white hover:bg-blue-800/30 hover:text-yellow-300'
                 }`}
                 onClick={() => setIsOpen(false)}
@@ -557,7 +557,7 @@ const Navbar = () => {
                   <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
                 )}
               </Link>
-              
+
               <Link
                 to="/tour-packages"
                 className={`flex items-center py-2.5 px-3 rounded-lg transition-all ${
@@ -573,7 +573,7 @@ const Navbar = () => {
                   <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
                 )}
               </Link>
-              
+
               <Link
                 to="/activities"
                 className={`flex items-center py-2.5 px-3 rounded-lg transition-all ${
@@ -589,7 +589,7 @@ const Navbar = () => {
                   <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
                 )}
               </Link>
-              
+
               <Link
                 to="/airport-transfers"
                 className={`flex items-center py-2.5 px-3 rounded-lg transition-all ${
@@ -605,7 +605,7 @@ const Navbar = () => {
                   <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
                 )}
               </Link>
-              
+
               <Link
                 to="/about"
                 className={`flex items-center py-2.5 px-3 rounded-lg transition-all ${
@@ -621,7 +621,7 @@ const Navbar = () => {
                   <i className="fas fa-circle text-xs ml-auto text-yellow-400"></i>
                 )}
               </Link>
-              
+
               <Link
                 to="/contact"
                 className={`flex items-center py-2.5 px-3 rounded-lg transition-all ${
@@ -646,7 +646,7 @@ const Navbar = () => {
                   <div className="text-xs font-semibold text-yellow-300/80 uppercase tracking-wider px-3 py-2">
                     My Account
                   </div>
-                  
+
                   {currentUser.role === 'admin' ? (
                     <Link
                       to="/admin/dashboard"
@@ -698,7 +698,7 @@ const Navbar = () => {
                       </Link>
                     </>
                   )}
-                  
+
                   <button
                     onClick={() => {
                       handleSignOut();
@@ -735,7 +735,7 @@ const Navbar = () => {
                 </div>
               </>
             )}
-            
+
             {/* Prominent Book Now Button at bottom */}
             <div className="mt-4 pt-3 border-t border-yellow-500/30">
               <Link
