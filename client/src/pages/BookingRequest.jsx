@@ -546,23 +546,7 @@ const BookingRequest = () => {
                   />
                 </div>
 
-                {/* Terms & Conditions */}
-                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-4 border border-blue-100">
-                  <div className="flex items-start">
-                    <input
-                      type="checkbox"
-                      id="terms"
-                      required
-                      className="mt-0.5 mr-3 w-4 h-4 text-blue-600 bg-white border-2 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                    />
-                    <label htmlFor="terms" className="text-gray-700 text-sm">
-                      <span className="font-medium text-gray-900">I agree to the Terms & Conditions and Privacy Policy.</span>
-                      <p className="text-xs text-gray-600 mt-1">
-                        By proceeding, you acknowledge our booking policies and privacy practices.
-                      </p>
-                    </label>
-                  </div>
-                </div>
+               
 
                 {/* Submit Button */}
                 <button

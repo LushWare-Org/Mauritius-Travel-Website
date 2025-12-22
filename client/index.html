@@ -2,60 +2,86 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+    />
     <title>Holiday Vibes Tour - Mauritius</title>
+
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
-    <!-- Tailwind CSS -->
+
+    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
-      .goog-te-banner-frame {
-        display: none !important;
+      /* 🔒 PREVENT RIGHT SIDE WHITE SPACE */
+      html,
+      body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden !important;
       }
+
+      /* Hide Google Translate UI completely */
+      .goog-te-banner-frame,
+      .goog-te-banner,
+      .goog-tooltip,
+      .goog-te-balloon-frame,
+      #goog-gt-tt,
+      .goog-te-ftab,
+      .skiptranslate {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+      }
+
       body {
         top: 0 !important;
       }
+
       .goog-te-combo {
         opacity: 0;
         position: absolute;
+        width: 1px;
+        height: 1px;
+        pointer-events: none;
       }
 
-      /* Smooth animations */
+      /* Animation */
       @keyframes fadeIn {
         from {
           opacity: 0;
-          transform: translateY(-5px);
+          transform: translateY(-6px);
         }
         to {
           opacity: 1;
           transform: translateY(0);
         }
       }
+
       .animate-fadeIn {
         animation: fadeIn 0.2s ease-out;
       }
 
-      /* Draggable styles */
-      .draggable {
-        cursor: move;
-        user-select: none;
-        -webkit-user-select: none;
-        touch-action: none;
-      }
-
+      /* Draggable */
       .draggable-handle {
         cursor: grab;
+        user-select: none;
       }
 
       .draggable-handle:active {
         cursor: grabbing;
       }
+
+      #compactWindow {
+        max-width: calc(100vw - 16px);
+      }
     </style>
   </head>
 
   <body>
+    <!-- React root -->
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
 
@@ -71,415 +97,68 @@
     </script>
     <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
-    <!-- COMPACT MOVABLE LANGUAGE SELECTOR -->
-    <div id="languageContainer" class="fixed z-50 top-4 right-20">
-      <!-- Compact Toggle Button (always visible) -->
+    <!-- 🌐 LANGUAGE SELECTOR -->
+    <div id="languageContainer" class="fixed z-[999999] top-4 right-4">
+      <!-- Toggle Button -->
       <button
         id="compactToggleBtn"
         onclick="toggleCompactWindow()"
-        class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full shadow-lg hover:shadow-xl hover:scale-110 active:scale-95 transition-all duration-200 flex items-center justify-center group"
-        title="Translate"
+        class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full shadow-lg hover:scale-110 transition flex items-center justify-center"
       >
         <span class="text-white text-xl">🌐</span>
       </button>
 
-      <!-- Compact Floating Window -->
+      <!-- Floating Window -->
       <div
         id="compactWindow"
-        class="absolute top-14 right-0 bg-white rounded-xl shadow-xl border border-gray-200 opacity-0 scale-95 pointer-events-none transition-all duration-200 origin-top-right draggable min-w-[140px] hidden"
+        class="absolute top-12 right-0 bg-white rounded-xl shadow-xl border opacity-0 scale-95 pointer-events-none transition origin-top-right hidden"
       >
-        <!-- Drag Handle -->
+        <!-- Header -->
         <div
-          class="draggable-handle px-3 py-2 bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200 cursor-move rounded-t-xl"
+          class="draggable-handle px-3 py-2 bg-gradient-to-r from-blue-50 to-purple-50 border-b rounded-t-xl flex justify-between items-center"
         >
-          <div
-            id="languageContainer2"
-            class="fixed top-4 right-12 z-50"
-            style="left: auto; transform: none"
-          >
-            <span class="text-xs font-semibold text-gray-700">Translate</span>
-            <div class="flex items-center gap-1">
-              <button
-                onclick="toggleCompactMoveMode()"
-                class="p-1 hover:bg-white/50 rounded transition-colors"
-                title="Move"
-              >
-                <svg
-                  class="w-3 h-3 text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M7 7l4-4m0 0l4 4m-4-4v16m0 0l-4 4m4-4l4 4"
-                  />
-                </svg>
-              </button>
-              <button
-                onclick="toggleCompactWindow()"
-                class="p-1 hover:bg-red-50 hover:text-red-600 rounded transition-colors"
-                title="Close"
-              >
-                <svg
-                  class="w-3 h-3 text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  ></path>
-                </svg>
-              </button>
-            </div>
-          </div>
+          <span class="text-xs font-semibold text-gray-700">Translate</span>
+          <button onclick="toggleCompactWindow()">✕</button>
         </div>
 
-        <!-- Language Options -->
-        <div class="p-2 flex flex-col gap-2">
-          <button
-            onclick="setCompactLanguage('en')"
-            class="compact-language-option active"
-          >
-            <div
-              class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center"
-            >
-              <span class="text-lg">🇺🇸</span>
-            </div>
-            <div class="text-left">
-              <span class="text-xs font-medium text-gray-800">English</span>
-              <div class="text-[10px] text-gray-500">EN</div>
-            </div>
-            <div class="ml-auto w-2 h-2 rounded-full bg-blue-500"></div>
+        <!-- Languages -->
+        <div class="p-2 space-y-2">
+          <button onclick="setCompactLanguage('en')" class="flex items-center gap-2 w-full">
+            🇺🇸 <span>English</span>
           </button>
-
-          <button
-            onclick="setCompactLanguage('fr')"
-            class="compact-language-option"
-          >
-            <div
-              class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center"
-            >
-              <span class="text-lg">🇫🇷</span>
-            </div>
-            <div class="text-left">
-              <span class="text-xs font-medium text-gray-800">Français</span>
-              <div class="text-[10px] text-gray-500">FR</div>
-            </div>
+          <button onclick="setCompactLanguage('fr')" class="flex items-center gap-2 w-full">
+            🇫🇷 <span>Français</span>
           </button>
-
-          <button
-            onclick="setCompactLanguage('de')"
-            class="compact-language-option"
-          >
-            <div
-              class="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center"
-            >
-              <span class="text-lg">🇩🇪</span>
-            </div>
-            <div class="text-left">
-              <span class="text-xs font-medium text-gray-800">Deutsch</span>
-              <div class="text-[9px] text-gray-500">DE</div>
-            </div>
+          <button onclick="setCompactLanguage('de')" class="flex items-center gap-2 w-full">
+            🇩🇪 <span>Deutsch</span>
           </button>
-        </div>
-
-        <!-- Footer -->
-        <div
-          class="px-3 py-1.5 bg-gray-50 border-t border-gray-200 rounded-b-xl"
-        >
-          <p class="text-[10px] text-gray-500 text-center">
-            Drag header to move
-          </p>
         </div>
       </div>
     </div>
 
-    <style>
-      /* Google Translate hiding */
-      .goog-te-banner-frame {
-        display: none !important;
-      }
-      body {
-        top: 0 !important;
-      }
-      .goog-te-combo {
-        opacity: 0;
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        pointer-events: none;
-      }
-
-      /* Hide Google Translate's "This page is translated" popup */
-      .goog-te-banner {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        height: 0 !important;
-        overflow: hidden !important;
-      }
-
-      /* Hide the Google Translate attribution */
-      .goog-te-ftab {
-        display: none !important;
-      }
-
-      /* Hide the floating Google Translate toolbar */
-      #goog-gt-tt {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-      }
-
-      /* Hide the translated text popup */
-      .goog-tooltip {
-        display: none !important;
-      }
-
-      /* Hide the "Show original" button */
-      .goog-te-balloon-frame {
-        display: none !important;
-      }
-
-      /* Hide Google Translate's "Translating..." banner */
-      .goog-te-banner-frame.skiptranslate {
-        display: none !important;
-      }
-
-      /* Prevent Google Translate from injecting styles that affect layout */
-      .skiptranslate {
-        display: none !important;
-        visibility: hidden !important;
-      }
-
-      /* Make sure the language container stays visible */
-      #languageContainer {
-        z-index: 999999 !important; /* Very high z-index to stay above Google Translate */
-      }
-
-      /* Language selector vertical layout */
-      #languageRow {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 8px;
-        gap: 6px;
-        min-width: 60px;
-      }
-
-      /* Language buttons vertical layout */
-      .language-button {
-        width: 48px;
-        height: 48px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        margin-bottom: 4px;
-      }
-
-      /* Last language button shouldn't have bottom margin */
-      .language-button:last-child {
-        margin-bottom: 0;
-      }
-
-      /* Active language styling */
-      .language-button.active {
-        background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important;
-        transform: scale(1.1);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-      }
-
-      /* Language flags */
-      .language-button .flag {
-        font-size: 24px;
-        transition: all 0.2s ease;
-      }
-
-      /* Drag handle styling */
-      .draggable-handle {
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 8px;
-      }
-
-      /* Settings button */
-      .settings-button {
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-top: 8px;
-      }
-
-      /* Tooltip styling */
-      .language-button::after {
-        content: attr(title);
-        position: absolute;
-        left: 60px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: #1f2937;
-        color: white;
-        padding: 6px 12px;
-        border-radius: 6px;
-        font-size: 10px;
-        white-space: nowrap;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.2s ease;
-        z-index: 1000000;
-      }
-
-      .language-button:hover::after {
-        opacity: 1;
-      }
-
-      /* Settings panel positioning */
-      #settingsPanel {
-        position: absolute;
-        left: 60px;
-        top: 0;
-        z-index: 1000001;
-      }
-    </style>
-
     <script>
-      // Compact window variables
-      let isCompactWindowVisible = false;
-      let isCompactDragging = false;
-      let isCompactMoveMode = false;
-      let compactXOffset = 0;
-      let compactYOffset = 0;
-      let compactInitialX, compactInitialY, compactCurrentX, compactCurrentY;
+      let isOpen = false;
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+      let offsetX = 0;
+      let offsetY = 0;
 
-      const compactContainer = document.getElementById('languageContainer');
-      const compactWindow = document.getElementById('compactWindow');
-      const compactToggleBtn = document.getElementById('compactToggleBtn');
+      const toggleBtn = document.getElementById('compactToggleBtn');
+      const windowEl = document.getElementById('compactWindow');
+      const header = windowEl.querySelector('.draggable-handle');
 
       function toggleCompactWindow() {
-        isCompactWindowVisible = !isCompactWindowVisible;
-        if (isCompactWindowVisible) {
-          compactWindow.classList.remove('hidden');
+        isOpen = !isOpen;
+        if (isOpen) {
+          windowEl.classList.remove('hidden');
           setTimeout(() => {
-            compactWindow.classList.remove(
-              'opacity-0',
-              'scale-95',
-              'pointer-events-none'
-            );
-            compactWindow.classList.add(
-              'opacity-100',
-              'scale-100',
-              'pointer-events-auto'
-            );
+            windowEl.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
           }, 10);
         } else {
-          compactWindow.classList.add(
-            'opacity-0',
-            'scale-95',
-            'pointer-events-none'
-          );
-          compactWindow.classList.remove(
-            'opacity-100',
-            'scale-100',
-            'pointer-events-auto'
-          );
-          setTimeout(() => {
-            compactWindow.classList.add('hidden');
-          }, 200);
+          windowEl.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+          setTimeout(() => windowEl.classList.add('hidden'), 200);
         }
-      }
-
-      function toggleCompactMoveMode() {
-        isCompactMoveMode = !isCompactMoveMode;
-        compactWindow.classList.toggle('compact-move-mode', isCompactMoveMode);
-      }
-
-      // Make compact window draggable by header
-      const compactHeader = compactWindow.querySelector('.draggable-handle');
-
-      compactHeader.addEventListener('mousedown', compactDragStart);
-      compactHeader.addEventListener('touchstart', compactDragStart);
-
-      document.addEventListener('mousemove', compactDrag);
-      document.addEventListener('touchmove', compactDrag);
-
-      document.addEventListener('mouseup', compactDragEnd);
-      document.addEventListener('touchend', compactDragEnd);
-
-      // Keyboard shortcut for compact mode
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && isCompactWindowVisible) {
-          toggleCompactWindow();
-        }
-      });
-
-      function compactDragStart(e) {
-        e.preventDefault();
-        isCompactDragging = true;
-
-        if (e.type === 'touchstart') {
-          compactInitialX = e.touches[0].clientX - compactXOffset;
-          compactInitialY = e.touches[0].clientY - compactYOffset;
-        } else {
-          compactInitialX = e.clientX - compactXOffset;
-          compactInitialY = e.clientY - compactYOffset;
-        }
-
-        compactWindow.style.transition = 'none';
-        document.body.style.userSelect = 'none';
-      }
-
-      function compactDrag(e) {
-        if (!isCompactDragging) return;
-
-        e.preventDefault();
-
-        if (e.type === 'touchmove') {
-          compactCurrentX = e.touches[0].clientX - compactInitialX;
-          compactCurrentY = e.touches[0].clientY - compactInitialY;
-        } else {
-          compactCurrentX = e.clientX - compactInitialX;
-          compactCurrentY = e.clientY - compactInitialY;
-        }
-
-        compactXOffset = compactCurrentX;
-        compactYOffset = compactCurrentY;
-
-        compactSetTranslate(compactCurrentX, compactCurrentY);
-      }
-
-      function compactSetTranslate(xPos, yPos) {
-        compactWindow.style.transform = `translate3d(${xPos}px, ${yPos}px, 0) scale(1)`;
-      }
-
-      function compactDragEnd() {
-        compactInitialX = compactCurrentX;
-        compactInitialY = compactCurrentY;
-        isCompactDragging = false;
-
-        compactWindow.style.transition = 'transform 0.2s ease-out';
-        document.body.style.userSelect = 'auto';
-
-        // Save compact position to localStorage
-        localStorage.setItem(
-          'compactWindowPosition',
-          JSON.stringify({
-            x: compactXOffset,
-            y: compactYOffset,
-          })
-        );
       }
 
       function setCompactLanguage(lang) {
@@ -487,64 +166,40 @@
         if (select) {
           select.value = lang;
           select.dispatchEvent(new Event('change'));
-
-          // Update active state
-          document
-            .querySelectorAll('.compact-language-option')
-            .forEach((opt) => {
-              opt.classList.remove('active');
-              if (opt.onclick.toString().includes(`'${lang}'`)) {
-                opt.classList.add('active');
-              }
-            });
-
-          // Close window after selection
-          setTimeout(() => {
-            toggleCompactWindow();
-          }, 300);
-
-          // Show subtle toast
-          const languages = { en: 'English', fr: 'French', de: 'German' };
-          showCompactToast(`🌐 ${languages[lang]}`);
         }
+        toggleCompactWindow();
       }
 
-      function showCompactToast(message) {
-        const toast = document.createElement('div');
-        toast.className =
-          'fixed top-16 right-4 z-50 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs px-3 py-1.5 rounded-lg shadow-lg animate-fadeIn flex items-center gap-1';
-        toast.innerHTML = `
-          <span>${message}</span>
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-          </svg>
-        `;
-        document.body.appendChild(toast);
-        setTimeout(() => {
-          toast.style.opacity = '0';
-          toast.style.transform = 'translateY(-10px)';
-          setTimeout(() => toast.remove(), 300);
-        }, 1500);
-      }
-
-      // Load saved compact position
-      window.addEventListener('load', () => {
-        const savedPos = localStorage.getItem('compactWindowPosition');
-        if (savedPos) {
-          const { x, y } = JSON.parse(savedPos);
-          compactXOffset = x;
-          compactYOffset = y;
-          compactSetTranslate(x, y);
-        }
+      header.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startX = e.clientX - offsetX;
+        startY = e.clientY - offsetY;
+        windowEl.style.transition = 'none';
       });
 
-      // Close window when clicking outside
-      document.addEventListener('click', function (e) {
-        if (
-          isCompactWindowVisible &&
-          !compactWindow.contains(e.target) &&
-          !compactToggleBtn.contains(e.target)
-        ) {
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+
+        let x = e.clientX - startX;
+        let y = e.clientY - startY;
+
+        const rect = windowEl.getBoundingClientRect();
+        x = Math.max(Math.min(x, window.innerWidth - rect.width - 8), -rect.left);
+        y = Math.max(Math.min(y, window.innerHeight - rect.height - 8), -rect.top);
+
+        offsetX = x;
+        offsetY = y;
+
+        windowEl.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      });
+
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+        windowEl.style.transition = 'transform 0.2s ease';
+      });
+
+      document.addEventListener('click', (e) => {
+        if (isOpen && !windowEl.contains(e.target) && !toggleBtn.contains(e.target)) {
           toggleCompactWindow();
         }
       });
