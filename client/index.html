@@ -103,9 +103,16 @@
       <button
         id="compactToggleBtn"
         onclick="toggleCompactWindow()"
-        class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full shadow-lg hover:scale-110 transition flex items-center justify-center"
+        class="relative w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full shadow-xl hover:scale-110 active:scale-95 transition-all duration-200 flex items-center justify-center ring-2 ring-blue-400 ring-offset-2 ring-offset-white animate-pulse"
+        title="Translate language"
       >
-        <span class="text-white text-xl">🌐</span>
+        <!-- glow -->
+        <span
+          class="absolute inset-0 rounded-full bg-blue-400 opacity-30 blur-md"
+        ></span>
+
+        <!-- icon -->
+        <span class="relative text-white text-xl">🌐</span>
       </button>
 
       <!-- Floating Window -->
@@ -123,13 +130,22 @@
 
         <!-- Languages -->
         <div class="p-2 space-y-2">
-          <button onclick="setCompactLanguage('en')" class="flex items-center gap-2 w-full">
+          <button
+            onclick="setCompactLanguage('en')"
+            class="flex items-center gap-2 w-full"
+          >
             🇺🇸 <span>English</span>
           </button>
-          <button onclick="setCompactLanguage('fr')" class="flex items-center gap-2 w-full">
+          <button
+            onclick="setCompactLanguage('fr')"
+            class="flex items-center gap-2 w-full"
+          >
             🇫🇷 <span>Français</span>
           </button>
-          <button onclick="setCompactLanguage('de')" class="flex items-center gap-2 w-full">
+          <button
+            onclick="setCompactLanguage('de')"
+            class="flex items-center gap-2 w-full"
+          >
             🇩🇪 <span>Deutsch</span>
           </button>
         </div>
@@ -153,10 +169,18 @@
         if (isOpen) {
           windowEl.classList.remove('hidden');
           setTimeout(() => {
-            windowEl.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+            windowEl.classList.remove(
+              'opacity-0',
+              'scale-95',
+              'pointer-events-none'
+            );
           }, 10);
         } else {
-          windowEl.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+          windowEl.classList.add(
+            'opacity-0',
+            'scale-95',
+            'pointer-events-none'
+          );
           setTimeout(() => windowEl.classList.add('hidden'), 200);
         }
       }
@@ -184,8 +208,14 @@
         let y = e.clientY - startY;
 
         const rect = windowEl.getBoundingClientRect();
-        x = Math.max(Math.min(x, window.innerWidth - rect.width - 8), -rect.left);
-        y = Math.max(Math.min(y, window.innerHeight - rect.height - 8), -rect.top);
+        x = Math.max(
+          Math.min(x, window.innerWidth - rect.width - 8),
+          -rect.left
+        );
+        y = Math.max(
+          Math.min(y, window.innerHeight - rect.height - 8),
+          -rect.top
+        );
 
         offsetX = x;
         offsetY = y;
@@ -199,7 +229,11 @@
       });
 
       document.addEventListener('click', (e) => {
-        if (isOpen && !windowEl.contains(e.target) && !toggleBtn.contains(e.target)) {
+        if (
+          isOpen &&
+          !windowEl.contains(e.target) &&
+          !toggleBtn.contains(e.target)
+        ) {
           toggleCompactWindow();
         }
       });
