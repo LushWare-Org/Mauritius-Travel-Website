@@ -2,11 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { activityReviewsAPI } from '../../utils/api';
 import { FaStar, FaRegStar, FaMapMarkerAlt } from 'react-icons/fa';
 
-const ActivityInfo = ({ activity }) => {
+const ActivityInfo = ({ activity, currency = 'MUR' }) => {
     const [selectedDuration, setSelectedDuration] = useState('halfDay');
     const [reviewStats, setReviewStats] = useState(null);
     const [loadingReviews, setLoadingReviews] = useState(true);
     
+    // Get currency symbol
+    const getCurrencySymbol = () => {
+        return currency === 'EUR' ? '€' : 'Rs';
+    };
+
     // Fetch review statistics
     useEffect(() => {
         const fetchReviewStats = async () => {
@@ -125,7 +130,7 @@ const ActivityInfo = ({ activity }) => {
                                 >
                                     <div className="font-semibold">Half Day</div>
                                     <div className="text-sm mt-1 font-bold">
-                                        ${activity.halfDayPrice || activity.price}
+                                        {getCurrencySymbol()}{activity.halfDayPrice || activity.price}
                                     </div>
                                 </button>
                                 <button
@@ -139,7 +144,7 @@ const ActivityInfo = ({ activity }) => {
                                 >
                                     <div className="font-semibold">Full Day</div>
                                     <div className="text-sm mt-1 font-bold">
-                                        ${activity.fullDayPrice || activity.price}
+                                        {getCurrencySymbol()}{activity.fullDayPrice || activity.price}
                                     </div>
                                 </button>
                             </div>
@@ -150,7 +155,7 @@ const ActivityInfo = ({ activity }) => {
                         <div className="flex justify-between items-center">
                             <span className="text-gray-600">Price:</span>
                             <span className="text-2xl font-bold text-blue-600">
-                                ${getCurrentPrice()}
+                                {getCurrencySymbol()}{getCurrentPrice()}
                                 <span className="text-sm font-normal text-gray-500 ml-1">per package</span>
                             </span>
                         </div>
@@ -171,8 +176,6 @@ const ActivityInfo = ({ activity }) => {
                     </div>
                 </div>
             </div>
-            
-          
         </div>
     );
 };

@@ -41,7 +41,6 @@ const BookingRequest = () => {
     { code: '+44', name: 'UK', flag: '🇬🇧' },
     { code: '+33', name: 'France', flag: '🇫🇷' },
     { code: '+49', name: 'Germany', flag: '🇩🇪' },
-    { code: '+1', name: 'USA', flag: '🇺🇸' },
     { code: '+61', name: 'Australia', flag: '🇦🇺' },
     { code: '+65', name: 'Singapore', flag: '🇸🇬' },
     { code: '+971', name: 'UAE', flag: '🇦🇪' },
@@ -378,7 +377,7 @@ const BookingRequest = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-blue-600">${selectedPrice * guests}</div>
+                      <div className="text-2xl font-bold text-blue-600">Rs {selectedPrice * guests}</div>
                       <div className="text-xs text-gray-500 mt-0.5">Activity total</div>
                     </div>
                   </div>
@@ -418,7 +417,7 @@ const BookingRequest = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-2xl font-bold text-green-600">${airportTransferPrice}</div>
+                        <div className="text-2xl font-bold text-green-600">Rs {airportTransferPrice}</div>
                         <div className="text-xs text-gray-500 mt-0.5">Transfer total</div>
                       </div>
                     </div>
@@ -434,7 +433,7 @@ const BookingRequest = () => {
                     </div>
                     <div className="text-right">
                       <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">
-                        ${totalAmount}
+                        Rs {totalAmount}
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">Final price</div>
                     </div>
@@ -475,7 +474,19 @@ const BookingRequest = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {/* Email */}
                   <div>
-                    
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                      placeholder="your@email.com"
+                      required
+                      disabled={!!currentUser}
+                    />
                     {currentUser && (
                       <div className="mt-1.5 text-xs text-blue-600 flex items-center">
                         <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">

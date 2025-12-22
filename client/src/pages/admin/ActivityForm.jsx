@@ -58,16 +58,11 @@ const ActivityForm = () => {
     }
   }, [id]);
 
-  // Validation schema for all currencies
+  // Validation schema - only EUR and MUR currencies
   const validationSchema = Yup.object({
     title: Yup.string().required('Title is required'),
     description: Yup.string().required('Description is required'),
     shortDescription: Yup.string().max(200, 'Short description cannot exceed 200 characters'),
-    
-    // USD Prices
-    price: Yup.number().required('USD price is required').positive('Price must be positive'),
-    fullDayPrice: Yup.number().required('USD full day price is required').positive('Price must be positive'),
-    halfDayPrice: Yup.number().required('USD half day price is required').positive('Price must be positive'),
     
     // EUR Prices
     priceEUR: Yup.number().required('EUR price is required').positive('Price must be positive'),
@@ -83,8 +78,8 @@ const ActivityForm = () => {
     location: Yup.string().required('Location is required'),
     type: Yup.string().required('Excursion type is required'),
     maxParticipants: Yup.number().positive('Must be positive').integer('Must be a whole number'),
-    currency: Yup.string().oneOf(['USD', 'EUR', 'MUR'], 'Invalid currency').default('USD'),
-    displayCurrency: Yup.string().oneOf(['USD', 'EUR', 'MUR'], 'Invalid display currency').default('USD'),
+    currency: Yup.string().oneOf(['EUR', 'MUR'], 'Invalid currency').default('EUR'),
+    displayCurrency: Yup.string().oneOf(['EUR', 'MUR'], 'Invalid display currency').default('EUR'),
   });
 
   // Handle image upload (same as before)
@@ -291,11 +286,6 @@ const ActivityForm = () => {
               description: activity?.description || '',
               shortDescription: activity?.shortDescription || '',
               
-              // USD Prices
-              price: activity?.price || '',
-              fullDayPrice: activity?.fullDayPrice || '',
-              halfDayPrice: activity?.halfDayPrice || '',
-              
               // EUR Prices
               priceEUR: activity?.priceEUR || '',
               fullDayPriceEUR: activity?.fullDayPriceEUR || '',
@@ -317,8 +307,8 @@ const ActivityForm = () => {
               requirements: activity?.requirements || [],
               featured: activity?.featured || false,
               status: activity?.status || 'active',
-              currency: activity?.currency || 'USD',
-              displayCurrency: activity?.displayCurrency || 'USD',
+              currency: activity?.currency || 'EUR',
+              displayCurrency: activity?.displayCurrency || 'EUR',
             }}
             validationSchema={validationSchema}
             onSubmit={handleSubmit}
@@ -381,61 +371,6 @@ const ActivityForm = () => {
                 {/* Currency Prices Section */}
                 <div className="space-y-6">
                   <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Pricing (All Currencies Required)</h3>
-                  
-                  {/* USD Prices */}
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <h4 className="text-md font-semibold text-blue-800 mb-4 flex items-center">
-                      <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm mr-2">USD</span>
-                      US Dollar Prices
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label htmlFor="price" className="block text-sm font-medium text-gray-700">
-                          Base Price (USD) <span className="text-red-500">*</span>
-                        </label>
-                        <Field
-                          type="number"
-                          name="price"
-                          id="price"
-                          className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md text-base py-2 px-3 ${
-                            errors.price && touched.price ? 'border-red-300' : ''
-                          }`}
-                          placeholder="e.g., 299"
-                        />
-                        <ErrorMessage name="price" component="div" className="mt-1 text-sm text-red-600" />
-                      </div>
-                      <div>
-                        <label htmlFor="fullDayPrice" className="block text-sm font-medium text-gray-700">
-                          Full Day Price (USD) <span className="text-red-500">*</span>
-                        </label>
-                        <Field
-                          type="number"
-                          name="fullDayPrice"
-                          id="fullDayPrice"
-                          className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md text-base py-2 px-3 ${
-                            errors.fullDayPrice && touched.fullDayPrice ? 'border-red-300' : ''
-                          }`}
-                          placeholder="e.g., 299"
-                        />
-                        <ErrorMessage name="fullDayPrice" component="div" className="mt-1 text-sm text-red-600" />
-                      </div>
-                      <div>
-                        <label htmlFor="halfDayPrice" className="block text-sm font-medium text-gray-700">
-                          Half Day Price (USD) <span className="text-red-500">*</span>
-                        </label>
-                        <Field
-                          type="number"
-                          name="halfDayPrice"
-                          id="halfDayPrice"
-                          className={`mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm border-gray-300 rounded-md text-base py-2 px-3 ${
-                            errors.halfDayPrice && touched.halfDayPrice ? 'border-red-300' : ''
-                          }`}
-                          placeholder="e.g., 199"
-                        />
-                        <ErrorMessage name="halfDayPrice" component="div" className="mt-1 text-sm text-red-600" />
-                      </div>
-                    </div>
-                  </div>
                   
                   {/* EUR Prices */}
                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">
@@ -558,7 +493,6 @@ const ActivityForm = () => {
                         id="currency"
                         className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-base"
                       >
-                        <option value="USD">USD (US Dollar)</option>
                         <option value="EUR">EUR (Euro)</option>
                         <option value="MUR">MUR (Mauritian Rupee)</option>
                       </Field>
@@ -577,7 +511,6 @@ const ActivityForm = () => {
                         id="displayCurrency"
                         className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-base"
                       >
-                        <option value="USD">USD (US Dollar)</option>
                         <option value="EUR">EUR (Euro)</option>
                         <option value="MUR">MUR (Mauritian Rupee)</option>
                       </Field>
@@ -664,7 +597,7 @@ const ActivityForm = () => {
                     </div>
                   </div>
                 
-                  {/* Included, Not Included, Requirements (same as before) */}
+                  {/* Included, Not Included, Requirements */}
                   <div>
                     <label className="block text-base font-medium text-gray-700 mb-2">
                       What's Included
@@ -818,7 +751,7 @@ const ActivityForm = () => {
                   </div>
                 </div>
               
-                {/* Main Image Section (same as before) */}
+                {/* Main Image Section */}
                 <div className="border-t border-gray-200 pt-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Main Excursion Image</h3>
                
@@ -878,7 +811,7 @@ const ActivityForm = () => {
                   </p>
                 </div>
               
-                {/* Gallery Images Section (same as before) */}
+                {/* Gallery Images Section */}
                 <div className="border-t border-gray-200 pt-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Gallery Images</h3>
                

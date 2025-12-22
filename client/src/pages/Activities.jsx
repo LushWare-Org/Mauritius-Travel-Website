@@ -13,8 +13,8 @@ const Activities = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [currency, setCurrency] = useState(() => {
-        // Get currency from URL params, localStorage, or default to USD
-        return searchParams.get('currency') || localStorage.getItem('preferredCurrency') || 'USD';
+        // Get currency from URL params, localStorage, or default to EUR
+        return searchParams.get('currency') || localStorage.getItem('preferredCurrency') || 'EUR';
     });
     
     // Parse URL search parameters
@@ -24,14 +24,13 @@ const Activities = () => {
     const locationParam = queryParams.get('location');
     const categoryParam = queryParams.get('category');
 
-    // Get currency symbol
+    // Get currency symbol - only EUR and MUR
     const getCurrencySymbol = (curr) => {
         const symbols = {
-            'USD': '$',
             'EUR': '€',
             'MUR': 'Rs'
         };
-        return symbols[curr] || '$';
+        return symbols[curr] || '€'; // Default to Euro if currency not found
     };
 
     // Fetch activities from the backend API with search params
@@ -281,7 +280,6 @@ const Activities = () => {
                                         onChange={(e) => handleCurrencyChange(e.target.value)}
                                         className="border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
                                     >
-                                        <option value="USD">USD ($)</option>
                                         <option value="EUR">EUR (€)</option>
                                         <option value="MUR">MUR (Rs)</option>
                                     </select>

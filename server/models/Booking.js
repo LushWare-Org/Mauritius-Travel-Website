@@ -25,14 +25,35 @@ const BookingSchema = new mongoose.Schema({
     enum: ['Half Day', 'Full Day'],
     required: false
   },
+  
+  // Currency information
+  currency: {
+    type: String,
+    enum: ['EUR', 'MUR'],
+    default: 'EUR',
+    required: [true, 'Currency is required']
+  },
+  
+  // Store currency symbol for display
+  currencySymbol: {
+    type: String,
+    enum: ['€', 'Rs'],
+    default: '€'
+  },
+  
+  // Price fields - store in selected currency
   pricePerPerson: {
     type: Number,
-    required: false
+    required: [true, 'Price per person is required'],
+    min: [0, 'Price per person cannot be negative']
   },
+  
   totalPrice: {
     type: Number,
-    required: [true, 'Total price is required']
+    required: [true, 'Total price is required'],
+    min: [0, 'Total price cannot be negative']
   },
+  
   fullName: {
     type: String,
     required: [true, 'Full name is required']
@@ -61,6 +82,16 @@ const BookingSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
+});
+
+// Pre-save middleware to set currency symbol based on currency
+BookingSchema.pre('save', function(next) {
+  if (this.currency === 'MUR') {
+    this.currencySymbol = 'Rs';
+  } else {
+    this.currencySymbol = '€';
+  }
+  next();
 });
 
 module.exports = mongoose.model('Booking', BookingSchema);

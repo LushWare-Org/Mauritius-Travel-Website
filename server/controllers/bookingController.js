@@ -22,7 +22,6 @@ exports.createBooking = async (req, res) => {
     console.log('✅ Activity found:', activity.title);
 
     // If user is logged in, use their email instead of form email
-    // This ensures bookings are linked to the logged-in user
     let bookingEmail = req.body.email;
     if (req.user && req.user.email) {
       console.log('👤 User is logged in, using logged-in email:', req.user.email);
@@ -45,6 +44,7 @@ exports.createBooking = async (req, res) => {
       email: bookingEmail,
       phone: req.body.phone,
       specialRequests: req.body.specialRequests
+      // Note: No currency field needed if prices are already in RS or EURO
     });
 
     console.log('✅ Booking created successfully:', booking._id);
@@ -70,7 +70,6 @@ exports.createBooking = async (req, res) => {
       errors: err.errors
     });
     
-    // More detailed error response
     let errorMessage = err.message;
     if (err.errors) {
       const validationErrors = Object.keys(err.errors).map(key => ({
@@ -95,6 +94,7 @@ exports.getAllBookings = async (req, res) => {
   try {
     console.log('📋 Fetching all bookings (admin)');
     
+    // Populate only activity fields without currency specification
     const bookings = await Booking.find().populate('activity', 'title image price halfDayPrice fullDayPrice pricingType');
     
     console.log(`✅ Retrieved ${bookings.length} bookings`);

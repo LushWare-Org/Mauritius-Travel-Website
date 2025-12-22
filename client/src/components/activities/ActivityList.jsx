@@ -1,21 +1,18 @@
 import React from 'react';
 import ActivityListItem from './ActivityListItem';
 
-const ActivityList = ({ activities, currency = 'USD' }) => {
+const ActivityList = ({ activities, currency = 'MUR' }) => {
     // Get currency symbol
     const getCurrencySymbol = (curr) => {
         const symbols = {
-            'USD': '$',
-            'EUR': '€',
-            'MUR': 'Rs'
+            'MUR': 'Rs',
+            'EUR': '€'
         };
-        return symbols[curr] || '$';
+        return symbols[curr] || 'Rs';
     };
 
     const symbol = getCurrencySymbol(currency);
     
-   
-
     // Handle undefined or null activities
     if (!activities || activities.length === 0) {
         return (
@@ -57,10 +54,6 @@ const ActivityList = ({ activities, currency = 'USD' }) => {
     
     return (
         <div className="relative">
-            
-            
-         
-            
             {/* Activities Grid */}
             <div className="grid grid-cols-1 gap-6">
                 {activities.map((activity, index) => (
@@ -73,11 +66,8 @@ const ActivityList = ({ activities, currency = 'USD' }) => {
                     </div>
                 ))}
             </div>
-           
         </div>
     );
 };
-
-
 
 export default ActivityList;

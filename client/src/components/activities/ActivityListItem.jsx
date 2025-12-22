@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { activityReviewsAPI } from '../../utils/api';
 import { FaStar, FaRegStar } from 'react-icons/fa';
 
-const ActivityListItem = ({ activity, currency = 'USD' }) => {
+const ActivityListItem = ({ activity, currency = 'EUR' }) => {
     const [reviewStats, setReviewStats] = useState(null);
     const [loadingReviews, setLoadingReviews] = useState(true);
 
@@ -56,14 +56,13 @@ const ActivityListItem = ({ activity, currency = 'USD' }) => {
         );
     };
 
-    // Get currency symbol
+    // Get currency symbol - only EUR and MUR (Rs)
     const getCurrencySymbol = (curr) => {
         const symbols = {
-            'USD': '$',
             'EUR': '€',
             'MUR': 'Rs'
         };
-        return symbols[curr] || '$';
+        return symbols[curr] || '€'; // Default to Euro if currency not found
     };
 
     const symbol = getCurrencySymbol(currency);
@@ -175,16 +174,12 @@ const ActivityListItem = ({ activity, currency = 'USD' }) => {
                     </div>
                 </div>
                 
-              
-                
                 {/* Description - Fixed height */}
                 <div className="my-4 flex-grow min-h-[60px]">
                     <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed h-full">
                         {activity.description || activity.shortDescription || 'No description available'}
                     </p>
                 </div>
-                
-              
                 
                 {/* Price and CTA */}
                 <div className="mt-auto flex flex-col sm:flex-row justify-between items-start sm:items-center pt-4 border-t border-gray-100">
@@ -213,24 +208,7 @@ const ActivityListItem = ({ activity, currency = 'USD' }) => {
                     </Link>
                 </div>
                 
-                {/* Included Highlights */}
-                {activity.included && activity.included.length > 0 && (
-                    <div className="mt-4 pt-3 border-t border-gray-100">
-                        <div className="text-xs font-medium text-gray-700 mb-1">Included:</div>
-                        <div className="flex flex-wrap gap-1">
-                            {activity.included.slice(0, 3).map((item, index) => (
-                                <span key={index} className="bg-gray-50 text-gray-600 text-xs py-0.5 px-2 rounded border border-gray-200">
-                                    {item}
-                                </span>
-                            ))}
-                            {activity.included.length > 3 && (
-                                <span className="text-gray-500 text-xs">
-                                    +{activity.included.length - 3} more
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                )}
+             
             </div>
         </div>
     );

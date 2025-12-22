@@ -3,7 +3,6 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { bookingsAPI, airportTransferBookingAPI } from '../../utils/api';
 
-//please note that excursions will be saved in activity table and airport transfers will be stored in airport transfer table
 const AdminBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [airportTransferBookings, setAirportTransferBookings] = useState([]);
@@ -74,6 +73,11 @@ const AdminBookings = () => {
           (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
         );
         setAirportTransferBookings(sortedAirportBookings);
+      } else {
+        // Only set error if both requests fail
+        if (!bookingsResponse.data.success) {
+          setError('Failed to fetch airport transfer bookings');
+        }
       }
 
       setCurrentPage(1);
@@ -93,7 +97,7 @@ const AdminBookings = () => {
 
   const getTotalPriceWithTransfer = (booking) => {
     const airportTransfer = findAirportTransferForBooking(booking.bookingReference);
-    let total = booking.totalPrice || 0;
+    let total = parseFloat(booking.totalPrice || 0);
     if (airportTransfer) {
       total += parseFloat(airportTransfer.totalPrice || airportTransfer.price || 0);
     }
@@ -111,69 +115,88 @@ const AdminBookings = () => {
 
   const getFilteredBookings = () => {
     return bookings.filter((booking) => {
+      // Convert search term and fields to lowercase safely
+      const searchTermLower = searchTerm.toLowerCase();
+      const activityTitle = (booking.activity?.title || '').toLowerCase();
+      const fullName = (booking.fullName || '').toLowerCase();
+      const bookingReference = (booking.bookingReference || '').toLowerCase();
+      const email = (booking.email || '').toLowerCase();
+
       const matchesSearch =
-        (booking.activity?.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.bookingReference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.email.toLowerCase().includes(searchTerm.toLowerCase());
+        activityTitle.includes(searchTermLower) ||
+        fullName.includes(searchTermLower) ||
+        bookingReference.includes(searchTermLower) ||
+        email.includes(searchTermLower);
 
       const matchesStatus = selectedStatus === 'all' || booking.status === selectedStatus;
 
       let matchesDate = true;
-      const bookingDate = new Date(booking.date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      if (booking.date) {
+        const bookingDate = new Date(booking.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-      switch (selectedDateFilter) {
-        case 'today':
-          matchesDate = bookingDate.setHours(0, 0, 0, 0) === today.getTime();
-          break;
-        case 'tomorrow':
-          const tomorrow = new Date(today);
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          matchesDate = bookingDate.setHours(0, 0, 0, 0) === tomorrow.getTime();
-          break;
-        case 'thisWeek':
-          const nextWeekStart = new Date(today);
-          nextWeekStart.setDate(today.getDate() + 7);
-          matchesDate = bookingDate >= today && bookingDate < nextWeekStart;
-          break;
-        case 'nextWeek':
-          const nextWeekEnd = new Date(today);
-          nextWeekEnd.setDate(today.getDate() + 14);
-          matchesDate = bookingDate >= new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000) && bookingDate < nextWeekEnd;
-          break;
-        case 'thisMonth':
-          const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-          matchesDate = bookingDate >= today && bookingDate <= thisMonthEnd;
-          break;
-        default:
-          matchesDate = true;
+        switch (selectedDateFilter) {
+          case 'today':
+            const todayDate = new Date(today);
+            matchesDate = bookingDate.setHours(0, 0, 0, 0) === todayDate.setHours(0, 0, 0, 0);
+            break;
+          case 'tomorrow':
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            matchesDate = bookingDate.setHours(0, 0, 0, 0) === tomorrow.setHours(0, 0, 0, 0);
+            break;
+          case 'thisWeek':
+            const nextWeekStart = new Date(today);
+            nextWeekStart.setDate(today.getDate() + 7);
+            matchesDate = bookingDate >= today && bookingDate < nextWeekStart;
+            break;
+          case 'nextWeek':
+            const nextWeekEnd = new Date(today);
+            nextWeekEnd.setDate(today.getDate() + 14);
+            const weekStart = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+            matchesDate = bookingDate >= weekStart && bookingDate < nextWeekEnd;
+            break;
+          case 'thisMonth':
+            const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            thisMonthEnd.setHours(23, 59, 59, 999);
+            matchesDate = bookingDate >= today && bookingDate <= thisMonthEnd;
+            break;
+          default:
+            matchesDate = true;
+        }
       }
 
       let matchesMonth = true;
-      if (selectedMonth !== 'all') {
-        const bookingMonth = bookingDate.getMonth() + 1;
-        matchesMonth = String(bookingMonth).padStart(2, '0') === selectedMonth;
+      if (selectedMonth !== 'all' && booking.date) {
+        const bookingDate = new Date(booking.date);
+        const bookingMonth = (bookingDate.getMonth() + 1).toString().padStart(2, '0');
+        matchesMonth = bookingMonth === selectedMonth;
       }
 
       let matchesYear = true;
-      if (selectedYear !== 'all') {
-        matchesYear = bookingDate.getFullYear() === parseInt(selectedYear);
+      if (selectedYear !== 'all' && booking.date) {
+        const bookingDate = new Date(booking.date);
+        matchesYear = bookingDate.getFullYear() === parseInt(selectedYear, 10);
       }
 
       let matchesDateRange = true;
-      if (dateRange.startDate && dateRange.endDate) {
-        const startDate = new Date(dateRange.startDate);
-        const endDate = new Date(dateRange.endDate);
-        endDate.setHours(23, 59, 59, 999);
-        matchesDateRange = bookingDate >= startDate && bookingDate <= endDate;
-      } else if (dateRange.startDate && !dateRange.endDate) {
-        matchesDateRange = bookingDate >= new Date(dateRange.startDate);
-      } else if (!dateRange.startDate && dateRange.endDate) {
-        const endDate = new Date(dateRange.endDate);
-        endDate.setHours(23, 59, 59, 999);
-        matchesDateRange = bookingDate <= endDate;
+      if (booking.date) {
+        const bookingDate = new Date(booking.date);
+        
+        if (dateRange.startDate && dateRange.endDate) {
+          const startDate = new Date(dateRange.startDate);
+          const endDate = new Date(dateRange.endDate);
+          endDate.setHours(23, 59, 59, 999);
+          matchesDateRange = bookingDate >= startDate && bookingDate <= endDate;
+        } else if (dateRange.startDate && !dateRange.endDate) {
+          const startDate = new Date(dateRange.startDate);
+          matchesDateRange = bookingDate >= startDate;
+        } else if (!dateRange.startDate && dateRange.endDate) {
+          const endDate = new Date(dateRange.endDate);
+          endDate.setHours(23, 59, 59, 999);
+          matchesDateRange = bookingDate <= endDate;
+        }
       }
 
       return matchesSearch && matchesStatus && matchesDate && matchesMonth && matchesYear && matchesDateRange;
@@ -183,11 +206,12 @@ const AdminBookings = () => {
   const filteredBookings = getFilteredBookings();
 
   useEffect(() => {
-    setTotalPages(Math.ceil(filteredBookings.length / itemsPerPage));
-    if (currentPage > Math.ceil(filteredBookings.length / itemsPerPage) && Math.ceil(filteredBookings.length / itemsPerPage) > 0) {
+    const newTotalPages = Math.ceil(filteredBookings.length / itemsPerPage);
+    setTotalPages(newTotalPages);
+    if (currentPage > newTotalPages && newTotalPages > 0) {
       setCurrentPage(1);
     }
-  }, [filteredBookings, itemsPerPage]);
+  }, [filteredBookings, itemsPerPage, currentPage]);
 
   const getCurrentPageBookings = () => {
     const indexOfLastBooking = currentPage * itemsPerPage;
@@ -200,7 +224,12 @@ const AdminBookings = () => {
   const prevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    if (!dateString) return 'No date';
+    return new Date(dateString).toLocaleDateString(undefined, { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
   };
 
   const getDurationTypeDisplay = (booking) => {
@@ -240,16 +269,22 @@ const AdminBookings = () => {
     const getStatusColor = (status) => {
       switch (status) {
         case 'confirmed': return 'bg-blue-100 text-blue-800 border-blue-200';
-        case 'completed': return 'bg-blue-100 text-blue-800 border-blue-200';
+        case 'completed': return 'bg-green-100 text-green-800 border-green-200';
         case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-        case 'cancelled': return 'bg-gray-100 text-gray-800 border-gray-200';
+        case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
         default: return 'bg-gray-100 text-gray-800 border-gray-200';
       }
     };
 
     return (
       <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${getStatusColor(status)}`}>
-        <span className={`h-1.5 w-1.5 rounded-full mr-1.5 ${status === 'confirmed' || status === 'completed' ? 'bg-blue-600' : status === 'pending' ? 'bg-yellow-600' : 'bg-gray-600'}`}></span>
+        <span className={`h-1.5 w-1.5 rounded-full mr-1.5 ${
+          status === 'confirmed' ? 'bg-blue-600' :
+          status === 'completed' ? 'bg-green-600' :
+          status === 'pending' ? 'bg-yellow-600' :
+          status === 'cancelled' ? 'bg-red-600' :
+          'bg-gray-600'
+        }`}></span>
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
@@ -276,7 +311,14 @@ const AdminBookings = () => {
   };
 
   const handleRowClick = (bookingId, e) => {
-    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A' || e.target.closest('button') || e.target.closest('a')) {
+    if (e.target.tagName === 'BUTTON' || 
+        e.target.tagName === 'A' || 
+        e.target.tagName === 'SELECT' ||
+        e.target.tagName === 'INPUT' ||
+        e.target.closest('button') || 
+        e.target.closest('a') ||
+        e.target.closest('select') ||
+        e.target.closest('input')) {
       return;
     }
     navigateToBookingDetail(bookingId);
@@ -304,11 +346,36 @@ const AdminBookings = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         {[
-          { label: 'Filtered Bookings', value: totalBookings, desc: `${bookings.length > 0 ? `${((totalBookings / bookings.length) * 100).toFixed(1)}% of total` : '0%'}`, icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-          { label: 'Confirmed', value: confirmedBookings, desc: `${totalBookings > 0 ? `${((confirmedBookings / totalBookings) * 100).toFixed(1)}% confirmed` : '0%'}`, icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
-          { label: 'With Transfer', value: bookingsWithTransfer, desc: `${totalBookings > 0 ? `${((bookingsWithTransfer / totalBookings) * 100).toFixed(1)}%` : '0%'}`, icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
-          { label: 'Total Revenue', value: `RS${totalRevenue.toFixed(2)}`, desc: `Activity: RS${activityRevenue.toFixed(2)} | Transfer: RS${transferRevenue.toFixed(2)}`, icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
-          { label: 'Avg. Revenue', value: `RS${avgRevenuePerBooking.toFixed(2)}`, desc: 'Per booking', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+          { 
+            label: 'Filtered Bookings', 
+            value: totalBookings, 
+            desc: `${bookings.length > 0 ? `${((totalBookings / bookings.length) * 100).toFixed(1)}% of total` : '0%'}`, 
+            icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' 
+          },
+          { 
+            label: 'Confirmed', 
+            value: confirmedBookings, 
+            desc: `${totalBookings > 0 ? `${((confirmedBookings / totalBookings) * 100).toFixed(1)}% confirmed` : '0%'}`, 
+            icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' 
+          },
+          { 
+            label: 'With Transfer', 
+            value: bookingsWithTransfer, 
+            desc: `${totalBookings > 0 ? `${((bookingsWithTransfer / totalBookings) * 100).toFixed(1)}%` : '0%'}`, 
+            icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' 
+          },
+          { 
+            label: 'Total Revenue', 
+            value: `RS ${totalRevenue.toFixed(2)}`, 
+            desc: `Activity: RS ${activityRevenue.toFixed(2)} | Transfer: RS ${transferRevenue.toFixed(2)}`, 
+            icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' 
+          },
+          { 
+            label: 'Avg. Revenue', 
+            value: `RS ${avgRevenuePerBooking.toFixed(2)}`, 
+            desc: 'Per booking', 
+            icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' 
+          },
         ].map((stat, index) => (
           <div key={index} className="bg-white rounded-lg shadow p-4 border border-gray-200">
             <div className="flex items-center">
@@ -357,32 +424,64 @@ const AdminBookings = () => {
             </p>
           </div>
           <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-            <button onClick={prevPage} disabled={currentPage === 1} className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50'}`}>
+            <button 
+              onClick={prevPage} 
+              disabled={currentPage === 1} 
+              className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50'
+              }`}
+            >
               <span className="sr-only">Previous</span>
-              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
             </button>
             {startPage > 1 && (
               <>
-                <button onClick={() => paginate(1)} className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">1</button>
+                <button 
+                  onClick={() => paginate(1)} 
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  1
+                </button>
                 {startPage > 2 && <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>}
               </>
             )}
             {pageNumbers.map((number) => (
-              <button key={number} onClick={() => paginate(number)} className={`relative inline-flex items-center px-4 py-2 border ${currentPage === number ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'} text-sm font-medium`}>
+              <button 
+                key={number} 
+                onClick={() => paginate(number)} 
+                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                  currentPage === number 
+                    ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' 
+                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
                 {number}
               </button>
             ))}
             {endPage < totalPages && (
               <>
                 {endPage < totalPages - 1 && <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>}
-                <button onClick={() => paginate(totalPages)} className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                <button 
+                  onClick={() => paginate(totalPages)} 
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
                   {totalPages}
                 </button>
               </>
             )}
-            <button onClick={nextPage} disabled={currentPage === totalPages} className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50'}`}>
+            <button 
+              onClick={nextPage} 
+              disabled={currentPage === totalPages} 
+              className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-50'
+              }`}
+            >
               <span className="sr-only">Next</span>
-              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
             </button>
           </nav>
         </div>
@@ -488,6 +587,7 @@ const AdminBookings = () => {
             </div>
             <div className="flex items-end">
               <button
+                type="button"
                 onClick={clearFilters}
                 className="w-full inline-flex justify-center items-center px-4 py-2.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
@@ -535,6 +635,7 @@ const AdminBookings = () => {
             </div>
             <div className="ml-auto pl-3">
               <button
+                type="button"
                 onClick={() => setError('')}
                 className="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600"
               >
@@ -646,9 +747,6 @@ const AdminBookings = () => {
                         </td>
                         <td className="px-4 py-4">
                           <div className="text-sm text-gray-900">{formatDate(booking.date)}</div>
-                          <div className="text-xs text-gray-600 mt-1">
-                            {/* Created: {formatDate(booking.createdAt)} */}
-                          </div>
                           {durationType !== 'Standard' && (
                             <div className="mt-1">
                               <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border bg-blue-50 text-blue-800 border-blue-200">
@@ -688,19 +786,18 @@ const AdminBookings = () => {
                         <td className="px-4 py-4">
                           <div className="space-y-1">
                             <div className="text-sm font-semibold text-gray-900">
-                              RS{totalWithTransfer.toFixed(2)}
+                              RS {totalWithTransfer.toFixed(2)}
                               {hasTransfer && (
                                 <span className="text-xs text-blue-600 ml-1">(incl. transfer)</span>
                               )}
                             </div>
                             <div className="text-xs text-gray-500 space-y-0.5">
-                              <div>Excursion: RS{booking.totalPrice?.toFixed(2) || '0.00'}</div>
+                              <div>Excursion: RS {booking.totalPrice?.toFixed(2) || '0.00'}</div>
                               {hasTransfer && (
                                 <div className="text-blue-600">
                                   Transfer: +RS {transferPrice.toFixed(2)}
                                 </div>
                               )}
-                            
                             </div>
                           </div>
                         </td>
@@ -727,30 +824,22 @@ const AdminBookings = () => {
                             >
                               View
                             </Link>
-                            {booking.status === 'pending' && (
+                           
+                            {booking.status !== 'cancelled' && (
                               <button
+                                type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleStatusChange(booking._id, 'cancelled');
                                 }}
-                                className="text-gray-600 hover:text-gray-900"
-                              >
-                                Cancel
-                              </button>
-                            )}
-                            {booking.status === 'confirmed' && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleStatusChange(booking._id, 'cancelled');
-                                }}
-                                className="text-gray-600 hover:text-gray-900"
+                                className="text-red-600 hover:text-red-900"
                               >
                                 Cancel
                               </button>
                             )}
                             {booking.status === 'cancelled' && (
                               <button
+                                type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleStatusChange(booking._id, 'confirmed');
@@ -794,6 +883,7 @@ const AdminBookings = () => {
               </select>
             </div>
             <button
+              type="button"
               onClick={fetchBookings}
               className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >

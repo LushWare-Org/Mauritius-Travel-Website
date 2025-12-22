@@ -7,7 +7,7 @@ const BookingForm = ({ activity, currency: propCurrency }) => {
   const [selectedDuration, setSelectedDuration] = useState('halfDay');
   const [totalPrice, setTotalPrice] = useState(0);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [currency, setCurrency] = useState(propCurrency || activity?.displayCurrency || 'USD');
+  const [currency, setCurrency] = useState(propCurrency || activity?.displayCurrency || 'MUR');
   
   // Airport transfer states
   const [includeAirportTransfer, setIncludeAirportTransfer] = useState(false);
@@ -23,19 +23,17 @@ const BookingForm = ({ activity, currency: propCurrency }) => {
   // Get currency symbol
   const getCurrencySymbol = (curr) => {
     const symbols = {
-      'USD': '$',
       'EUR': '€',
       'MUR': 'Rs'
     };
-    return symbols[curr] || '$';
+    return symbols[curr] || 'Rs';
   };
   
   // Get price based on currency
   const getPriceByCurrency = (priceField) => {
     if (!activity) return 0;
     
-    const currencySuffix = currency === 'USD' ? '' : currency;
-    const fieldName = currency === 'USD' ? priceField : `${priceField}${currency}`;
+    const fieldName = priceField + currency;
     
     return activity[fieldName] || activity[priceField] || 0;
   };
@@ -44,7 +42,7 @@ const BookingForm = ({ activity, currency: propCurrency }) => {
   const getTransferPriceByCurrency = (transfer, priceField) => {
     if (!transfer) return 0;
     
-    const fieldName = currency === 'USD' ? priceField : `${priceField}${currency}`;
+    const fieldName = priceField + currency;
     return transfer[fieldName] || transfer[priceField] || 0;
   };
 
@@ -328,9 +326,8 @@ const BookingForm = ({ activity, currency: propCurrency }) => {
               onChange={(e) => setCurrency(e.target.value)}
               className="bg-white/20 text-white border-0 rounded-lg px-2 py-1 text-xs focus:ring-0 focus:border-0"
             >
-              <option value="USD">USD ($)</option>
-              <option value="EUR">EUR (€)</option>
               <option value="MUR">MUR (Rs)</option>
+              <option value="EUR">EUR (€)</option>
             </select>
           </div>
         </div>
