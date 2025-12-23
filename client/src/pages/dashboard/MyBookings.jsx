@@ -6,7 +6,8 @@ import BookingStatusBadge from '../../components/dashboard/BookingStatusBadge';
 import DashboardDebugger from '../../components/dashboard/DashboardDebugger';
 import { userBookingsAPI, airportTransferBookingAPI } from '../../utils/api';
 import { jsPDF } from 'jspdf';
-import logo from '../../assets/logo.png'; // Make sure this path is correct
+import logo from '../../assets/logo.png';
+import { getCurrencySymbol, formatPrice } from '../../utils/currency'; // Import the currency helper
 
 const MyBookings = () => {
   const { currentUser } = useAuth();
@@ -18,15 +19,42 @@ const MyBookings = () => {
   const [cancelNotification, setCancelNotification] = useState(null);
   const [generatingPDF, setGeneratingPDF] = useState(false);
   const [selectedBookingForPDF, setSelectedBookingForPDF] = useState(null);
-  const [sortOrder, setSortOrder] = useState('newest'); // 'newest' or 'oldest'
+  const [sortOrder, setSortOrder] = useState('newest');
   const [imageLoaded, setImageLoaded] = useState(false);
   const navigate = useNavigate();
+
+  // Function to get booking currency - with proper fallback
+  const getBookingCurrency = (booking) => {
+    // First priority: currency from booking
+    if (booking.currency) {
+      return booking.currency;
+    }
+    
+    // Second priority: currency from airport transfer
+    if (booking.airportTransfer?.currency) {
+      return booking.airportTransfer.currency;
+    }
+    
+    // Third priority: try to infer from activity or price
+    if (booking.activity?.currency) {
+      return booking.activity.currency;
+    }
+    
+    // Default fallback: MUR
+    return 'MUR';
+  };
+
+  // Function to format price for display with correct currency symbol
+  const formatBookingPrice = (price, booking) => {
+    if (!price) return formatPrice(0, getBookingCurrency(booking));
+    const currency = getBookingCurrency(booking);
+    return formatPrice(price, currency);
+  };
 
   // Load logo as base64
   useEffect(() => {
     const loadLogo = async () => {
       try {
-        // Convert logo to base64
         const response = await fetch(logo);
         const blob = await response.blob();
         const reader = new FileReader();
@@ -37,7 +65,7 @@ const MyBookings = () => {
         reader.readAsDataURL(blob);
       } catch (error) {
         console.error('Error loading logo:', error);
-        setImageLoaded(true); // Continue even if logo fails
+        setImageLoaded(true);
       }
     };
     loadLogo();
@@ -54,6 +82,15 @@ const MyBookings = () => {
 
       if (response.data.success) {
         let bookingsWithTransfers = response.data.data;
+
+        // DEBUG: Log the raw booking data
+        console.log('Raw booking data:', bookingsWithTransfers.map(b => ({
+          id: b._id,
+          title: b.activity?.title,
+          currency: b.currency,
+          totalPrice: b.totalPrice,
+          activityCurrency: b.activity?.currency
+        })));
 
         if (currentUser?.email) {
           try {
@@ -97,6 +134,8 @@ const MyBookings = () => {
                 if (linkedTransfer) {
                   return {
                     ...booking,
+                    // Ensure currency is preserved
+                    currency: booking.currency || linkedTransfer.currency || 'MUR',
                     airportTransfer: {
                       selected: true,
                       price:
@@ -132,19 +171,50 @@ const MyBookings = () => {
                       flightNumber: linkedTransfer.flightNumber,
                       specialRequests: linkedTransfer.specialRequests,
                       adminNotes: linkedTransfer.adminNotes,
+                      currency: linkedTransfer.currency || booking.currency || 'MUR',
                     },
                   };
                 }
-                return booking;
+                return {
+                  ...booking,
+                  currency: booking.currency || 'MUR'
+                };
               });
+            } else {
+              // Add default currency to bookings without transfers
+              bookingsWithTransfers = bookingsWithTransfers.map(booking => ({
+                ...booking,
+                currency: booking.currency || 'MUR',
+              }));
             }
           } catch (transferErr) {
             console.log(
               'Error fetching airport transfers:',
               transferErr.message
             );
+            // Still add default currency
+            bookingsWithTransfers = bookingsWithTransfers.map(booking => ({
+              ...booking,
+              currency: booking.currency || 'MUR',
+            }));
           }
+        } else {
+          // Add default currency for non-logged in users
+          bookingsWithTransfers = bookingsWithTransfers.map(booking => ({
+            ...booking,
+            currency: booking.currency || 'MUR',
+          }));
         }
+
+        // DEBUG: Log after processing
+        console.log('Processed bookings:', bookingsWithTransfers.map(b => ({
+          id: b._id,
+          title: b.activity?.title,
+          currency: b.currency,
+          totalPrice: b.totalPrice,
+          hasTransfer: !!b.airportTransfer,
+          transferCurrency: b.airportTransfer?.currency
+        })));
 
         // Sort by creation date (newest first) initially
         const sortedBookings = [...bookingsWithTransfers].sort(
@@ -198,12 +268,15 @@ const MyBookings = () => {
   };
 
   const handleCancelBooking = (booking) => {
+    const bookingCurrency = getBookingCurrency(booking);
+    
     setCancelNotification({
       bookingId: booking._id,
       bookingReference: booking.bookingReference,
       activityName: booking.activity?.title || 'Unknown Activity',
       date: booking.date,
       totalPrice: booking.totalPrice,
+      currency: bookingCurrency,
     });
 
     setTimeout(() => {
@@ -221,7 +294,7 @@ const MyBookings = () => {
             cancelNotification.bookingReference
           }) for "${cancelNotification.activityName}" scheduled on ${formatDate(
             cancelNotification.date
-          )}. Please assist with the cancellation process and provide information about any applicable cancellation fees or refunds.`,
+          )}. Total amount: ${formatBookingPrice(cancelNotification.totalPrice, {currency: cancelNotification.currency})}. Please assist with the cancellation process and provide information about any applicable cancellation fees or refunds.`,
         },
       });
       setCancelNotification(null);
@@ -461,11 +534,14 @@ const MyBookings = () => {
     doc.setFont('helvetica', 'normal');
     const priceY = paymentY + 10;
     
-    doc.text(`Activity Amount: Rs${booking.totalPrice || 0}`, 20, priceY);
+    const bookingCurrency = getBookingCurrency(booking);
+    const currencySymbol = getCurrencySymbol(bookingCurrency);
+    
+    doc.text(`Activity Amount: ${currencySymbol}${booking.totalPrice || 0}`, 20, priceY);
     
     if (booking.airportTransfer && booking.airportTransfer.price) {
       doc.text(
-        `Transfer Amount: Rs${booking.airportTransfer.price || 0}`,
+        `Transfer Amount: ${currencySymbol}${booking.airportTransfer.price || 0}`,
         20,
         priceY + 7
       );
@@ -480,17 +556,19 @@ const MyBookings = () => {
     // Total
     doc.setFont('helvetica', 'bold');
     doc.text(
-      `Total Amount: Rs${calculateTotalPrice(booking).toFixed(2)}`,
+      `Total Amount: ${currencySymbol}${calculateTotalPrice(booking).toFixed(2)}`,
       20,
       lineY + 8
     );
     
+    // Add currency information
     doc.setFont('helvetica', 'normal');
-    doc.text(`Payment Date: ${formatDate(new Date())}`, 20, lineY + 15);
+    doc.text(`Currency: ${bookingCurrency} (${currencySymbol})`, 20, lineY + 15);
+    doc.text(`Payment Date: ${formatDate(new Date())}`, 20, lineY + 22);
 
     // Add special notes section
     if (booking.specialRequests || booking.airportTransfer?.specialRequests) {
-      const notesY = lineY + 25;
+      const notesY = lineY + 30;
       doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
       doc.text('ADDITIONAL NOTES', 20, notesY);
@@ -606,7 +684,7 @@ const MyBookings = () => {
                 <span className="font-medium text-gray-900">
                   {cancelNotification.bookingReference}
                 </span>
-                , please contact our admin team.
+                , please contact our admin team. Total amount: {formatBookingPrice(cancelNotification.totalPrice, {currency: cancelNotification.currency})}
               </p>
 
               <div className="flex gap-2">
@@ -733,132 +811,114 @@ const MyBookings = () => {
           </div>
         ) : sortedBookings.length > 0 ? (
           <div className="space-y-4">
-            {sortedBookings.map((booking) => (
-              <div
-                key={booking._id}
-                className="bg-white border border-gray-200 rounded-lg overflow-hidden"
-              >
-                <div className="flex flex-col md:flex-row">
-                  {/* Activity Image - UPDATED: Fixed size container */}
-                  <div className="md:w-1/4">
-                    <div className="relative h-64 w-full overflow-hidden bg-gray-100">
-                      <img
-                        src={booking.activity?.image}
-                        alt={booking.activity?.title}
-                        className="absolute inset-0 h-full w-full object-cover"
-                      />
-                      {/* New Booking Badge - Show if booking is less than 24 hours old */}
-                      {new Date() - new Date(booking.createdAt) <
-                        24 * 60 * 60 * 1000 && (
-                        <div className="absolute top-3 left-3">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            <svg
-                              className="mr-1.5 h-2 w-2 text-green-600"
-                              fill="currentColor"
-                              viewBox="0 0 8 8"
-                            >
-                              <circle cx="4" cy="4" r="3" />
-                            </svg>
-                            New Booking
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Booking Details */}
-                  <div className="p-5 flex-1 flex flex-col">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900">
-                          {booking.activity?.title || 'Unknown Activity'}
-                        </h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {booking.activity?.location ||
-                            'Location not available'}
-                        </p>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <BookingStatusBadge status={booking.status} />
-                        <p className="text-xs text-gray-500 mt-2">
-                          Booked: {formatDateTime(booking.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide">
-                          Activity Date
-                        </p>
-                        <p className="font-medium mt-1">
-                          {formatDate(booking.date)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide">
-                          Reference
-                        </p>
-                        <p className="font-medium mt-1">
-                          {booking.bookingReference}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide">
-                          Total Price
-                        </p>
-                        <p className="font-medium mt-1">
-                          Rs{calculateTotalPrice(booking).toFixed(2)}
-                          {booking.airportTransfer &&
-                            booking.airportTransfer.price && (
-                              <span className="text-xs text-green-600 ml-2">
-                                (includes transfer)
-                              </span>
-                            )}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Airport Transfer Info */}
-                    {booking.airportTransfer &&
-                      booking.airportTransfer.selected && (
-                        <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-100">
-                          <div className="flex flex-col gap-2">
-                            <div className="flex items-center text-sm">
+            {sortedBookings.map((booking) => {
+              const bookingCurrency = getBookingCurrency(booking);
+              const currencySymbol = getCurrencySymbol(bookingCurrency);
+              
+              return (
+                <div
+                  key={booking._id}
+                  className="bg-white border border-gray-200 rounded-lg overflow-hidden"
+                >
+                  <div className="flex flex-col md:flex-row">
+                    {/* Activity Image */}
+                    <div className="md:w-1/4">
+                      <div className="relative h-64 w-full overflow-hidden bg-gray-100">
+                        <img
+                          src={booking.activity?.image}
+                          alt={booking.activity?.title}
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
+                        {/* New Booking Badge */}
+                        {new Date() - new Date(booking.createdAt) <
+                          24 * 60 * 60 * 1000 && (
+                          <div className="absolute top-3 left-3">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                               <svg
-                                className="w-4 h-4 text-blue-500 mr-2"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                                className="mr-1.5 h-2 w-2 text-green-600"
+                                fill="currentColor"
+                                viewBox="0 0 8 8"
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                                />
+                                <circle cx="4" cy="4" r="3" />
                               </svg>
-                              <span className="font-medium text-blue-700">
-                                Airport Transfer:{' '}
-                              </span>
-                              <span className="text-blue-600 ml-1">
-                                Rs
-                                {parseFloat(
-                                  booking.airportTransfer.price
-                                ).toFixed(2)}
-                              </span>
-                              {booking.airportTransfer.type && (
-                                <span className="ml-2 text-blue-500">
-                                  ({booking.airportTransfer.type})
+                              New Booking
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Booking Details */}
+                    <div className="p-5 flex-1 flex flex-col">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900">
+                            {booking.activity?.title || 'Unknown Activity'}
+                          </h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {booking.activity?.location ||
+                              'Location not available'}
+                          </p>
+                          {/* Currency Display */}
+                          <div className="mt-1">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                              bookingCurrency === 'EUR' 
+                                ? 'bg-yellow-100 text-yellow-800' 
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {currencySymbol} ({bookingCurrency})
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <BookingStatusBadge status={booking.status} />
+                          <p className="text-xs text-gray-500 mt-2">
+                            Booked: {formatDateTime(booking.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase tracking-wide">
+                            Activity Date
+                          </p>
+                          <p className="font-medium mt-1">
+                            {formatDate(booking.date)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase tracking-wide">
+                            Reference
+                          </p>
+                          <p className="font-medium mt-1">
+                            {booking.bookingReference}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase tracking-wide">
+                            Total Price
+                          </p>
+                          <p className="font-medium mt-1">
+                            {formatBookingPrice(calculateTotalPrice(booking), booking)}
+                            {booking.airportTransfer &&
+                              booking.airportTransfer.price && (
+                                <span className="text-xs text-green-600 ml-2">
+                                  (includes transfer)
                                 </span>
                               )}
-                            </div>
+                          </p>
+                        </div>
+                      </div>
 
-                            {/* ADDED: Airport Name and Code */}
-                            {booking.airportTransfer.airportName && (
-                              <div className="ml-6 flex items-center text-sm">
+                      {/* Airport Transfer Info */}
+                      {booking.airportTransfer &&
+                        booking.airportTransfer.selected && (
+                          <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-100">
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center text-sm">
                                 <svg
-                                  className="w-4 h-4 text-gray-500 mr-2"
+                                  className="w-4 h-4 text-blue-500 mr-2"
                                   fill="none"
                                   stroke="currentColor"
                                   viewBox="0 0 24 24"
@@ -867,234 +927,267 @@ const MyBookings = () => {
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                     strokeWidth="2"
-                                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
                                   />
+                                </svg>
+                                <span className="font-medium text-blue-700">
+                                  Airport Transfer:{' '}
+                                </span>
+                                <span className="text-blue-600 ml-1">
+                                  {formatBookingPrice(
+                                    booking.airportTransfer.price, 
+                                    {currency: booking.airportTransfer.currency || bookingCurrency}
+                                  )}
+                                </span>
+                                {booking.airportTransfer.type && (
+                                  <span className="ml-2 text-blue-500">
+                                    ({booking.airportTransfer.type})
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Airport Name and Code */}
+                              {booking.airportTransfer.airportName && (
+                                <div className="ml-6 flex items-center text-sm">
+                                  <svg
+                                    className="w-4 h-4 text-gray-500 mr-2"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                    />
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
+                                  </svg>
+                                  <span className="font-medium text-gray-600">
+                                    Airport:{' '}
+                                  </span>
+                                  <span className="ml-1 text-gray-700">
+                                    {booking.airportTransfer.airportName}
+                                    {booking.airportTransfer.airportCode && (
+                                      <span className="ml-1 font-mono text-sm bg-gray-100 px-1.5 py-0.5 rounded">
+                                        ({booking.airportTransfer.airportCode})
+                                      </span>
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+
+                              {booking.airportTransfer.details && (
+                                <p className="text-sm text-blue-600 ml-6">
+                                  {booking.airportTransfer.details}
+                                </p>
+                              )}
+
+                              {/* Transfer Status */}
+                              <div className="mt-2 flex items-center">
+                                <span className="text-xs font-medium text-gray-600 mr-2">
+                                  Transfer Status:
+                                </span>
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                    booking.airportTransfer.status === 'completed'
+                                      ? 'bg-green-100 text-green-800'
+                                      : booking.airportTransfer.status ===
+                                        'confirmed'
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : booking.airportTransfer.status ===
+                                        'pending'
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : booking.airportTransfer.status ===
+                                        'cancelled'
+                                      ? 'bg-red-100 text-red-800'
+                                      : 'bg-gray-100 text-gray-800'
+                                  }`}
+                                >
+                                  {booking.airportTransfer.status
+                                    .charAt(0)
+                                    .toUpperCase() +
+                                    booking.airportTransfer.status.slice(1)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                      {/* PDF Download Section */}
+                      {booking.airportTransfer &&
+                        booking.airportTransfer.status === 'completed' && (
+                          <div className="mb-4 p-3 bg-green-50 rounded border border-green-100">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center">
+                                <svg
+                                  className="w-5 h-5 text-green-600 mr-2"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
                                   <path
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                     strokeWidth="2"
-                                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                                   />
                                 </svg>
-                                <span className="font-medium text-gray-600">
-                                  Airport:{' '}
-                                </span>
-                                <span className="ml-1 text-gray-700">
-                                  {booking.airportTransfer.airportName}
-                                  {booking.airportTransfer.airportCode && (
-                                    <span className="ml-1 font-mono text-sm bg-gray-100 px-1.5 py-0.5 rounded">
-                                      ({booking.airportTransfer.airportCode})
-                                    </span>
-                                  )}
-                                </span>
+                                <div>
+                                  <p className="text-sm font-medium text-green-700">
+                                    Invoice Available
+                                  </p>
+                                  <p className="text-xs text-green-600">
+                                    Your booking is now complete and paid
+                                  </p>
+                                </div>
                               </div>
-                            )}
-
-                            {booking.airportTransfer.details && (
-                              <p className="text-sm text-blue-600 ml-6">
-                                {booking.airportTransfer.details}
-                              </p>
-                            )}
-
-                            {/* Transfer Status */}
-                            <div className="mt-2 flex items-center">
-                              <span className="text-xs font-medium text-gray-600 mr-2">
-                                Transfer Status:
-                              </span>
-                              <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                  booking.airportTransfer.status === 'completed'
-                                    ? 'bg-green-100 text-green-800'
-                                    : booking.airportTransfer.status ===
-                                      'confirmed'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : booking.airportTransfer.status ===
-                                      'pending'
-                                    ? 'bg-yellow-100 text-yellow-800'
-                                    : booking.airportTransfer.status ===
-                                      'cancelled'
-                                    ? 'bg-red-100 text-red-800'
-                                    : 'bg-gray-100 text-gray-800'
-                                }`}
+                              <button
+                                onClick={() => generateBookingPDF(booking)}
+                                disabled={
+                                  generatingPDF &&
+                                  selectedBookingForPDF === booking._id
+                                }
+                                className="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
                               >
-                                {booking.airportTransfer.status
-                                  .charAt(0)
-                                  .toUpperCase() +
-                                  booking.airportTransfer.status.slice(1)}
-                              </span>
+                                {generatingPDF &&
+                                selectedBookingForPDF === booking._id ? (
+                                  <>
+                                    <svg
+                                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <circle
+                                        className="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                      ></circle>
+                                      <path
+                                        className="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                      ></path>
+                                    </svg>
+                                    Generating...
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg
+                                      className="w-4 h-4 mr-1.5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                      ></path>
+                                    </svg>
+                                    Download Invoice PDF
+                                  </>
+                                )}
+                              </button>
                             </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                    {/* PDF Download Section - Only show if transfer status is completed */}
-                    {booking.airportTransfer &&
-                      booking.airportTransfer.status === 'completed' && (
-                        <div className="mb-4 p-3 bg-green-50 rounded border border-green-100">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <svg
-                                className="w-5 h-5 text-green-600 mr-2"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                      <div className="mt-auto flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
+                        <div className="text-sm text-gray-500">
+                          {/* Intentionally left empty */}
+                        </div>
+                        <div className="flex space-x-2">
+                          {/* PDF Download Button */}
+                          {booking.airportTransfer &&
+                            booking.airportTransfer.status === 'completed' && (
+                              <button
+                                onClick={() => generateBookingPDF(booking)}
+                                disabled={
+                                  generatingPDF &&
+                                  selectedBookingForPDF === booking._id
+                                }
+                                className="inline-flex items-center px-3 py-1.5 border border-green-300 text-green-700 text-sm rounded hover:bg-green-50 transition-colors"
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                />
-                              </svg>
-                              <div>
-                                <p className="text-sm font-medium text-green-700">
-                                  Invoice Available
-                                </p>
-                                <p className="text-xs text-green-600">
-                                  Your booking is now complete and paid
-                                </p>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => generateBookingPDF(booking)}
-                              disabled={
-                                generatingPDF &&
-                                selectedBookingForPDF === booking._id
-                              }
-                              className="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
-                            >
-                              {generatingPDF &&
-                              selectedBookingForPDF === booking._id ? (
-                                <>
-                                  <svg
-                                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <circle
-                                      className="opacity-25"
-                                      cx="12"
-                                      cy="12"
-                                      r="10"
+                                {generatingPDF &&
+                                selectedBookingForPDF === booking._id ? (
+                                  <>
+                                    <svg
+                                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-green-700"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <circle
+                                        className="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                      ></circle>
+                                      <path
+                                        className="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                      ></path>
+                                    </svg>
+                                    Generating...
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg
+                                      className="w-4 h-4 mr-1.5"
+                                      fill="none"
                                       stroke="currentColor"
-                                      strokeWidth="4"
-                                    ></circle>
-                                    <path
-                                      className="opacity-75"
-                                      fill="currentColor"
-                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                    ></path>
-                                  </svg>
-                                  Generating...
-                                </>
-                              ) : (
-                                <>
-                                  <svg
-                                    className="w-4 h-4 mr-1.5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth="2"
-                                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                    ></path>
-                                  </svg>
-                                  Download Invoice PDF
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                      ></path>
+                                    </svg>
+                                    Invoice
+                                  </>
+                                )}
+                              </button>
+                            )}
 
-                    <div className="mt-auto flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
-                      <div className="text-sm text-gray-500">
-                        {/* This section intentionally left empty after removing number of guests */}
-                      </div>
-                      <div className="flex space-x-2">
-                        {/* PDF Download Button - Alternative location */}
-                        {booking.airportTransfer &&
-                          booking.airportTransfer.status === 'completed' && (
+                          {booking.status === 'pending' && (
                             <button
-                              onClick={() => generateBookingPDF(booking)}
-                              disabled={
-                                generatingPDF &&
-                                selectedBookingForPDF === booking._id
-                              }
-                              className="inline-flex items-center px-3 py-1.5 border border-green-300 text-green-700 text-sm rounded hover:bg-green-50 transition-colors"
+                              onClick={() => handleCancelBooking(booking)}
+                              className="px-3 py-1.5 border border-red-300 text-red-600 text-sm rounded hover:bg-red-50 transition-colors"
                             >
-                              {generatingPDF &&
-                              selectedBookingForPDF === booking._id ? (
-                                <>
-                                  <svg
-                                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-green-700"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <circle
-                                      className="opacity-25"
-                                      cx="12"
-                                      cy="12"
-                                      r="10"
-                                      stroke="currentColor"
-                                      strokeWidth="4"
-                                    ></circle>
-                                    <path
-                                      className="opacity-75"
-                                      fill="currentColor"
-                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                    ></path>
-                                  </svg>
-                                  Generating...
-                                </>
-                              ) : (
-                                <>
-                                  <svg
-                                    className="w-4 h-4 mr-1.5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth="2"
-                                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                    ></path>
-                                  </svg>
-                                  Invoice
-                                </>
-                              )}
+                              Cancel Booking
                             </button>
                           )}
-
-                        {booking.status === 'pending' && (
-                          <button
-                            onClick={() => handleCancelBooking(booking)}
-                            className="px-3 py-1.5 border border-red-300 text-red-600 text-sm rounded hover:bg-red-50 transition-colors"
-                          >
-                            Cancel Booking
-                          </button>
-                        )}
-                        {booking.status === 'confirmed' && (
-                          <button
-                            onClick={() => handleCancelBooking(booking)}
-                            className="px-3 py-1.5 border border-yellow-300 text-yellow-700 text-sm rounded hover:bg-yellow-50 transition-colors"
-                          >
-                            Request Cancellation
-                          </button>
-                        )}
+                          {booking.status === 'confirmed' && (
+                            <button
+                              onClick={() => handleCancelBooking(booking)}
+                              className="px-3 py-1.5 border border-yellow-300 text-yellow-700 text-sm rounded hover:bg-yellow-50 transition-colors"
+                            >
+                              Request Cancellation
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-12">

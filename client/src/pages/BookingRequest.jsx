@@ -15,6 +15,8 @@ const BookingRequest = () => {
     guests = 1,
     selectedDuration,
     selectedPrice,
+    currency = 'MUR', // Default to MUR if not provided
+    currencySymbol = 'Rs', // Default to Rs if not provided
     includeAirportTransfer,
     airportTransferId,
     airportTransferType,
@@ -46,6 +48,21 @@ const BookingRequest = () => {
     { code: '+971', name: 'UAE', flag: '🇦🇪' },
     { code: '+27', name: 'South Africa', flag: '🇿🇦' },
   ];
+
+  // Get currency symbol
+  const getCurrencySymbol = (curr) => {
+    const symbols = {
+      'EUR': '€',
+      'MUR': 'Rs'
+    };
+    return symbols[curr] || 'Rs';
+  };
+
+  // Use the provided currencySymbol or calculate it
+  const symbol = currencySymbol || getCurrencySymbol(currency);
+
+  // Calculate total amount
+  const totalAmount = selectedPrice * guests + (includeAirportTransfer ? airportTransferPrice : 0);
 
   useEffect(() => {
     const fetchActivity = async () => {
@@ -205,6 +222,7 @@ const BookingRequest = () => {
         durationType: selectedDuration === 'halfDay' ? 'Half Day' : 'Full Day',
         pricePerPerson: selectedPrice,
         totalPrice: selectedPrice * guests,
+        currency: currency, // Add currency to booking data
         fullName: formData.fullName,
         email: formData.email,
         phone: fullPhoneNumber,
@@ -238,6 +256,7 @@ const BookingRequest = () => {
           passengers: guests,
           specialRequests: `Linked to activity: ${activityBookingReference}\n${formData.specialRequests}`,
           totalPrice: airportTransferPrice,
+          currency: currency, // Add currency to transfer data
         };
 
         const transferResponse = await airportTransferBookingAPI.createBooking(airportTransferData);
@@ -254,6 +273,8 @@ const BookingRequest = () => {
           airportTransferBookingReference: airportTransferBookingReference,
           includeAirportTransfer: includeAirportTransfer,
           totalAmount: selectedPrice * guests + (includeAirportTransfer ? airportTransferPrice : 0),
+          currency: currency,
+          currencySymbol: symbol,
         },
       });
     } catch (err) {
@@ -287,8 +308,6 @@ const BookingRequest = () => {
     );
   }
 
-  const totalAmount = selectedPrice * guests + (includeAirportTransfer ? airportTransferPrice : 0);
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50/30 via-white to-blue-50/20 py-20 px-4">
       <div className="max-w-6xl mx-auto">
@@ -305,6 +324,12 @@ const BookingRequest = () => {
           <p className="text-gray-600 text-base max-w-2xl mx-auto">
             Please provide your details to confirm this amazing experience
           </p>
+          
+          {/* Currency Display */}
+          <div className="mt-2 inline-flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+            <span className="mr-2">Currency:</span>
+            <span className="font-bold">{currency} ({symbol})</span>
+          </div>
         </div>
 
         {/* Error Message */}
@@ -377,7 +402,7 @@ const BookingRequest = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-blue-600">Rs {selectedPrice * guests}</div>
+                      <div className="text-2xl font-bold text-blue-600">{symbol} {selectedPrice * guests}</div>
                       <div className="text-xs text-gray-500 mt-0.5">Activity total</div>
                     </div>
                   </div>
@@ -417,14 +442,14 @@ const BookingRequest = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-2xl font-bold text-green-600">Rs {airportTransferPrice}</div>
+                        <div className="text-2xl font-bold text-green-600">{symbol} {airportTransferPrice}</div>
                         <div className="text-xs text-gray-500 mt-0.5">Transfer total</div>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Total Amount */}
+                {/* Total Amount - Updated with currency symbol */}
                 <div className="pt-5 border-t border-gray-200">
                   <div className="flex justify-between items-center">
                     <div>
@@ -433,10 +458,20 @@ const BookingRequest = () => {
                     </div>
                     <div className="text-right">
                       <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">
-                        Rs {totalAmount}
+                        {symbol}{totalAmount}
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">Final price</div>
                     </div>
+                  </div>
+                </div>
+
+                {/* Currency Info */}
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>All prices shown in {currency} ({symbol})</span>
                   </div>
                 </div>
               </div>
@@ -546,8 +581,6 @@ const BookingRequest = () => {
                   />
                 </div>
 
-               
-
                 {/* Submit Button */}
                 <button
                   onClick={handleSubmitBooking}
@@ -623,21 +656,11 @@ const BookingRequest = () => {
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-900 text-sm">Flexible Cancellation</h4>
-                    <p className="text-gray-600 text-xs mt-0.5">Free 24h before</p>
+                    <p className="text-gray-600 text-xs mt-0.5">Cantact Us</p>
                   </div>
                 </div>
 
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                    <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 text-sm">Instant Confirmation</h4>
-                    <p className="text-gray-600 text-xs mt-0.5">Details immediately</p>
-                  </div>
-                </div>
+                
               </div>
 
               <div className="my-6">
@@ -669,43 +692,7 @@ const BookingRequest = () => {
               </div>
             </div>
 
-            {/* Need Help */}
-            <div className="bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl p-6 text-white shadow-lg">
-              <h3 className="text-lg font-bold mb-3">Need Help?</h3>
-              <p className="text-blue-100 text-sm mb-5">Our team is here to assist you</p>
-              
-              <div className="space-y-3">
-                <a 
-                  href="tel:+23051234567" 
-                  className="flex items-center p-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
-                >
-                  <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center mr-3">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="font-medium text-sm text-blue-100">Call Us</div>
-                    <div className="text-xs text-blue-100">+230 123 4567</div>
-                  </div>
-                </a>
-
-                <a 
-                  href="mailto:support@aquaexcursions.com" 
-                  className="flex items-center p-3 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
-                >
-                  <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center mr-3">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="font-medium text-sm text-blue-100">Email Us</div>
-                    <div className="text-xs text-blue-100">support@aqua.com</div>
-                  </div>
-                </a>
-              </div>
-            </div>
+           
           </div>
         </div>
       </div>
