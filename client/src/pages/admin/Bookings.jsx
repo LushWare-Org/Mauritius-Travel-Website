@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { bookingsAPI, airportTransferBookingAPI } from '../../utils/api';
+import { formatBookingPrice } from '../../utils/currency'; // Import the currency formatting function
 
 const AdminBookings = () => {
   const [bookings, setBookings] = useState([]);
@@ -337,14 +338,10 @@ const AdminBookings = () => {
   const BookingStats = () => {
     const totalBookings = filteredBookings.length;
     const bookingsWithTransfer = filteredBookings.filter((booking) => hasAirportTransfer(booking)).length;
-    const totalRevenue = filteredBookings.reduce((sum, booking) => sum + getTotalPriceWithTransfer(booking), 0);
-    const avgRevenuePerBooking = totalBookings > 0 ? totalRevenue / totalBookings : 0;
     const confirmedBookings = filteredBookings.filter((b) => b.status === 'confirmed').length;
-    const transferRevenue = filteredBookings.reduce((sum, booking) => sum + getAirportTransferPrice(booking), 0);
-    const activityRevenue = totalRevenue - transferRevenue;
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {[
           { 
             label: 'Filtered Bookings', 
@@ -363,18 +360,6 @@ const AdminBookings = () => {
             value: bookingsWithTransfer, 
             desc: `${totalBookings > 0 ? `${((bookingsWithTransfer / totalBookings) * 100).toFixed(1)}%` : '0%'}`, 
             icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' 
-          },
-          { 
-            label: 'Total Revenue', 
-            value: `RS ${totalRevenue.toFixed(2)}`, 
-            desc: `Activity: RS ${activityRevenue.toFixed(2)} | Transfer: RS ${transferRevenue.toFixed(2)}`, 
-            icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' 
-          },
-          { 
-            label: 'Avg. Revenue', 
-            value: `RS ${avgRevenuePerBooking.toFixed(2)}`, 
-            desc: 'Per booking', 
-            icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' 
           },
         ].map((stat, index) => (
           <div key={index} className="bg-white rounded-lg shadow p-4 border border-gray-200">
@@ -786,16 +771,16 @@ const AdminBookings = () => {
                         <td className="px-4 py-4">
                           <div className="space-y-1">
                             <div className="text-sm font-semibold text-gray-900">
-                              RS {totalWithTransfer.toFixed(2)}
+                              {formatBookingPrice(totalWithTransfer, booking)} {/* Use formatBookingPrice */}
                               {hasTransfer && (
                                 <span className="text-xs text-blue-600 ml-1">(incl. transfer)</span>
                               )}
                             </div>
                             <div className="text-xs text-gray-500 space-y-0.5">
-                              <div>Excursion: RS {booking.totalPrice?.toFixed(2) || '0.00'}</div>
+                              <div>Excursion: {formatBookingPrice(booking.totalPrice, booking)}</div> {/* Use formatBookingPrice */}
                               {hasTransfer && (
                                 <div className="text-blue-600">
-                                  Transfer: +RS {transferPrice.toFixed(2)}
+                                  Transfer: +{formatBookingPrice(transferPrice, booking)} {/* Use formatBookingPrice */}
                                 </div>
                               )}
                             </div>

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { bookingsAPI, airportTransferBookingAPI } from '../../utils/api';
 import AdminLayout from '../../components/admin/AdminLayout';
 import logo from '../../assets/logo.png'; 
+import { formatBookingPrice } from '../../utils/currency'; // Import the currency formatting function
 
 const BookingDetail = () => {
   const { id } = useParams();
@@ -133,15 +134,16 @@ const BookingDetail = () => {
     return 'Standard';
   };
 
-  // Get price per person display
+  // Get price per person display using formatBookingPrice
   const getPricePerPersonDisplay = () => {
     if (booking?.pricePerPerson) {
-      return `RS${booking.pricePerPerson}`;
+      return formatBookingPrice(booking.pricePerPerson, booking);
     }
     
     // Calculate from total price and guests
     if (booking?.totalPrice && booking?.guests) {
-      return `RS${(booking.totalPrice / booking.guests).toFixed(2)}`;
+      const pricePerPerson = booking.totalPrice / booking.guests;
+      return formatBookingPrice(pricePerPerson, booking);
     }
     
     return 'N/A';
@@ -168,6 +170,16 @@ const BookingDetail = () => {
       total += parseFloat(airportTransferBooking.totalPrice);
     }
     return total;
+  };
+
+  // Format price with currency symbol
+  const formatPrice = (price) => {
+    return formatBookingPrice(price, booking);
+  };
+
+  // Format airport transfer price with currency symbol
+  const formatTransferPrice = (price) => {
+    return formatBookingPrice(price, airportTransferBooking);
   };
 
   const handleStatusChange = async (newStatus) => {
@@ -353,24 +365,24 @@ const BookingDetail = () => {
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
 
-      // Activity Total
+      // Activity Total - use formatBookingPrice for proper currency formatting
       doc.text(`Excursion Total:`, margin, y);
-      doc.text(`RS ${booking.totalPrice || 0}`, pageWidth - margin, y, { align: 'right' });
+      doc.text(`${formatBookingPrice(booking.totalPrice || 0, booking)}`, pageWidth - margin, y, { align: 'right' });
       y += 7;
 
-      // Airport Transfer Total
+      // Airport Transfer Total - use formatBookingPrice for proper currency formatting
       if (airportTransferBooking) {
         const transferPrice = airportTransferBooking.totalPrice || airportTransferBooking.price || 0;
         doc.text(`Airport Transfer:`, margin, y);
-        doc.text(`RS ${transferPrice}`, pageWidth - margin, y, { align: 'right' });
+        doc.text(`${formatBookingPrice(transferPrice, airportTransferBooking)}`, pageWidth - margin, y, { align: 'right' });
         y += 7;
       }
 
-      // Grand Total
+      // Grand Total - use formatBookingPrice for proper currency formatting
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(14);
       doc.text(`Grand Total:`, margin, y);
-      doc.text(`RS ${getGrandTotal().toFixed(2)}`, pageWidth - margin, y, { align: 'right' });
+      doc.text(`${formatBookingPrice(getGrandTotal(), booking || airportTransferBooking)}`, pageWidth - margin, y, { align: 'right' });
       y += 10;
 
       // Status and Notes
@@ -663,7 +675,7 @@ const BookingDetail = () => {
               <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500">Excursions Total</dt>
                 <dd className="mt-1 text-sm font-medium text-blue-700 sm:mt-0 sm:col-span-2">
-                  RS{booking.totalPrice}
+                  {formatPrice(booking.totalPrice)} {/* Use formatPrice instead of RS{...} */}
                 </dd>
               </div>
             </dl>
@@ -765,7 +777,7 @@ const BookingDetail = () => {
               <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500">Transfer Price</dt>
                 <dd className="mt-1 text-sm font-medium text-green-700 sm:mt-0 sm:col-span-2">
-                  RS{airportTransferBooking.totalPrice || airportTransferBooking.price || '0.00'}
+                  {formatTransferPrice(airportTransferBooking.totalPrice || airportTransferBooking.price || '0.00')} {/* Use formatTransferPrice instead of RS{...} */}
                 </dd>
               </div>
               {airportTransferBooking.specialRequests && (
@@ -795,16 +807,16 @@ const BookingDetail = () => {
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <span className="font-medium">Base Price:</span> RS{booking.activity.price}
+                      <span className="font-medium">Base Price:</span> {formatPrice(booking.activity.price)} {/* Use formatPrice */}
                     </div>
                     {booking.activity.halfDayPrice && (
                       <div>
-                        <span className="font-medium">Half Day:</span> RS{booking.activity.halfDayPrice}
+                        <span className="font-medium">Half Day:</span> {formatPrice(booking.activity.halfDayPrice)} {/* Use formatPrice */}
                       </div>
                     )}
                     {booking.activity.fullDayPrice && (
                       <div>
-                        <span className="font-medium">Full Day:</span> RS{booking.activity.fullDayPrice}
+                        <span className="font-medium">Full Day:</span> {formatPrice(booking.activity.fullDayPrice)} {/* Use formatPrice */}
                       </div>
                     )}
                   </div>
@@ -819,7 +831,7 @@ const BookingDetail = () => {
                 <div className="space-y-1">
                   <div className="flex justify-between">
                     <span>Excursions price per person:</span>
-                    <span>{pricePerPerson}</span>
+                    <span>{pricePerPerson}</span> {/* Already using formatBookingPrice */}
                   </div>
                   <div className="flex justify-between">
                     <span>Number of guests:</span>
@@ -827,7 +839,7 @@ const BookingDetail = () => {
                   </div>
                   <div className="flex justify-between font-medium pt-2 border-t">
                     <span>Excursions Subtotal:</span>
-                    <span className="text-blue-700">RS{booking.totalPrice}</span>
+                    <span className="text-blue-700">{formatPrice(booking.totalPrice)}</span> {/* Use formatPrice */}
                   </div>
                   
                   {/* Airport Transfer Price */}
@@ -836,7 +848,7 @@ const BookingDetail = () => {
                       <div className="flex justify-between pt-2">
                         <span>Airport Transfer ({getTripTypeDisplay(airportTransferBooking.tripType)}):</span>
                         <span className="text-green-600">
-                          RS{airportTransferBooking.totalPrice || airportTransferBooking.price || '0.00'}
+                          {formatTransferPrice(airportTransferBooking.totalPrice || airportTransferBooking.price || '0.00')} {/* Use formatTransferPrice */}
                         </span>
                       </div>
                       <div className="text-xs text-gray-500 pl-4">
@@ -848,7 +860,7 @@ const BookingDetail = () => {
                   {/* Grand Total */}
                   <div className="flex justify-between font-bold text-lg pt-4 border-t-2">
                     <span>GRAND TOTAL:</span>
-                    <span className="text-blue-800">RS{grandTotal.toFixed(2)}</span>
+                    <span className="text-blue-800">{formatBookingPrice(grandTotal, booking || airportTransferBooking)}</span> {/* Use formatBookingPrice */}
                   </div>
                 </div>
               </dd>

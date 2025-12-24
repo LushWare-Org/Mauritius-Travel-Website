@@ -42,6 +42,9 @@ router.get('/', protect, bookingController.getAllBookings);
 // Route to get booking by reference number
 router.get('/reference/:reference', bookingController.getBookingByReference);
 
+// Route to convert booking price to another currency
+router.get('/:id/convert/:toCurrency', bookingController.convertBookingPrice);
+
 // Route to get, update or delete a booking by ID
 router.get('/:id', protect, bookingController.getBookingById);
 router.put('/:id', protect, bookingController.updateBookingStatus);

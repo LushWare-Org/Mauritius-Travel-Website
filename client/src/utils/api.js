@@ -346,7 +346,9 @@ export const bookingsAPI = {
   getById: (id) => API.get(`/bookings/${id}`),
   getByReference: (reference) => API.get(`/bookings/reference/${reference}`),
   updateStatus: (id, status) => API.put(`/bookings/${id}`, { status }),
-  delete: (id) => API.delete(`/bookings/${id}`)
+  delete: (id) => API.delete(`/bookings/${id}`),
+  // NEW: Convert price to another currency
+  convertPrice: (id, toCurrency) => API.get(`/bookings/${id}/convert/${toCurrency}`)
 };
 
 // Users API

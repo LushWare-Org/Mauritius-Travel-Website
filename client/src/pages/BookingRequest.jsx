@@ -49,20 +49,36 @@ const BookingRequest = () => {
     { code: '+27', name: 'South Africa', flag: '🇿🇦' },
   ];
 
-  // Get currency symbol
+  // Function to get currency symbol - consistent with MyBookings
   const getCurrencySymbol = (curr) => {
     const symbols = {
       'EUR': '€',
-      'MUR': 'Rs'
+      'MUR': 'Rs',
+      'USD': '$',
+      'GBP': '£'
     };
-    return symbols[curr] || 'Rs';
+    return symbols[curr] || curr || 'Rs';
   };
 
-  // Use the provided currencySymbol or calculate it
-  const symbol = currencySymbol || getCurrencySymbol(currency);
+  // Function to format price for display - consistent with MyBookings
+  const formatBookingPrice = (price, currencyCode = currency) => {
+    const symbol = getCurrencySymbol(currencyCode);
+    const amount = parseFloat(price) || 0;
+    
+    // Format based on currency
+    if (currencyCode === 'EUR') {
+      return `${symbol} ${amount.toFixed(2)}`;
+    } else {
+      return `${symbol} ${amount.toFixed(currencyCode === 'MUR' ? 0 : 2)}`;
+    }
+  };
+
+  // Use consistent currency handling
+  const bookingCurrency = currency || 'MUR';
+  const symbol = getCurrencySymbol(bookingCurrency);
 
   // Calculate total amount
-  const totalAmount = selectedPrice * guests + (includeAirportTransfer ? airportTransferPrice : 0);
+  const totalAmount = (selectedPrice * guests) + (includeAirportTransfer ? airportTransferPrice : 0);
 
   useEffect(() => {
     const fetchActivity = async () => {
@@ -222,7 +238,8 @@ const BookingRequest = () => {
         durationType: selectedDuration === 'halfDay' ? 'Half Day' : 'Full Day',
         pricePerPerson: selectedPrice,
         totalPrice: selectedPrice * guests,
-        currency: currency, // Add currency to booking data
+        currency: bookingCurrency,
+        currencySymbol: symbol,
         fullName: formData.fullName,
         email: formData.email,
         phone: fullPhoneNumber,
@@ -256,7 +273,8 @@ const BookingRequest = () => {
           passengers: guests,
           specialRequests: `Linked to activity: ${activityBookingReference}\n${formData.specialRequests}`,
           totalPrice: airportTransferPrice,
-          currency: currency, // Add currency to transfer data
+          currency: bookingCurrency,
+          currencySymbol: symbol,
         };
 
         const transferResponse = await airportTransferBookingAPI.createBooking(airportTransferData);
@@ -272,8 +290,8 @@ const BookingRequest = () => {
           bookingReference: activityBookingReference,
           airportTransferBookingReference: airportTransferBookingReference,
           includeAirportTransfer: includeAirportTransfer,
-          totalAmount: selectedPrice * guests + (includeAirportTransfer ? airportTransferPrice : 0),
-          currency: currency,
+          totalAmount: totalAmount,
+          currency: bookingCurrency,
           currencySymbol: symbol,
         },
       });
@@ -328,7 +346,7 @@ const BookingRequest = () => {
           {/* Currency Display */}
           <div className="mt-2 inline-flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
             <span className="mr-2">Currency:</span>
-            <span className="font-bold">{currency} ({symbol})</span>
+            <span className="font-bold">{bookingCurrency} ({symbol})</span>
           </div>
         </div>
 
@@ -395,14 +413,16 @@ const BookingRequest = () => {
                         </div>
                         <div className="flex items-center">
                           <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 01118 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           <span>{selectedDuration === 'halfDay' ? 'Half Day (4-5 hours)' : 'Full Day (8-9 hours)'}</span>
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-blue-600">{symbol} {selectedPrice * guests}</div>
+                      <div className="text-2xl font-bold text-blue-600">
+                        {formatBookingPrice(selectedPrice * guests)}
+                      </div>
                       <div className="text-xs text-gray-500 mt-0.5">Activity total</div>
                     </div>
                   </div>
@@ -442,14 +462,16 @@ const BookingRequest = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-2xl font-bold text-green-600">{symbol} {airportTransferPrice}</div>
+                        <div className="text-2xl font-bold text-green-600">
+                          {formatBookingPrice(airportTransferPrice)}
+                        </div>
                         <div className="text-xs text-gray-500 mt-0.5">Transfer total</div>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Total Amount - Updated with currency symbol */}
+                {/* Total Amount - Updated with consistent currency formatting */}
                 <div className="pt-5 border-t border-gray-200">
                   <div className="flex justify-between items-center">
                     <div>
@@ -458,7 +480,7 @@ const BookingRequest = () => {
                     </div>
                     <div className="text-right">
                       <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">
-                        {symbol}{totalAmount}
+                        {formatBookingPrice(totalAmount)}
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">Final price</div>
                     </div>
@@ -471,7 +493,7 @@ const BookingRequest = () => {
                     <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span>All prices shown in {currency} ({symbol})</span>
+                    <span>All prices shown in {bookingCurrency} ({symbol})</span>
                   </div>
                 </div>
               </div>
@@ -656,11 +678,9 @@ const BookingRequest = () => {
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-900 text-sm">Flexible Cancellation</h4>
-                    <p className="text-gray-600 text-xs mt-0.5">Cantact Us</p>
+                    <p className="text-gray-600 text-xs mt-0.5">Contact Us</p>
                   </div>
                 </div>
-
-                
               </div>
 
               <div className="my-6">
@@ -691,8 +711,6 @@ const BookingRequest = () => {
                 </ul>
               </div>
             </div>
-
-           
           </div>
         </div>
       </div>

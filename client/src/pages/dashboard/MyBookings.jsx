@@ -7,7 +7,11 @@ import DashboardDebugger from '../../components/dashboard/DashboardDebugger';
 import { userBookingsAPI, airportTransferBookingAPI } from '../../utils/api';
 import { jsPDF } from 'jspdf';
 import logo from '../../assets/logo.png';
-import { getCurrencySymbol, formatPrice } from '../../utils/currency'; // Import the currency helper
+import {
+  getCurrencySymbol,
+  formatBookingPrice,
+  getBookingCurrency,
+} from '../../utils/currency';
 
 const MyBookings = () => {
   const { currentUser } = useAuth();
@@ -23,33 +27,72 @@ const MyBookings = () => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const navigate = useNavigate();
 
-  // Function to get booking currency - with proper fallback
-  const getBookingCurrency = (booking) => {
-    // First priority: currency from booking
-    if (booking.currency) {
-      return booking.currency;
-    }
-    
-    // Second priority: currency from airport transfer
-    if (booking.airportTransfer?.currency) {
-      return booking.airportTransfer.currency;
-    }
-    
-    // Third priority: try to infer from activity or price
-    if (booking.activity?.currency) {
-      return booking.activity.currency;
-    }
-    
-    // Default fallback: MUR
-    return 'MUR';
-  };
+  // Calculate total price function - FIXED
+  // Calculate total price function - WITH DEBUG LOGGING
+const calculateTotalPrice = (booking) => {
+  console.log('🔍 DEBUG calculateTotalPrice for booking:', {
+    id: booking._id,
+    bookingCurrency: booking.currency,
+    bookingSymbol: booking.currencySymbol,
+    prices: booking.prices,
+    hasEURPrice: booking.prices?.EUR?.totalPrice,
+    hasMURPrice: booking.prices?.MUR?.totalPrice,
+    totalPriceField: booking.totalPrice
+  });
 
-  // Function to format price for display with correct currency symbol
-  const formatBookingPrice = (price, booking) => {
-    if (!price) return formatPrice(0, getBookingCurrency(booking));
-    const currency = getBookingCurrency(booking);
-    return formatPrice(price, currency);
-  };
+  let total = 0;
+  const bookingCurrency = booking.currency || 'MUR';
+
+  if (booking.prices && booking.prices[bookingCurrency]) {
+    total = parseFloat(booking.prices[bookingCurrency].totalPrice) || 0;
+    console.log(`💰 Using prices[${bookingCurrency}].totalPrice:`, total);
+  } else {
+    total = parseFloat(booking.totalPrice) || 0;
+    console.log(`💰 Fallback to booking.totalPrice:`, total);
+  }
+
+  if (booking.airportTransfer && booking.airportTransfer.price) {
+    const transferPrice = parseFloat(booking.airportTransfer.price);
+    console.log(`✈️ Adding airport transfer:`, transferPrice);
+    total += transferPrice;
+  }
+
+  console.log(`💰 Final total:`, total);
+  return total;
+};
+  // Calculate and format total price with correct currency - SIMPLIFIED
+  // Calculate and format total price with correct currency - FIXED
+const calculateAndFormatTotalPrice = (booking) => {
+  console.log('💰 calculateAndFormatTotalPrice for booking:', {
+    id: booking._id,
+    currency: booking.currency,
+    currencySymbol: booking.currencySymbol,
+    totalPrice: booking.totalPrice
+  });
+  
+  const totalPrice = calculateTotalPrice(booking);
+  
+  // Get the correct currency and symbol
+  const currency = booking.currency || 'MUR';
+  
+  // FIX: Use the correct symbol based on currency, not just fallback to 'Rs'
+  let currencySymbol;
+  if (booking.currencySymbol) {
+    currencySymbol = booking.currencySymbol;
+  } else if (currency === 'EUR') {
+    currencySymbol = '€';
+  } else {
+    currencySymbol = 'Rs';
+  }
+  
+  console.log('💰 Formatting with:', { 
+    totalPrice, 
+    currency, 
+    currencySymbol 
+  });
+  
+  return formatBookingPrice(totalPrice, { currency, currencySymbol });
+};
 
   // Load logo as base64
   useEffect(() => {
@@ -75,166 +118,256 @@ const MyBookings = () => {
     fetchBookings();
   }, [currentUser, retryCount]);
 
-  const fetchBookings = async () => {
-    setLoading(true);
-    try {
-      const response = await userBookingsAPI.getUpcoming();
+ const fetchBookings = async () => {
+  setLoading(true);
+  try {
+    const response = await userBookingsAPI.getUpcoming();
 
-      if (response.data.success) {
-        let bookingsWithTransfers = response.data.data;
+    if (response.data.success) {
+      let bookingsWithTransfers = response.data.data;
 
-        // DEBUG: Log the raw booking data
-        console.log('Raw booking data:', bookingsWithTransfers.map(b => ({
-          id: b._id,
-          title: b.activity?.title,
-          currency: b.currency,
-          totalPrice: b.totalPrice,
-          activityCurrency: b.activity?.currency
-        })));
+      console.log(
+        '📋 Raw activity bookings API response:',
+        bookingsWithTransfers
+      );
 
-        if (currentUser?.email) {
-          try {
-            let airportTransfers = [];
-            try {
-              const userTransfersResponse =
-                await airportTransferBookingAPI.getUserBookings();
-              if (userTransfersResponse.data.success) {
-                airportTransfers = userTransfersResponse.data.data;
-              }
-            } catch (userEndpointErr) {
-              try {
-                const allTransfersResponse =
-                  await airportTransferBookingAPI.getAllBookings();
-                if (allTransfersResponse.data.success) {
-                  airportTransfers = allTransfersResponse.data.filter(
-                    (transfer) => transfer.email === currentUser.email
-                  );
-                }
-              } catch (allTransfersErr) {
-                console.log(
-                  'Cannot fetch all airport transfers:',
-                  allTransfersErr.message
-                );
-              }
+      // TEMPORARY FIX: Create prices object if missing
+      bookingsWithTransfers = bookingsWithTransfers.map(booking => {
+        // If prices is undefined, create it based on the currency
+        if (!booking.prices) {
+          console.log('⚠️ Creating missing prices for booking:', booking._id, 'Currency:', booking.currency);
+          
+          // Create prices object based on the booking's currency
+          const prices = {
+            EUR: {
+              pricePerPerson: 0,
+              totalPrice: 0
+            },
+            MUR: {
+              pricePerPerson: 0,
+              totalPrice: 0
             }
+          };
+          
+          // Set the correct price in the booking's currency
+          if (booking.currency === 'EUR') {
+            prices.EUR.pricePerPerson = booking.pricePerPerson || 0;
+            prices.EUR.totalPrice = booking.totalPrice || 0;
+            // Calculate MUR equivalent (assuming 1 EUR = 49.5 MUR)
+            prices.MUR.pricePerPerson = Math.round((booking.pricePerPerson || 0) * 49.5);
+            prices.MUR.totalPrice = Math.round((booking.totalPrice || 0) * 49.5);
+          } else {
+            // Currency is MUR
+            prices.MUR.pricePerPerson = booking.pricePerPerson || 0;
+            prices.MUR.totalPrice = booking.totalPrice || 0;
+            // Calculate EUR equivalent
+            prices.EUR.pricePerPerson = Math.round(((booking.pricePerPerson || 0) / 49.5) * 100) / 100;
+            prices.EUR.totalPrice = Math.round(((booking.totalPrice || 0) / 49.5) * 100) / 100;
+          }
+          
+          // Add the prices object to the booking
+          return {
+            ...booking,
+            prices: prices,
+            currency: booking.currency || 'MUR',
+            currencySymbol: booking.currencySymbol || (booking.currency === 'EUR' ? '€' : 'Rs')
+          };
+        }
+        
+        // If prices exists, just ensure currency info is set
+        return {
+          ...booking,
+          currency: booking.currency || 'MUR',
+          currencySymbol: booking.currencySymbol || (booking.currency === 'EUR' ? '€' : 'Rs')
+        };
+      });
 
-            if (airportTransfers.length > 0) {
-              bookingsWithTransfers = bookingsWithTransfers.map((booking) => {
-                const linkedTransfer = airportTransfers.find(
-                  (transfer) =>
-                    (transfer.specialRequests &&
-                      transfer.specialRequests.includes(
-                        booking.bookingReference
-                      )) ||
-                    transfer.activityBookingReference ===
-                      booking.bookingReference ||
-                    transfer.activityBookingId === booking._id
+      if (currentUser?.email) {
+        try {
+          let airportTransfers = [];
+          try {
+            const userTransfersResponse =
+              await airportTransferBookingAPI.getUserBookings();
+            if (userTransfersResponse.data.success) {
+              airportTransfers = userTransfersResponse.data.data;
+              console.log(
+                '🚗 Airport transfers fetched:',
+                airportTransfers.length
+              );
+              console.log(
+                '🚗 Sample airport transfer data:',
+                airportTransfers[0]
+              );
+            }
+          } catch (userEndpointErr) {
+            try {
+              const allTransfersResponse =
+                await airportTransferBookingAPI.getAllBookings();
+              if (allTransfersResponse.data.success) {
+                airportTransfers = allTransfersResponse.data.filter(
+                  (transfer) => transfer.email === currentUser.email
+                );
+                console.log(
+                  '🚗 Filtered airport transfers:',
+                  airportTransfers.length
+                );
+              }
+            } catch (allTransfersErr) {
+              console.log(
+                'Cannot fetch all airport transfers:',
+                allTransfersErr.message
+              );
+            }
+          }
+
+          if (airportTransfers.length > 0) {
+            console.log('🔗 Linking airport transfers to bookings...');
+
+            bookingsWithTransfers = bookingsWithTransfers.map((booking) => {
+              const linkedTransfer = airportTransfers.find(
+                (transfer) =>
+                  (transfer.specialRequests &&
+                    transfer.specialRequests.includes(
+                      booking.bookingReference
+                    )) ||
+                  transfer.activityBookingReference ===
+                    booking.bookingReference ||
+                  transfer.activityBookingId === booking._id
+              );
+
+              console.log(
+                '🔄 Processing booking:',
+                booking.bookingReference,
+                'has linked transfer:',
+                !!linkedTransfer
+              );
+
+              if (linkedTransfer) {
+                // Extract currency information from the airport transfer booking
+                // Check multiple possible sources for currency data
+                const transferCurrency =
+                  linkedTransfer.currency ||
+                  (linkedTransfer.totalPrice &&
+                  typeof linkedTransfer.totalPrice === 'object'
+                    ? linkedTransfer.totalPrice.currency
+                    : null) ||
+                  booking.currency ||
+                  'MUR';
+                const transferSymbol =
+                  linkedTransfer.currencySymbol ||
+                  getCurrencySymbol(transferCurrency);
+                const transferPrice = parseFloat(
+                  (typeof linkedTransfer.totalPrice === 'object'
+                    ? linkedTransfer.totalPrice.amount
+                    : linkedTransfer.totalPrice) ||
+                    linkedTransfer.price ||
+                    0
                 );
 
-                if (linkedTransfer) {
-                  return {
-                    ...booking,
-                    // Ensure currency is preserved
-                    currency: booking.currency || linkedTransfer.currency || 'MUR',
-                    airportTransfer: {
-                      selected: true,
-                      price:
-                        linkedTransfer.totalPrice || linkedTransfer.price || 0,
-                      type:
-                        linkedTransfer.tripType === 'one-way'
-                          ? 'One Way'
-                          : linkedTransfer.tripType === 'round-trip'
-                          ? 'Round Trip'
-                          : linkedTransfer.tripType || 'Transfer',
-                      details:
-                        linkedTransfer.transferType === 'airport-to-hotel'
-                          ? 'Airport to Hotel'
-                          : linkedTransfer.transferType === 'hotel-to-airport'
-                          ? 'Hotel to Airport'
-                          : linkedTransfer.transferType || 'Airport Transfer',
-                      bookingReference: linkedTransfer.bookingReference,
-                      status: linkedTransfer.status,
-                      transferType: linkedTransfer.transferType,
-                      tripType: linkedTransfer.tripType,
-                      airportName:
-                        linkedTransfer.transfer?.airportName || 'N/A',
-                      airportCode:
-                        linkedTransfer.transfer?.airportCode || 'N/A',
-                      vehicleType: linkedTransfer.transfer?.vehicleType,
-                      guestName: linkedTransfer.guestName,
-                      email: linkedTransfer.email,
-                      phone: linkedTransfer.phone,
-                      arrivalDate: linkedTransfer.arrivalDate,
-                      arrivalTime: linkedTransfer.arrivalTime,
-                      departureDate: linkedTransfer.departureDate,
-                      departureTime: linkedTransfer.departureTime,
-                      flightNumber: linkedTransfer.flightNumber,
-                      specialRequests: linkedTransfer.specialRequests,
-                      adminNotes: linkedTransfer.adminNotes,
-                      currency: linkedTransfer.currency || booking.currency || 'MUR',
-                    },
-                  };
-                }
+                console.log('💰 Airport transfer currency info:', {
+                  transferId: linkedTransfer._id,
+                  transferCurrency,
+                  transferSymbol,
+                  transferPrice,
+                  rawTransferData: linkedTransfer,
+                });
+
                 return {
                   ...booking,
-                  currency: booking.currency || 'MUR'
+                  // Ensure booking has currency info
+                  currency: booking.currency || 'MUR',
+                  currencySymbol: booking.currencySymbol || (booking.currency === 'EUR' ? '€' : 'Rs'),
+                  airportTransfer: {
+                    selected: true,
+                    price: transferPrice,
+                    type:
+                      linkedTransfer.tripType === 'one-way'
+                        ? 'One Way'
+                        : linkedTransfer.tripType === 'round-trip'
+                        ? 'Round Trip'
+                        : linkedTransfer.tripType || 'Transfer',
+                    details:
+                      linkedTransfer.transferType === 'airport-to-hotel'
+                        ? 'Airport to Hotel'
+                        : linkedTransfer.transferType === 'hotel-to-airport'
+                        ? 'Hotel to Airport'
+                        : linkedTransfer.transferType || 'Airport Transfer',
+                    bookingReference: linkedTransfer.bookingReference,
+                    status: linkedTransfer.status,
+                    transferType: linkedTransfer.transferType,
+                    tripType: linkedTransfer.tripType,
+                    airportName:
+                      linkedTransfer.transfer?.airportName || 'N/A',
+                    airportCode:
+                      linkedTransfer.transfer?.airportCode || 'N/A',
+                    vehicleType: linkedTransfer.transfer?.vehicleType,
+                    guestName: linkedTransfer.guestName,
+                    email: linkedTransfer.email,
+                    phone: linkedTransfer.phone,
+                    arrivalDate: linkedTransfer.arrivalDate,
+                    arrivalTime: linkedTransfer.arrivalTime,
+                    departureDate: linkedTransfer.departureDate,
+                    departureTime: linkedTransfer.departureTime,
+                    flightNumber: linkedTransfer.flightNumber,
+                    specialRequests: linkedTransfer.specialRequests,
+                    adminNotes: linkedTransfer.adminNotes,
+                    // Include currency information
+                    currency: transferCurrency,
+                    currencySymbol: transferSymbol,
+                  },
                 };
-              });
-            } else {
-              // Add default currency to bookings without transfers
-              bookingsWithTransfers = bookingsWithTransfers.map(booking => ({
-                ...booking,
-                currency: booking.currency || 'MUR',
-              }));
-            }
-          } catch (transferErr) {
-            console.log(
-              'Error fetching airport transfers:',
-              transferErr.message
-            );
-            // Still add default currency
-            bookingsWithTransfers = bookingsWithTransfers.map(booking => ({
-              ...booking,
-              currency: booking.currency || 'MUR',
-            }));
-          }
-        } else {
-          // Add default currency for non-logged in users
-          bookingsWithTransfers = bookingsWithTransfers.map(booking => ({
-            ...booking,
-            currency: booking.currency || 'MUR',
-          }));
-        }
+              }
 
-        // DEBUG: Log after processing
-        console.log('Processed bookings:', bookingsWithTransfers.map(b => ({
+              // Return booking without transfer
+              return booking;
+            });
+          } else {
+            // No airport transfers found, bookings already have currency info from the first map
+          }
+        } catch (transferErr) {
+          console.log(
+            'Error fetching airport transfers:',
+            transferErr.message
+          );
+          // Bookings already have currency info from the first map
+        }
+      }
+
+      // Enhanced debug logging
+      console.log(
+        '✅ Final processed bookings with currency:',
+        bookingsWithTransfers.map((b) => ({
           id: b._id,
           title: b.activity?.title,
-          currency: b.currency,
+          bookingCurrency: b.currency,
+          bookingSymbol: b.currencySymbol,
+          pricePerPerson: b.pricePerPerson,
           totalPrice: b.totalPrice,
+          prices: b.prices,
           hasTransfer: !!b.airportTransfer,
-          transferCurrency: b.airportTransfer?.currency
-        })));
+          transferPrice: b.airportTransfer?.price,
+          transferCurrency: b.airportTransfer?.currency,
+          transferSymbol: b.airportTransfer?.currencySymbol,
+        }))
+      );
 
-        // Sort by creation date (newest first) initially
-        const sortedBookings = [...bookingsWithTransfers].sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-        );
+      // Sort by creation date (newest first) initially
+      const sortedBookings = [...bookingsWithTransfers].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
 
-        setBookings(sortedBookings);
-        setError('');
-      } else {
-        setError('Failed to fetch bookings');
-      }
-    } catch (error) {
-      console.error('Error fetching bookings:', error);
-      setError('Error connecting to the server. Please try again.');
-    } finally {
-      setLoading(false);
+      setBookings(sortedBookings);
+      setError('');
+    } else {
+      setError('Failed to fetch bookings');
     }
-  };
-
-  const handleRefresh = () => {
+  } catch (error) {
+    console.error('Error fetching bookings:', error);
+    setError('Error connecting to the server. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};  const handleRefresh = () => {
     setRetryCount((prevCount) => prevCount + 1);
   };
 
@@ -269,14 +402,18 @@ const MyBookings = () => {
 
   const handleCancelBooking = (booking) => {
     const bookingCurrency = getBookingCurrency(booking);
-    
+    const currencySymbol = getCurrencySymbol(bookingCurrency);
+    const formattedTotal = calculateAndFormatTotalPrice(booking);
+
     setCancelNotification({
       bookingId: booking._id,
       bookingReference: booking.bookingReference,
       activityName: booking.activity?.title || 'Unknown Activity',
       date: booking.date,
-      totalPrice: booking.totalPrice,
+      totalPrice: calculateTotalPrice(booking),
+      formattedTotal: formattedTotal,
       currency: bookingCurrency,
+      currencySymbol: currencySymbol,
     });
 
     setTimeout(() => {
@@ -294,7 +431,9 @@ const MyBookings = () => {
             cancelNotification.bookingReference
           }) for "${cancelNotification.activityName}" scheduled on ${formatDate(
             cancelNotification.date
-          )}. Total amount: ${formatBookingPrice(cancelNotification.totalPrice, {currency: cancelNotification.currency})}. Please assist with the cancellation process and provide information about any applicable cancellation fees or refunds.`,
+          )}. Total amount: ${
+            cancelNotification.formattedTotal
+          }. Please assist with the cancellation process and provide information about any applicable cancellation fees or refunds.`,
         },
       });
       setCancelNotification(null);
@@ -347,16 +486,6 @@ const MyBookings = () => {
     }
   };
 
-  const calculateTotalPrice = (booking) => {
-    let total = parseFloat(booking.totalPrice) || 0;
-
-    if (booking.airportTransfer && booking.airportTransfer.price) {
-      total += parseFloat(booking.airportTransfer.price);
-    }
-
-    return total;
-  };
-
   // Function to get transfer type text
   const getTransferTypeText = (transferType) => {
     switch (transferType) {
@@ -376,6 +505,10 @@ const MyBookings = () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
+
+    // Get booking currency info using utility functions
+    const bookingCurrency = booking.currency || 'MUR';
+    const currencySymbol = booking.currencySymbol || 'Rs';
 
     // Add blue header background
     doc.setFillColor(59, 130, 246); // Blue-600
@@ -410,7 +543,7 @@ const MyBookings = () => {
     doc.setFont('helvetica', 'bold');
     doc.text('BOOKING INVOICE', pageWidth / 2, 50, { align: 'center' });
 
-    // Add booking reference
+    // Add booking reference and currency
     doc.setFontSize(14);
     doc.setFont('helvetica', 'normal');
     doc.text(
@@ -420,40 +553,49 @@ const MyBookings = () => {
       { align: 'center' }
     );
 
+    // Add currency info
+    doc.setFontSize(12);
+    doc.text(
+      `Currency: ${bookingCurrency} (${currencySymbol})`,
+      pageWidth / 2,
+      70,
+      { align: 'center' }
+    );
+
     // Add line separator
     doc.setDrawColor(59, 130, 246); // Blue-600
     doc.setLineWidth(0.5);
-    doc.line(20, 65, pageWidth - 20, 65);
+    doc.line(20, 75, pageWidth - 20, 75);
 
     // Customer Information Section
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('CUSTOMER INFORMATION', 20, 75);
+    doc.text('CUSTOMER INFORMATION', 20, 85);
 
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Name: ${booking.fullName}`, 20, 85);
-    doc.text(`Email: ${booking.email}`, 20, 92);
-    doc.text(`Phone: ${booking.phone}`, 20, 99);
+    doc.text(`Name: ${booking.fullName}`, 20, 95);
+    doc.text(`Email: ${booking.email}`, 20, 102);
+    doc.text(`Phone: ${booking.phone}`, 20, 109);
 
     // Activity Details Section
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('ACTIVITY DETAILS', 20, 115);
+    doc.text('ACTIVITY DETAILS', 20, 125);
 
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Activity: ${booking.activity?.title || 'N/A'}`, 20, 125);
-    doc.text(`Date: ${formatDateForPDF(booking.date)}`, 20, 132);
+    doc.text(`Activity: ${booking.activity?.title || 'N/A'}`, 20, 135);
+    doc.text(`Date: ${formatDateForPDF(booking.date)}`, 20, 142);
     doc.text(
       `Status: ${booking.status?.toUpperCase() || 'CONFIRMED'}`,
       20,
-      139
+      149
     );
-    doc.text(`Location: ${booking.activity?.location || 'N/A'}`, 20, 146);
+    doc.text(`Location: ${booking.activity?.location || 'N/A'}`, 20, 156);
 
     // Airport Transfer Section (if exists)
-    let currentY = 165;
+    let currentY = 175;
     if (booking.airportTransfer) {
       doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
@@ -462,7 +604,7 @@ const MyBookings = () => {
 
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
-      
+
       if (booking.airportTransfer.airportName) {
         doc.text(
           `Airport: ${booking.airportTransfer.airportName} (${booking.airportTransfer.airportCode})`,
@@ -471,46 +613,54 @@ const MyBookings = () => {
         );
         currentY += 7;
       }
-      
+
       doc.text(
-        `Vehicle Type: ${booking.airportTransfer.vehicleType?.toUpperCase() || 'N/A'}`,
+        `Vehicle Type: ${
+          booking.airportTransfer.vehicleType?.toUpperCase() || 'N/A'
+        }`,
         20,
         currentY
       );
       currentY += 7;
-      
+
       doc.text(
         `Trip Type: ${booking.airportTransfer.type?.toUpperCase() || 'N/A'}`,
         20,
         currentY
       );
       currentY += 7;
-      
+
       doc.text(
-        `Transfer Type: ${getTransferTypeText(booking.airportTransfer.transferType)}`,
+        `Transfer Type: ${getTransferTypeText(
+          booking.airportTransfer.transferType
+        )}`,
         20,
         currentY
       );
       currentY += 7;
-      
+
       if (booking.airportTransfer.arrivalDate) {
         doc.text(
-          `Arrival: ${formatDate(booking.airportTransfer.arrivalDate)} ${booking.airportTransfer.arrivalTime || ''}`,
+          `Arrival: ${formatDate(booking.airportTransfer.arrivalDate)} ${
+            booking.airportTransfer.arrivalTime || ''
+          }`,
           20,
           currentY
         );
         currentY += 7;
       }
-      
+
       if (booking.airportTransfer.departureDate) {
         doc.text(
-          `Departure: ${formatDate(booking.airportTransfer.departureDate)} ${booking.airportTransfer.departureTime || ''}`,
+          `Departure: ${formatDate(booking.airportTransfer.departureDate)} ${
+            booking.airportTransfer.departureTime || ''
+          }`,
           20,
           currentY
         );
         currentY += 7;
       }
-      
+
       if (booking.airportTransfer.flightNumber) {
         doc.text(
           `Flight Number: ${booking.airportTransfer.flightNumber}`,
@@ -519,13 +669,13 @@ const MyBookings = () => {
         );
         currentY += 7;
       }
-      
+
       currentY += 5;
     }
 
     // Payment Details Section
-    const paymentY = booking.airportTransfer ? currentY + 5 : 180;
-    
+    const paymentY = booking.airportTransfer ? currentY + 5 : 190;
+
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.text('PAYMENT DETAILS', 20, paymentY);
@@ -533,37 +683,53 @@ const MyBookings = () => {
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
     const priceY = paymentY + 10;
-    
-    const bookingCurrency = getBookingCurrency(booking);
-    const currencySymbol = getCurrencySymbol(bookingCurrency);
-    
-    doc.text(`Activity Amount: ${currencySymbol}${booking.totalPrice || 0}`, 20, priceY);
-    
-    if (booking.airportTransfer && booking.airportTransfer.price) {
-      doc.text(
-        `Transfer Amount: ${currencySymbol}${booking.airportTransfer.price || 0}`,
-        20,
-        priceY + 7
-      );
+
+    // Get activity price in correct currency
+    let activityPriceAmount = 0;
+    if (booking.prices && booking.prices[bookingCurrency]) {
+      activityPriceAmount = booking.prices[bookingCurrency].totalPrice || 0;
+    } else {
+      activityPriceAmount = booking.totalPrice || 0;
     }
-    
+
+    const activityPrice = formatBookingPrice(activityPriceAmount, {
+      currency: bookingCurrency,
+      currencySymbol,
+    });
+    doc.text(`Activity Amount: ${activityPrice}`, 20, priceY);
+
+    if (booking.airportTransfer && booking.airportTransfer.price) {
+      // Create proper currency object for transfer
+      const transferCurrencyObj = {
+        currency: booking.airportTransfer.currency || booking.currency,
+        currencySymbol:
+          booking.airportTransfer.currencySymbol || booking.currencySymbol,
+      };
+      const transferPrice = formatBookingPrice(
+        booking.airportTransfer.price,
+        transferCurrencyObj
+      );
+      doc.text(`Transfer Amount: ${transferPrice}`, 20, priceY + 7);
+    }
+
     // Add line separator for total
     doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.3);
     const lineY = booking.airportTransfer ? priceY + 14 : priceY + 7;
     doc.line(20, lineY, pageWidth - 20, lineY);
-    
-    // Total
+
+    // Total - Use the new calculateAndFormatTotalPrice function
     doc.setFont('helvetica', 'bold');
-    doc.text(
-      `Total Amount: ${currencySymbol}${calculateTotalPrice(booking).toFixed(2)}`,
-      20,
-      lineY + 8
-    );
-    
+    const formattedTotal = calculateAndFormatTotalPrice(booking);
+    doc.text(`Total Amount: ${formattedTotal}`, 20, lineY + 8);
+
     // Add currency information
     doc.setFont('helvetica', 'normal');
-    doc.text(`Currency: ${bookingCurrency} (${currencySymbol})`, 20, lineY + 15);
+    doc.text(
+      `Currency: ${bookingCurrency} (${currencySymbol})`,
+      20,
+      lineY + 15
+    );
     doc.text(`Payment Date: ${formatDate(new Date())}`, 20, lineY + 22);
 
     // Add special notes section
@@ -575,7 +741,10 @@ const MyBookings = () => {
 
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
-      const notes = booking.specialRequests || booking.airportTransfer?.specialRequests || '';
+      const notes =
+        booking.specialRequests ||
+        booking.airportTransfer?.specialRequests ||
+        '';
       const splitNotes = doc.splitTextToSize(notes, pageWidth - 40);
       doc.text(splitNotes, 20, notesY + 10);
     }
@@ -594,12 +763,9 @@ const MyBookings = () => {
     doc.text('Holiday Vibes Tour Ltd', pageWidth / 2, pageHeight - 25, {
       align: 'center',
     });
-    doc.text(
-      'www.holidayvibestour.com',
-      pageWidth / 2,
-      pageHeight - 20,
-      { align: 'center' }
-    );
+    doc.text('www.holidayvibestour.com', pageWidth / 2, pageHeight - 20, {
+      align: 'center',
+    });
     doc.text(
       'Email: Mervbn01@gmail.com | Phone: +230 5813 7644',
       pageWidth / 2,
@@ -684,7 +850,8 @@ const MyBookings = () => {
                 <span className="font-medium text-gray-900">
                   {cancelNotification.bookingReference}
                 </span>
-                , please contact our admin team. Total amount: {formatBookingPrice(cancelNotification.totalPrice, {currency: cancelNotification.currency})}
+                , please contact our admin team. Total amount:{' '}
+                {cancelNotification.formattedTotal}
               </p>
 
               <div className="flex gap-2">
@@ -812,9 +979,9 @@ const MyBookings = () => {
         ) : sortedBookings.length > 0 ? (
           <div className="space-y-4">
             {sortedBookings.map((booking) => {
-              const bookingCurrency = getBookingCurrency(booking);
-              const currencySymbol = getCurrencySymbol(bookingCurrency);
-              
+              const bookingCurrency = booking.currency || 'MUR';
+              const currencySymbol = booking.currencySymbol || 'Rs';
+
               return (
                 <div
                   key={booking._id}
@@ -861,11 +1028,13 @@ const MyBookings = () => {
                           </p>
                           {/* Currency Display */}
                           <div className="mt-1">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                              bookingCurrency === 'EUR' 
-                                ? 'bg-yellow-100 text-yellow-800' 
-                                : 'bg-blue-100 text-blue-800'
-                            }`}>
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                bookingCurrency === 'EUR'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}
+                            >
                               {currencySymbol} ({bookingCurrency})
                             </span>
                           </div>
@@ -900,7 +1069,7 @@ const MyBookings = () => {
                             Total Price
                           </p>
                           <p className="font-medium mt-1">
-                            {formatBookingPrice(calculateTotalPrice(booking), booking)}
+                            {calculateAndFormatTotalPrice(booking)}
                             {booking.airportTransfer &&
                               booking.airportTransfer.price && (
                                 <span className="text-xs text-green-600 ml-2">
@@ -911,7 +1080,7 @@ const MyBookings = () => {
                         </div>
                       </div>
 
-                      {/* Airport Transfer Info */}
+                      {/* Airport Transfer Info - FIXED CURRENCY DISPLAY */}
                       {booking.airportTransfer &&
                         booking.airportTransfer.selected && (
                           <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-100">
@@ -934,9 +1103,18 @@ const MyBookings = () => {
                                   Airport Transfer:{' '}
                                 </span>
                                 <span className="text-blue-600 ml-1">
+                                  {/* FIX: Create proper currency object for the transfer */}
                                   {formatBookingPrice(
-                                    booking.airportTransfer.price, 
-                                    {currency: booking.airportTransfer.currency || bookingCurrency}
+                                    booking.airportTransfer.price,
+                                    {
+                                      currency:
+                                        booking.airportTransfer.currency ||
+                                        booking.currency,
+                                      currencySymbol:
+                                        booking.airportTransfer
+                                          .currencySymbol ||
+                                        booking.currencySymbol,
+                                    }
                                   )}
                                 </span>
                                 {booking.airportTransfer.type && (
@@ -995,7 +1173,8 @@ const MyBookings = () => {
                                 </span>
                                 <span
                                   className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                    booking.airportTransfer.status === 'completed'
+                                    booking.airportTransfer.status ===
+                                    'completed'
                                       ? 'bg-green-100 text-green-800'
                                       : booking.airportTransfer.status ===
                                         'confirmed'

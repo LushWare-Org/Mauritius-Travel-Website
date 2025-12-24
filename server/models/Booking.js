@@ -30,7 +30,7 @@ const BookingSchema = new mongoose.Schema({
   currency: {
     type: String,
     enum: ['EUR', 'MUR'],
-    default: 'EUR',
+    default: 'MUR',
     required: [true, 'Currency is required']
   },
   
@@ -38,7 +38,7 @@ const BookingSchema = new mongoose.Schema({
   currencySymbol: {
     type: String,
     enum: ['€', 'Rs'],
-    default: '€'
+    default: 'Rs'
   },
   
   // Price fields - store in selected currency
@@ -52,6 +52,18 @@ const BookingSchema = new mongoose.Schema({
     type: Number,
     required: [true, 'Total price is required'],
     min: [0, 'Total price cannot be negative']
+  },
+  
+  // Store prices in both currencies for reference
+  prices: {
+    EUR: {
+      pricePerPerson: Number,
+      totalPrice: Number
+    },
+    MUR: {
+      pricePerPerson: Number,
+      totalPrice: Number
+    }
   },
   
   fullName: {
@@ -69,6 +81,10 @@ const BookingSchema = new mongoose.Schema({
   phone: {
     type: String,
     required: [true, 'Phone number is required']
+  },
+  countryCode: {
+    type: String,
+    default: '+230'
   },
   specialRequests: {
     type: String
@@ -91,6 +107,24 @@ BookingSchema.pre('save', function(next) {
   } else {
     this.currencySymbol = '€';
   }
+  
+  // Ensure both currency prices are stored
+  if (!this.prices) {
+    this.prices = {
+      EUR: {},
+      MUR: {}
+    };
+  }
+  
+  // Store price in the selected currency
+  if (this.currency === 'MUR') {
+    this.prices.MUR.pricePerPerson = this.pricePerPerson;
+    this.prices.MUR.totalPrice = this.totalPrice;
+  } else {
+    this.prices.EUR.pricePerPerson = this.pricePerPerson;
+    this.prices.EUR.totalPrice = this.totalPrice;
+  }
+  
   next();
 });
 
