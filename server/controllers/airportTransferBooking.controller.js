@@ -2,6 +2,202 @@ const AirportTransferBooking = require('../models/AirportTransferBooking');
 const AirportTransfer = require('../models/AirportTransfer');
 const User = require('../models/User');
 
+// Helper function - add this since the import might fail
+const calculateTransferPrice = (transfer, tripType, currency = 'MUR') => {
+  if (!transfer) return 0;
+  
+  let price = 0;
+  
+  if (currency === 'MUR') {
+    price = tripType === 'one-way' 
+      ? transfer.oneWayPriceMUR 
+      : transfer.roundTripPriceMUR;
+  } else {
+    price = tripType === 'one-way'
+      ? transfer.oneWayPriceEUR
+      : transfer.roundTripPriceEUR;
+  }
+  
+  return parseFloat(price) || 0;
+};
+
+// @desc    Create airport transfer booking
+// @route   POST /api/v1/airport-transfer-bookings
+// @access  Public
+exports.createBooking = async (req, res) => {
+  try {
+    console.log('📥 Received booking request:', JSON.stringify(req.body, null, 2));
+    
+    // Validate required fields
+    const requiredFields = [
+      'transfer',
+      'guestName',
+      'email',
+      'phone',
+      'arrivalDate',
+      'arrivalTime',
+      'tripType',
+      'transferType',
+      'passengers',
+      'currency'
+    ];
+    
+    const missingFields = requiredFields.filter(field => !req.body[field]);
+    
+    if (missingFields.length > 0) {
+      console.log('❌ Missing fields:', missingFields);
+      return res.status(400).json({
+        success: false,
+        error: `Missing required fields: ${missingFields.join(', ')}`
+      });
+    }
+    
+    console.log('✅ All required fields present');
+    
+    // Get transfer details
+    const transfer = await AirportTransfer.findById(req.body.transfer);
+    if (!transfer) {
+      console.log('❌ Transfer not found:', req.body.transfer);
+      return res.status(404).json({
+        success: false,
+        error: 'Transfer not found'
+      });
+    }
+    
+    console.log('✅ Transfer found:', transfer.airportName);
+    
+    // Calculate price based on currency
+    let basePrice = 0;
+    
+    if (req.body.currency === 'MUR') {
+      basePrice = req.body.tripType === 'one-way' 
+        ? transfer.oneWayPriceMUR 
+        : transfer.roundTripPriceMUR;
+    } else {
+      basePrice = req.body.tripType === 'one-way'
+        ? transfer.oneWayPriceEUR
+        : transfer.roundTripPriceEUR;
+    }
+    
+    basePrice = parseFloat(basePrice) || 0;
+    console.log('💰 Base price calculated:', { basePrice, currency: req.body.currency, tripType: req.body.tripType });
+    
+    if (basePrice <= 0) {
+      console.log('❌ Invalid base price:', basePrice);
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid transfer pricing'
+      });
+    }
+    
+    const passengers = parseInt(req.body.passengers) || 1;
+    const totalPrice = basePrice * passengers;
+    
+    console.log('💰 Total price calculated:', { totalPrice, passengers, basePrice });
+    
+    // Calculate alternative currency price for reference
+    const altCurrency = req.body.currency === 'MUR' ? 'EUR' : 'MUR';
+    let altBasePrice = 0;
+    
+    if (altCurrency === 'MUR') {
+      altBasePrice = req.body.tripType === 'one-way' 
+        ? transfer.oneWayPriceMUR 
+        : transfer.roundTripPriceMUR;
+    } else {
+      altBasePrice = req.body.tripType === 'one-way'
+        ? transfer.oneWayPriceEUR
+        : transfer.roundTripPriceEUR;
+    }
+    
+    altBasePrice = parseFloat(altBasePrice) || 0;
+    const altTotalPrice = altBasePrice * passengers;
+    
+    // Generate booking reference
+    const bookingReference = 'ATB-' + Date.now() + Math.random().toString(36).substr(2, 6).toUpperCase();
+    
+    console.log('📝 Creating booking with data:', {
+      totalPrice,
+      currency: req.body.currency,
+      bookingReference
+    });
+    
+    // Create booking with currency data
+    const booking = await AirportTransferBooking.create({
+      transfer: req.body.transfer,
+      guestName: req.body.guestName.trim(),
+      email: req.body.email.trim().toLowerCase(),
+      phone: req.body.phone.trim(),
+      flightNumber: req.body.flightNumber?.trim() || '',
+      arrivalDate: new Date(req.body.arrivalDate),
+      arrivalTime: req.body.arrivalTime,
+      departureDate: req.body.departureDate ? new Date(req.body.departureDate) : null,
+      departureTime: req.body.departureTime || '',
+      tripType: req.body.tripType,
+      transferType: req.body.transferType,
+      passengers: passengers,
+      specialRequests: req.body.specialRequests?.trim() || '',
+      currency: req.body.currency,
+      totalPrice: parseFloat(totalPrice.toFixed(2)),
+      user: req.body.user || null,
+      status: 'pending',
+      bookingReference: bookingReference,
+      prices: {
+        [req.body.currency]: {
+          totalPrice: parseFloat(totalPrice.toFixed(2))
+        },
+        [altCurrency]: {
+          totalPrice: parseFloat(altTotalPrice.toFixed(2))
+        }
+      }
+    });
+    
+    console.log('✅ Booking created successfully:', booking._id);
+    
+    // Populate the transfer details
+    const populatedBooking = await AirportTransferBooking.findById(booking._id)
+      .populate(
+        'transfer',
+        'airportName airportCode oneWayPriceMUR oneWayPriceEUR roundTripPriceMUR roundTripPriceEUR vehicleType'
+      );
+    
+    res.status(201).json({
+      success: true,
+      data: populatedBooking
+    });
+    
+  } catch (error) {
+    console.error('❌ Booking creation error:', error);
+    console.error('❌ Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message);
+      console.log('❌ Validation errors:', messages);
+      return res.status(400).json({
+        success: false,
+        error: messages.join(', ')
+      });
+    }
+    
+    // Handle duplicate key error
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        error: 'Booking reference already exists. Please try again.'
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create booking',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 // @desc    Get all airport transfer bookings
 // @route   GET /api/v1/airport-transfer-bookings
 // @access  Private/Admin
@@ -31,7 +227,7 @@ exports.getBookings = async (req, res, next) => {
     query = AirportTransferBooking.find(JSON.parse(queryStr))
       .populate(
         'transfer',
-        'airportName airportCode oneWayPrice roundTripPrice vehicleType'
+        'airportName airportCode oneWayPriceMUR oneWayPriceEUR roundTripPriceMUR roundTripPriceEUR vehicleType'
       )
       .populate('user', 'name email');
 
@@ -93,13 +289,13 @@ exports.getBookings = async (req, res, next) => {
 
 // @desc    Get single airport transfer booking
 // @route   GET /api/v1/airport-transfer-bookings/:id
-// @access  Private (for user bookings) / Public (for guest bookings with reference)
+// @access  Private/Admin
 exports.getBooking = async (req, res, next) => {
   try {
     const booking = await AirportTransferBooking.findById(req.params.id)
       .populate(
         'transfer',
-        'airportName airportCode oneWayPrice roundTripPrice vehicleType'
+        'airportName airportCode oneWayPriceMUR oneWayPriceEUR roundTripPriceMUR roundTripPriceEUR vehicleType'
       )
       .populate('user', 'name email');
 
@@ -110,24 +306,6 @@ exports.getBooking = async (req, res, next) => {
       });
     }
 
-    // Check authorization
-    // If user is authenticated and owns the booking
-    if (req.user) {
-      if (
-        booking.user &&
-        booking.user._id.toString() !== req.user.id &&
-        req.user.role !== 'admin'
-      ) {
-        return res.status(401).json({
-          success: false,
-          error: 'Not authorized to access this booking',
-        });
-      }
-    }
-    // If no user is authenticated, only allow access if booking has no user (guest booking)
-    // In practice, you might want to implement a different auth method for guest bookings
-    // like checking booking reference via query parameter
-
     res.status(200).json({
       success: true,
       data: booking,
@@ -137,73 +315,6 @@ exports.getBooking = async (req, res, next) => {
   }
 };
 
-// @desc    Create airport transfer booking
-// @route   POST /api/v1/airport-transfer-bookings
-// @access  Public (both authenticated and guest users)
-// controllers/airportTransferBooking.controller.js
-exports.createBooking = async (req, res) => {
-  try {
-    console.log('📥 Received booking request:', req.body);
-    
-    // Validate required fields
-    const requiredFields = [
-      'transfer',
-      'guestName',
-      'email',
-      'phone',
-      'arrivalDate',
-      'arrivalTime',
-      'tripType',
-      'transferType',
-      'passengers',
-      'totalPrice'
-    ];
-    
-    const missingFields = requiredFields.filter(field => !req.body[field]);
-    
-    if (missingFields.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: `Missing required fields: ${missingFields.join(', ')}`
-      });
-    }
-    
-    // Generate booking reference
-    const bookingReference = 'ATB-' + Date.now() + Math.random().toString(36).substr(2, 6).toUpperCase();
-    
-    // Create booking
-    const booking = await AirportTransferBooking.create({
-      ...req.body,
-      bookingReference,
-      status: 'pending',
-      // Ensure totalPrice is a number
-      totalPrice: parseFloat(req.body.totalPrice) || 0
-    });
-    
-    console.log('✅ Booking created:', booking._id);
-    
-    res.status(201).json({
-      success: true,
-      data: booking
-    });
-    
-  } catch (error) {
-    console.error('❌ Booking creation error:', error);
-    
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map(val => val.message);
-      return res.status(400).json({
-        success: false,
-        error: messages.join(', ')
-      });
-    }
-    
-    res.status(500).json({
-      success: false,
-      error: 'Failed to create booking'
-    });
-  }
-};
 // @desc    Update booking status (admin only)
 // @route   PUT /api/v1/airport-transfer-bookings/:id/status
 // @access  Private/Admin
@@ -239,7 +350,7 @@ exports.updateBookingStatus = async (req, res, next) => {
     const populatedBooking = await AirportTransferBooking.findById(booking._id)
       .populate(
         'transfer',
-        'airportName airportCode oneWayPrice roundTripPrice vehicleType'
+        'airportName airportCode oneWayPriceMUR oneWayPriceEUR roundTripPriceMUR roundTripPriceEUR vehicleType'
       )
       .populate('user', 'name email');
 
@@ -252,9 +363,9 @@ exports.updateBookingStatus = async (req, res, next) => {
   }
 };
 
-// @desc    Update booking (user can update their own booking if pending)
+// @desc    Update booking
 // @route   PUT /api/v1/airport-transfer-bookings/:id
-// @access  Private
+// @access  Private/Admin
 exports.updateBooking = async (req, res, next) => {
   try {
     let booking = await AirportTransferBooking.findById(req.params.id);
@@ -266,44 +377,16 @@ exports.updateBooking = async (req, res, next) => {
       });
     }
 
-    // Check if user is authorized
-    // For guest bookings (no user), we need different authorization logic
-    if (booking.user) {
-      // Booking has a user, check if current user owns it or is admin
-      if (
-        booking.user.toString() !== req.user.id &&
-        req.user.role !== 'admin'
-      ) {
-        return res.status(401).json({
-          success: false,
-          error: 'Not authorized to update this booking',
-        });
-      }
-    } else {
-      // Guest booking - you might want to implement email/booking reference verification
-      // For now, only admin can update guest bookings
-      if (req.user.role !== 'admin') {
-        return res.status(401).json({
-          success: false,
-          error: 'Not authorized to update this guest booking',
-        });
-      }
-    }
+    // Check if currency or transfer is changing
+    const currencyChanged = req.body.currency && req.body.currency !== booking.currency;
+    const transferChanged = req.body.transfer && req.body.transfer !== booking.transfer.toString();
+    const tripTypeChanged = req.body.tripType && req.body.tripType !== booking.tripType;
+    const passengersChanged = req.body.passengers && parseInt(req.body.passengers) !== booking.passengers;
 
-    // Users can only update pending bookings
-    if (booking.status !== 'pending' && req.user.role !== 'admin') {
-      return res.status(400).json({
-        success: false,
-        error: 'Cannot update booking after it has been processed',
-      });
-    }
-
-    // If transfer is changed, recalculate price
-    if (
-      req.body.transfer &&
-      req.body.transfer !== booking.transfer.toString()
-    ) {
-      const transfer = await AirportTransfer.findById(req.body.transfer);
+    // If transfer, trip type, passengers, or currency is changing, recalculate price
+    if (transferChanged || tripTypeChanged || passengersChanged || currencyChanged) {
+      const transferId = req.body.transfer || booking.transfer;
+      const transfer = await AirportTransfer.findById(transferId);
 
       if (!transfer || !transfer.isActive) {
         return res.status(404).json({
@@ -312,17 +395,27 @@ exports.updateBooking = async (req, res, next) => {
         });
       }
 
-      let totalPrice = 0;
       const tripType = req.body.tripType || booking.tripType;
-      const passengers = req.body.passengers || booking.passengers;
+      const passengers = parseInt(req.body.passengers) || booking.passengers;
+      const currency = req.body.currency || booking.currency;
 
-      if (tripType === 'one-way') {
-        totalPrice = transfer.oneWayPrice * passengers;
-      } else {
-        totalPrice = transfer.roundTripPrice * passengers;
-      }
+      // Calculate new price
+      const basePrice = calculateTransferPrice(transfer, tripType, currency);
+      const totalPrice = basePrice * passengers;
 
-      req.body.totalPrice = totalPrice;
+      // Calculate alternative currency price
+      const altCurrency = currency === 'MUR' ? 'EUR' : 'MUR';
+      const altBasePrice = calculateTransferPrice(transfer, tripType, altCurrency);
+      const altTotalPrice = altBasePrice * passengers;
+
+      req.body.totalPrice = parseFloat(totalPrice.toFixed(2));
+      
+      // Update prices object
+      if (!req.body.prices) req.body.prices = {};
+      req.body.prices = {
+        [currency]: { totalPrice: parseFloat(totalPrice.toFixed(2)) },
+        [altCurrency]: { totalPrice: parseFloat(altTotalPrice.toFixed(2)) }
+      };
     }
 
     booking = await AirportTransferBooking.findByIdAndUpdate(
@@ -335,7 +428,7 @@ exports.updateBooking = async (req, res, next) => {
     )
       .populate(
         'transfer',
-        'airportName airportCode oneWayPrice roundTripPrice vehicleType'
+        'airportName airportCode oneWayPriceMUR oneWayPriceEUR roundTripPriceMUR roundTripPriceEUR vehicleType'
       )
       .populate('user', 'name email');
 
@@ -387,7 +480,7 @@ exports.getUserBookings = async (req, res, next) => {
     })
       .populate(
         'transfer',
-        'airportName airportCode oneWayPrice roundTripPrice vehicleType'
+        'airportName airportCode oneWayPriceMUR oneWayPriceEUR roundTripPriceMUR roundTripPriceEUR vehicleType'
       )
       .sort('-createdAt');
 
@@ -422,7 +515,7 @@ exports.getGuestBooking = async (req, res, next) => {
       isGuestBooking: true,
     }).populate(
       'transfer',
-      'airportName airportCode oneWayPrice roundTripPrice vehicleType'
+      'airportName airportCode oneWayPriceMUR oneWayPriceEUR roundTripPriceMUR roundTripPriceEUR vehicleType'
     );
 
     if (!booking) {
@@ -457,6 +550,14 @@ exports.getBookingStats = async (req, res, next) => {
           userBookings: [
             { $match: { isGuestBooking: false } },
             { $count: 'count' },
+          ],
+          byCurrency: [
+            { $group: { 
+              _id: '$currency', 
+              count: { $sum: 1 },
+              totalRevenue: { $sum: '$totalPrice' }
+            }},
+            { $sort: { _id: 1 } }
           ],
           totalRevenue: [
             { $group: { _id: null, total: { $sum: '$totalPrice' } } },

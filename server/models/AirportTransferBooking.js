@@ -9,9 +9,7 @@ const AirportTransferBookingSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    // CHANGE THIS LINE: Remove required: true
-    // required: true  // ← REMOVE OR COMMENT OUT THIS LINE
-    default: null  // ← Add this for guest bookings
+    default: null
   },
   guestName: {
     type: String,
@@ -67,10 +65,35 @@ const AirportTransferBookingSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  
+  // Currency fields
+  currency: {
+    type: String,
+    enum: ['EUR', 'MUR'],
+    default: 'MUR'
+  },
+  
+  currencySymbol: {
+    type: String,
+    enum: ['€', 'Rs'],
+    default: 'Rs'
+  },
+  
   totalPrice: {
     type: Number,
     required: true
   },
+  
+  // Store prices in both currencies for reference
+  prices: {
+    EUR: {
+      totalPrice: Number
+    },
+    MUR: {
+      totalPrice: Number
+    }
+  },
+  
   status: {
     type: String,
     enum: ['pending', 'confirmed', 'completed', 'cancelled', 'rejected'],
@@ -101,8 +124,31 @@ const AirportTransferBookingSchema = new mongoose.Schema({
   }
 });
 
-// Generate booking reference before saving
+// Pre-save middleware
 AirportTransferBookingSchema.pre('save', async function(next) {
+  // Set currency symbol
+  if (this.currency === 'MUR') {
+    this.currencySymbol = 'Rs';
+  } else {
+    this.currencySymbol = '€';
+  }
+  
+  // Initialize prices object
+  if (!this.prices) {
+    this.prices = {
+      EUR: {},
+      MUR: {}
+    };
+  }
+  
+  // Store price in the selected currency
+  if (this.currency === 'MUR') {
+    this.prices.MUR.totalPrice = this.totalPrice;
+  } else {
+    this.prices.EUR.totalPrice = this.totalPrice;
+  }
+  
+  // Generate booking reference
   if (!this.bookingReference) {
     const count = await mongoose.model('AirportTransferBooking').countDocuments();
     this.bookingReference = `TRF-${Date.now().toString().slice(-6)}-${(count + 1).toString().padStart(4, '0')}`;

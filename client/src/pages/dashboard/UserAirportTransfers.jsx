@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { airportTransferBookingAPI } from '../../utils/airportTransferApi';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { formatBookingPrice } from '../../utils/currency'; // Added import
 import { jsPDF } from 'jspdf';
-import logo from '../../assets/logo.png'; // Import your logo
+import logo from '../../assets/logo.png';
 
 const UserAirportTransfers = () => {
   const [bookings, setBookings] = useState([]);
@@ -28,7 +29,7 @@ const UserAirportTransfers = () => {
         reader.readAsDataURL(blob);
       } catch (error) {
         console.error('Error loading logo:', error);
-        setImageLoaded(true); // Continue even if logo fails
+        setImageLoaded(true);
       }
     };
     loadLogo();
@@ -44,20 +45,14 @@ const UserAirportTransfers = () => {
       const response = await airportTransferBookingAPI.getUserBookings();
 
       if (response.data.success) {
-        // Filter out transfers that are linked with activities
         const filteredBookings = response.data.data.filter((booking) => {
-          // If toggle is ON, show all transfers
           if (showLinkedTransfers) {
             return true;
           }
 
-          // Check for various patterns that indicate activity linkage
-
-          // 1. Check special requests for booking references
           if (booking.specialRequests) {
             const specialRequests = booking.specialRequests.toLowerCase();
 
-            // Common patterns indicating activity linkage
             if (
               specialRequests.includes('booking ref:') ||
               specialRequests.includes('booking reference:') ||
@@ -65,22 +60,19 @@ const UserAirportTransfers = () => {
               specialRequests.includes('activity ref:') ||
               specialRequests.includes('linked to') ||
               specialRequests.includes('combined with') ||
-              specialRequests.match(/[a-z]{3}-[0-9]{6}/) || // Pattern like abc-123456
-              specialRequests.match(/act-\d+/i) || // Pattern like ACT-123
-              specialRequests.match(/booking\s*#?\s*[a-z0-9-]+/i) // Booking # pattern
+              specialRequests.match(/[a-z]{3}-[0-9]{6}/) ||
+              specialRequests.match(/act-\d+/i) ||
+              specialRequests.match(/booking\s*#?\s*[a-z0-9-]+/i)
             ) {
-              return false; // Skip this booking (it's linked to an activity)
+              return false;
             }
           }
 
-          // 2. Check for dedicated activity booking reference fields
           if (booking.activityBookingReference || booking.activityBookingId) {
-            return false; // Skip this booking (it's linked to an activity)
+            return false;
           }
 
-          // 3. Check for patterns in booking reference itself
           if (booking.bookingReference) {
-            // If booking reference starts with ACT- (activity) or similar pattern
             if (
               booking.bookingReference.startsWith('ACT-') ||
               booking.bookingReference.startsWith('AB-') ||
@@ -90,12 +82,10 @@ const UserAirportTransfers = () => {
             }
           }
 
-          // 4. Check if transfer has an associated activity
           if (booking.activityId || booking.linkedActivityId) {
             return false;
           }
 
-          // 5. Return true for standalone airport transfers
           return true;
         });
 
@@ -121,7 +111,6 @@ const UserAirportTransfers = () => {
     setShowLinkedTransfers(!showLinkedTransfers);
   };
 
-  // Re-fetch when toggle changes
   useEffect(() => {
     if (!loading) {
       fetchUserBookings();
@@ -134,7 +123,7 @@ const UserAirportTransfers = () => {
     const pageHeight = doc.internal.pageSize.getHeight();
 
     // Add blue header background
-    doc.setFillColor(59, 130, 246); // Blue-600
+    doc.setFillColor(59, 130, 246);
     doc.rect(0, 0, pageWidth, 40, 'F');
 
     // Try to add logo if available
@@ -161,7 +150,7 @@ const UserAirportTransfers = () => {
     });
 
     // Add booking details title
-    doc.setTextColor(0, 0, 0); // Black
+    doc.setTextColor(0, 0, 0);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
     doc.text('BOOKING CONFIRMATION', pageWidth / 2, 50, { align: 'center' });
@@ -177,7 +166,7 @@ const UserAirportTransfers = () => {
     );
 
     // Add line separator
-    doc.setDrawColor(59, 130, 246); // Blue-600
+    doc.setDrawColor(59, 130, 246);
     doc.setLineWidth(0.5);
     doc.line(20, 65, pageWidth - 20, 65);
 
@@ -233,7 +222,7 @@ const UserAirportTransfers = () => {
       doc.text(`Flight Number: ${booking.flightNumber}`, 20, 167);
     }
 
-    // Payment Details Section
+    // Payment Details Section - UPDATED
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.text('PAYMENT DETAILS', 20, booking.flightNumber ? 185 : 180);
@@ -241,7 +230,9 @@ const UserAirportTransfers = () => {
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
     const paymentY = booking.flightNumber ? 195 : 190;
-    doc.text(`Total Amount: Rs${booking.totalPrice || 0}`, 20, paymentY);
+    
+    // Use formatBookingPrice instead of hardcoded Rs
+    doc.text(`Total Amount: ${formatBookingPrice(booking.totalPrice, booking)}`, 20, paymentY);
     doc.text(
       `Status: ${booking.status?.toUpperCase() || 'COMPLETED'}`,
       20,
@@ -341,13 +332,11 @@ const UserAirportTransfers = () => {
   };
 
   const handleCancelBooking = async (bookingId, bookingReference) => {
-    // Show contact admin information instead of actual cancellation
     setContactAdminInfo({
       bookingReference,
       message: 'To cancel this booking, please contact our admin team.',
     });
 
-    // Auto-hide after 8 seconds
     setTimeout(() => {
       setContactAdminInfo(null);
     }, 8000);
@@ -530,7 +519,6 @@ const UserAirportTransfers = () => {
                   {showLinkedTransfers && (
                     <div className="mt-2">
                       {(() => {
-                        // Check if this transfer is linked to an activity
                         const isLinked =
                           (booking.specialRequests &&
                             (booking.specialRequests.includes('Booking Ref:') ||
@@ -568,7 +556,8 @@ const UserAirportTransfers = () => {
                 <div className="flex items-center space-x-2">
                   {getStatusBadge(booking.status)}
                   <span className="text-lg font-bold text-gray-900">
-                    Rs{booking.totalPrice}
+                    {/* UPDATED: Use formatBookingPrice instead of hardcoded Rs */}
+                    {formatBookingPrice(booking.totalPrice, booking)}
                   </span>
                 </div>
               </div>

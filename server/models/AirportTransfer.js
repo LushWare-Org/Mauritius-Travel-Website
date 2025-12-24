@@ -6,9 +6,10 @@ const AirportTransferSchema = new mongoose.Schema({
     required: [true, 'Please add airport name'],
     trim: true
   },
+  //airportCode - this is hotel name - change it later
   airportCode: {
     type: String,
-    required: [true, 'Please add airport code'],
+    required: [true, 'Please add hotel name'],
     uppercase: true,
     trim: true
   },

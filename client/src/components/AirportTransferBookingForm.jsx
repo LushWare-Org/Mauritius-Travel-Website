@@ -6,6 +6,12 @@ import {
 } from '../utils/airportTransferApi';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from './common/LoadingSpinner';
+import {
+  formatPrice,
+  calculateTransferPrice,
+  getAlternativePrice,
+  getCurrencySymbol
+} from '../utils/currency';
 
 const AirportTransferBookingForm = () => {
   const { id } = useParams();
@@ -34,7 +40,6 @@ const AirportTransferBookingForm = () => {
     transferType: 'airport-to-hotel',
     passengers: 1,
     specialRequests: '',
-    selectedCurrency: 'MUR', // Store selected currency in booking
   });
 
   // Country codes for dropdown
@@ -93,14 +98,6 @@ const AirportTransferBookingForm = () => {
     setFormData((prev) => ({ ...prev, phone: fullPhone }));
   }, [countryCode, phoneNumber]);
 
-  useEffect(() => {
-    // Update formData with selected currency
-    setFormData(prev => ({
-      ...prev,
-      selectedCurrency: currency
-    }));
-  }, [currency]);
-
   const fetchTransfer = async () => {
     try {
       setLoading(true);
@@ -137,61 +134,32 @@ const AirportTransferBookingForm = () => {
   };
 
   const getPrice = () => {
-    if (!transfer) return { price: 0, currencySymbol: '' };
-
-    let price = 0;
-    let currencySymbol = currency === 'MUR' ? 'Rs ' : '€';
-
-    if (currency === 'MUR') {
-      price = formData.tripType === 'one-way' 
-        ? (transfer.oneWayPriceMUR || transfer.oneWayPrice || 0)
-        : (transfer.roundTripPriceMUR || transfer.roundTripPrice || 0);
-    } else {
-      price = formData.tripType === 'one-way'
-        ? (transfer.oneWayPriceEUR || (transfer.oneWayPrice ? transfer.oneWayPrice / (transfer.exchangeRate || 40) : 0))
-        : (transfer.roundTripPriceEUR || (transfer.roundTripPrice ? transfer.roundTripPrice / (transfer.exchangeRate || 40) : 0));
-    }
-
-    return { price: parseFloat(price) || 0, currencySymbol };
+    if (!transfer) return { price: 0, currencySymbol: getCurrencySymbol(currency) };
+    
+    const price = calculateTransferPrice(transfer, formData.tripType, currency);
+    const currencySymbol = getCurrencySymbol(currency);
+    
+    return { price, currencySymbol };
   };
 
-const calculateTotal = () => {
-  if (!transfer) return 0;
+  const calculateTotal = () => {
+    if (!transfer) return 0;
+    
+    const basePrice = calculateTransferPrice(transfer, formData.tripType, currency);
+    const total = basePrice * (parseInt(formData.passengers) || 1);
+    
+    console.log(`💰 CalculateTotal: ${currency} ${total} (tripType: ${formData.tripType}, passengers: ${formData.passengers})`);
+    return total;
+  };
 
-  let total = 0;
-  
-  if (currency === 'MUR') {
-    total = formData.tripType === 'one-way' 
-      ? parseFloat(transfer.oneWayPriceMUR) || 0
-      : parseFloat(transfer.roundTripPriceMUR) || 0;
-  } else {
-    total = formData.tripType === 'one-way'
-      ? parseFloat(transfer.oneWayPriceEUR) || 0
-      : parseFloat(transfer.roundTripPriceEUR) || 0;
-  }
-
-  console.log(`💰 CalculateTotal: ${currency} ${total} (tripType: ${formData.tripType})`);
-  return total;
-};
-
-  const getAlternativePrice = () => {
+  const getAltPrice = () => {
     if (!transfer) return { price: 0, currencySymbol: '' };
-
+    
     const altCurrency = currency === 'MUR' ? 'EUR' : 'MUR';
-    let price = 0;
-    let currencySymbol = altCurrency === 'MUR' ? 'Rs ' : '€';
-
-    if (altCurrency === 'MUR') {
-      price = formData.tripType === 'one-way' 
-        ? (transfer.oneWayPriceMUR || transfer.oneWayPrice || 0)
-        : (transfer.roundTripPriceMUR || transfer.roundTripPrice || 0);
-    } else {
-      price = formData.tripType === 'one-way'
-        ? (transfer.oneWayPriceEUR || (transfer.oneWayPrice ? transfer.oneWayPrice / (transfer.exchangeRate || 40) : 0))
-        : (transfer.roundTripPriceEUR || (transfer.roundTripPrice ? transfer.roundTripPrice / (transfer.exchangeRate || 40) : 0));
-    }
-
-    return { price: parseFloat(price) || 0, currencySymbol };
+    const price = calculateTransferPrice(transfer, formData.tripType, altCurrency);
+    const currencySymbol = getCurrencySymbol(altCurrency);
+    
+    return { price, currencySymbol };
   };
 
   const validateForm = () => {
@@ -249,127 +217,99 @@ const calculateTotal = () => {
     return true;
   };
 
-// In handleSubmit function, update the bookingData section:
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+    if (!validateForm()) return;
 
-  if (!validateForm()) return;
+    setSubmitting(true);
+    setError('');
 
-  setSubmitting(true);
-  setError('');
-
-  try {
-    // First, log all transfer data to debug
-    console.log('🔍 Transfer data for calculation:', {
-      transfer: transfer,
-      oneWayPriceMUR: transfer?.oneWayPriceMUR,
-      roundTripPriceMUR: transfer?.roundTripPriceMUR,
-      oneWayPriceEUR: transfer?.oneWayPriceEUR,
-      roundTripPriceEUR: transfer?.roundTripPriceEUR,
-      oneWayPrice: transfer?.oneWayPrice,
-      roundTripPrice: transfer?.roundTripPrice,
-      currency: currency,
-      tripType: formData.tripType
-    });
-
-    // Calculate total price with better error handling
-    let totalPrice = 0;
-    
-    if (currency === 'MUR') {
-      if (formData.tripType === 'one-way') {
-        totalPrice = parseFloat(transfer?.oneWayPriceMUR) || 
-                    parseFloat(transfer?.oneWayPrice) || 0;
-      } else {
-        totalPrice = parseFloat(transfer?.roundTripPriceMUR) || 
-                    parseFloat(transfer?.roundTripPrice) || 0;
-      }
-    } else {
-      if (formData.tripType === 'one-way') {
-        totalPrice = parseFloat(transfer?.oneWayPriceEUR) || 0;
-      } else {
-        totalPrice = parseFloat(transfer?.roundTripPriceEUR) || 0;
-      }
-    }
-
-    console.log('💰 Calculated totalPrice:', totalPrice);
-
-    // Validate pricing
-    if (isNaN(totalPrice) || totalPrice <= 0) {
-      console.error('❌ Invalid totalPrice:', totalPrice);
-      setError(`Invalid transfer pricing. Price is ${totalPrice}. Please contact support.`);
-      setSubmitting(false);
-      return;
-    }
-
-    // Get other price fields for backup
-    const oneWayPriceMUR = parseFloat(transfer?.oneWayPriceMUR) || 0;
-    const roundTripPriceMUR = parseFloat(transfer?.roundTripPriceMUR) || 0;
-    const oneWayPriceEUR = parseFloat(transfer?.oneWayPriceEUR) || 0;
-    const roundTripPriceEUR = parseFloat(transfer?.roundTripPriceEUR) || 0;
-
-    // Prepare booking data - simplified version with ONLY required fields
-    const bookingData = {
-      transfer: id,
-      guestName: formData.guestName.trim(),
-      email: formData.email.trim(),
-      phone: formData.phone.trim(),
-      arrivalDate: new Date(formData.arrivalDate).toISOString(), // Convert to ISO string
-      arrivalTime: formData.arrivalTime,
-      tripType: formData.tripType,
-      transferType: formData.transferType,
-      passengers: parseInt(formData.passengers) || 1,
-      
-      // CRITICAL: Ensure totalPrice is a valid number
-      totalPrice: parseFloat(totalPrice.toFixed(2)), // Round to 2 decimal places
-      
-      // Optional fields
-      flightNumber: formData.flightNumber?.trim() || '',
-      departureDate: formData.departureDate ? new Date(formData.departureDate).toISOString() : null,
-      departureTime: formData.departureTime || '',
-      specialRequests: formData.specialRequests?.trim() || '',
-      
-      // If user is logged in, include their ID
-      user: currentUser?._id || null
-    };
-
-    console.log('📦 Final booking data being sent:', bookingData);
-    console.log('✅ totalPrice in bookingData:', bookingData.totalPrice, 'Type:', typeof bookingData.totalPrice);
-
-    const response = await airportTransferBookingAPI.createBooking(bookingData);
-
-    if (response.data.success) {
-      console.log('✅ Booking created successfully:', response.data.data);
-      // Success navigation
-      navigate('/dashboard/airport-transfers', {
-        state: {
-          bookingSuccess: true,
-          bookingReference: response.data.data.bookingReference,
-        },
+    try {
+      console.log('🔍 Transfer data for calculation:', {
+        transfer: transfer,
+        oneWayPriceMUR: transfer?.oneWayPriceMUR,
+        roundTripPriceMUR: transfer?.roundTripPriceMUR,
+        oneWayPriceEUR: transfer?.oneWayPriceEUR,
+        roundTripPriceEUR: transfer?.roundTripPriceEUR,
+        currency: currency,
+        tripType: formData.tripType
       });
-    } else {
-      setError(response.data.error || 'Failed to create booking');
+
+      // Calculate total price using the utility function
+      const basePrice = calculateTransferPrice(transfer, formData.tripType, currency);
+      const totalPrice = basePrice * (parseInt(formData.passengers) || 1);
+
+      console.log('💰 Calculated totalPrice:', totalPrice);
+
+      // Validate pricing
+      if (isNaN(totalPrice) || totalPrice <= 0) {
+        console.error('❌ Invalid totalPrice:', totalPrice);
+        setError(`Invalid transfer pricing. Price is ${totalPrice}. Please contact support.`);
+        setSubmitting(false);
+        return;
+      }
+
+      // Prepare booking data
+      const bookingData = {
+        transfer: id,
+        guestName: formData.guestName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        arrivalDate: new Date(formData.arrivalDate).toISOString(),
+        arrivalTime: formData.arrivalTime,
+        tripType: formData.tripType,
+        transferType: formData.transferType,
+        passengers: parseInt(formData.passengers) || 1,
+        currency: currency,
+        totalPrice: parseFloat(totalPrice.toFixed(2)), // Send calculated total price
+        flightNumber: formData.flightNumber?.trim() || '',
+        departureDate: formData.departureDate ? new Date(formData.departureDate).toISOString() : null,
+        departureTime: formData.departureTime || '',
+        specialRequests: formData.specialRequests?.trim() || '',
+        user: currentUser?._id || null
+      };
+
+      console.log('📦 Final booking data being sent:', bookingData);
+      console.log('✅ totalPrice in bookingData:', bookingData.totalPrice, 'Type:', typeof bookingData.totalPrice);
+
+      const response = await airportTransferBookingAPI.createBooking(bookingData);
+
+      if (response.data.success) {
+        console.log('✅ Booking created successfully:', response.data.data);
+        // Success navigation
+        navigate('/dashboard/airport-transfers', {
+          state: {
+            bookingSuccess: true,
+            bookingReference: response.data.data.bookingReference,
+            bookingCurrency: currency,
+            bookingTotal: totalPrice
+          },
+        });
+      } else {
+        setError(response.data.error || 'Failed to create booking');
+      }
+    } catch (err) {
+      console.error('❌ Booking error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        config: err.config?.data
+      });
+      
+      const errorMessage = err.response?.data?.error || 
+                          err.response?.data?.message || 
+                          'Failed to create booking. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setSubmitting(false);
     }
-  } catch (err) {
-    console.error('❌ Booking error details:', {
-      message: err.message,
-      response: err.response?.data,
-      status: err.response?.status,
-      config: err.config?.data // Log what was actually sent
-    });
-    
-    const errorMessage = err.response?.data?.error || 
-                        err.response?.data?.message || 
-                        'Failed to create booking. Please try again.';
-    setError(errorMessage);
-  } finally {
-    setSubmitting(false);
-  }
-};
+  };
+
   if (loading) return <LoadingSpinner />;
 
   const { price, currencySymbol } = getPrice();
-  const altPrice = getAlternativePrice();
+  const altPrice = getAltPrice();
 
   return (
     <div className="max-w-6xl mx-auto py-6 px-4">
@@ -849,8 +789,6 @@ const handleSubmit = async (e) => {
                       </div>
                     </div>
                     
-                    
-
                     <div className="flex justify-between items-center text-xl pt-4 border-t border-gray-200">
                       <span className="text-blue-900 font-bold">Total Amount:</span>
                       <span className="text-blue-900 font-extrabold text-2xl">
@@ -859,9 +797,6 @@ const handleSubmit = async (e) => {
                     </div>
                   </div>
                 </div>
-
-               
-
 
                 {/* Mauritius Flag */}
                 <div className="pt-4 border-t border-gray-200">

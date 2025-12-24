@@ -1,4 +1,3 @@
-// utils/currency.js
 export const currencyConfig = {
   EUR: {
     symbol: '€',
@@ -19,6 +18,10 @@ export const getCurrencySymbol = (currencyCode = 'MUR') => {
 export const formatPrice = (price, currencyCode = 'MUR') => {
   const symbol = getCurrencySymbol(currencyCode);
   const numericPrice = parseFloat(price);
+  
+  if (isNaN(numericPrice)) {
+    return `${symbol} 0`;
+  }
   
   if (currencyCode === 'EUR') {
     return `${symbol}${numericPrice.toFixed(2)}`;
@@ -45,8 +48,6 @@ export const getBookingCurrency = (booking) => {
 export const formatBookingPrice = (price, booking) => {
   if (!price && price !== 0) return 'N/A';
   
-  console.log('🔧 formatBookingPrice called:', { price, booking });
-  
   // Handle both booking object and currency string
   let currency, symbol;
   
@@ -59,17 +60,49 @@ export const formatBookingPrice = (price, booking) => {
     symbol = getCurrencySymbol(currency);
   }
   
-  console.log('🔧 Formatting with:', { currency, symbol, price });
-  
   const numericPrice = parseFloat(price);
   
+  if (isNaN(numericPrice)) {
+    return `${symbol} 0`;
+  }
+  
   if (currency === 'EUR') {
-    return `€${numericPrice.toFixed(2)}`;
+    return `${symbol}${numericPrice.toFixed(2)}`;
   } else {
-    return `Rs ${Math.round(numericPrice)}`;
+    return `${symbol} ${Math.round(numericPrice)}`;
   }
 };
 
 export const getCurrencyName = (currencyCode = 'MUR') => {
   return currencyConfig[currencyCode]?.name || 'Mauritian Rupees';
+};
+
+// New: Calculate price based on trip type and currency
+export const calculateTransferPrice = (transfer, tripType, currency = 'MUR') => {
+  if (!transfer) return 0;
+  
+  let price = 0;
+  
+  if (currency === 'MUR') {
+    price = tripType === 'one-way' 
+      ? transfer.oneWayPriceMUR 
+      : transfer.roundTripPriceMUR;
+  } else {
+    price = tripType === 'one-way'
+      ? transfer.oneWayPriceEUR
+      : transfer.roundTripPriceEUR;
+  }
+  
+  return parseFloat(price) || 0;
+};
+
+// New: Get alternative currency price
+export const getAlternativePrice = (transfer, tripType, currentCurrency) => {
+  if (!transfer) return { price: 0, currencySymbol: '' };
+  
+  const altCurrency = currentCurrency === 'MUR' ? 'EUR' : 'MUR';
+  const price = calculateTransferPrice(transfer, tripType, altCurrency);
+  const currencySymbol = getCurrencySymbol(altCurrency);
+  
+  return { price, currencySymbol };
 };

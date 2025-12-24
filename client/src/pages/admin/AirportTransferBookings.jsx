@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { airportTransferBookingAPI } from '../../utils/airportTransferApi';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { formatBookingPrice } from '../../utils/currency'; // Added import
 import { jsPDF } from 'jspdf';
-import logo from '../../assets/logo.png'; // Import your logo
+import logo from '../../assets/logo.png';
 
 const AirportTransferBookings = () => {
   const [bookings, setBookings] = useState([]);
-  const [allBookings, setAllBookings] = useState([]); // Store all bookings
+  const [allBookings, setAllBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [stats, setStats] = useState(null);
@@ -24,7 +25,6 @@ const AirportTransferBookings = () => {
   useEffect(() => {
     const loadLogo = async () => {
       try {
-        // Convert logo to base64
         const response = await fetch(logo);
         const blob = await response.blob();
         const reader = new FileReader();
@@ -35,7 +35,7 @@ const AirportTransferBookings = () => {
         reader.readAsDataURL(blob);
       } catch (error) {
         console.error('Error loading logo:', error);
-        setImageLoaded(true); // Continue even if logo fails
+        setImageLoaded(true);
       }
     };
     loadLogo();
@@ -53,23 +53,16 @@ const AirportTransferBookings = () => {
       const response = await airportTransferBookingAPI.getAllBookings(params);
 
       if (response.data.success) {
-        // Store all bookings
         setAllBookings(response.data.data);
         
-        // Filter bookings based on toggle state
         const filteredBookings = response.data.data.filter(booking => {
-          // If toggle is ON, show all transfers
           if (showLinkedTransfers) {
             return true;
           }
           
-          // Check for various patterns that indicate activity linkage
-          
-          // 1. Check special requests for booking references
           if (booking.specialRequests) {
             const specialRequests = booking.specialRequests.toLowerCase();
             
-            // Common patterns indicating activity linkage
             if (
               specialRequests.includes('booking ref:') ||
               specialRequests.includes('booking reference:') ||
@@ -77,35 +70,32 @@ const AirportTransferBookings = () => {
               specialRequests.includes('activity ref:') ||
               specialRequests.includes('linked to') ||
               specialRequests.includes('combined with') ||
-              specialRequests.match(/[a-z]{3}-[0-9]{6}/) || // Pattern like abc-123456
-              specialRequests.match(/act-\d+/i) || // Pattern like ACT-123
-              specialRequests.match(/booking\s*#?\s*[a-z0-9-]+/i) // Booking # pattern
+              specialRequests.match(/[a-z]{3}-[0-9]{6}/) ||
+              specialRequests.match(/act-\d+/i) ||
+              specialRequests.match(/booking\s*#?\s*[a-z0-9-]+/i)
             ) {
-              return false; // Skip this booking (it's linked to an activity)
-            }
-          }
-          
-          // 2. Check for dedicated activity booking reference fields
-          if (booking.activityBookingReference || booking.activityBookingId) {
-            return false; // Skip this booking (it's linked to an activity)
-          }
-          
-          // 3. Check for patterns in booking reference itself
-          if (booking.bookingReference) {
-            // If booking reference starts with ACT- (activity) or similar pattern
-            if (booking.bookingReference.startsWith('ACT-') || 
-                booking.bookingReference.startsWith('AB-') ||
-                booking.bookingReference.includes('-ACT-')) {
               return false;
             }
           }
           
-          // 4. Check if transfer has an associated activity
+          if (booking.activityBookingReference || booking.activityBookingId) {
+            return false;
+          }
+          
+          if (booking.bookingReference) {
+            if (
+              booking.bookingReference.startsWith('ACT-') || 
+              booking.bookingReference.startsWith('AB-') ||
+              booking.bookingReference.includes('-ACT-')
+            ) {
+              return false;
+            }
+          }
+          
           if (booking.activityId || booking.linkedActivityId) {
             return false;
           }
           
-          // 5. Return true for standalone airport transfers
           return true;
         });
 
@@ -162,7 +152,7 @@ const AirportTransferBookings = () => {
     const pageHeight = doc.internal.pageSize.getHeight();
 
     // Add blue header background
-    doc.setFillColor(59, 130, 246); // Blue-600
+    doc.setFillColor(59, 130, 246);
     doc.rect(0, 0, pageWidth, 40, 'F');
 
     // Try to add logo if available
@@ -189,7 +179,7 @@ const AirportTransferBookings = () => {
     });
 
     // Add booking details title
-    doc.setTextColor(0, 0, 0); // Black
+    doc.setTextColor(0, 0, 0);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
     doc.text('BOOKING CONFIRMATION', pageWidth / 2, 50, { align: 'center' });
@@ -205,7 +195,7 @@ const AirportTransferBookings = () => {
     );
 
     // Add line separator
-    doc.setDrawColor(59, 130, 246); // Blue-600
+    doc.setDrawColor(59, 130, 246);
     doc.setLineWidth(0.5);
     doc.line(20, 65, pageWidth - 20, 65);
 
@@ -243,14 +233,16 @@ const AirportTransferBookings = () => {
     doc.text(`Date: ${formatDate(booking.arrivalDate)}`, 20, 146);
     doc.text(`Passengers: ${booking.passengers || 1}`, 20, 153);
 
-    // Payment Details Section - Changed from $ to RS
+    // Payment Details Section - UPDATED
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.text('PAYMENT DETAILS', 20, 170);
 
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Total Amount: RS ${booking.totalPrice || 0}`, 20, 180);
+    
+    // Use formatBookingPrice instead of hardcoded RS
+    doc.text(`Total Amount: ${formatBookingPrice(booking.totalPrice, booking)}`, 20, 180);
     doc.text(
       `Status: ${booking.status?.toUpperCase() || 'COMPLETED'}`,
       20,
@@ -339,7 +331,7 @@ const AirportTransferBookings = () => {
     setShowLinkedTransfers(!showLinkedTransfers);
   };
 
-  // Calculate filtered stats
+  // Calculate filtered stats with proper currency formatting
   const filteredStats = {
     totalBookings: [{ count: bookings.length }],
     byStatus: bookings.reduce((acc, booking) => {
@@ -473,7 +465,25 @@ const AirportTransferBookings = () => {
                   <div>
                     <p className="text-sm text-gray-500">Total Revenue</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      RS {filteredStats.totalRevenue?.[0]?.total?.toFixed(2) || '0.00'}
+                      {/* Calculate total revenue with proper currency formatting */}
+                      {(() => {
+                        // Calculate total revenue from all bookings
+                        const totalRevenue = bookings.reduce((sum, booking) => {
+                          return sum + (parseFloat(booking.totalPrice) || 0);
+                        }, 0);
+                        
+                        // Get currency from first booking or default to MUR
+                        const currency = bookings.length > 0 
+                          ? bookings[0].currency || 'MUR' 
+                          : 'MUR';
+                          
+                        // Format the total revenue based on currency
+                        if (currency === 'EUR') {
+                          return `€${totalRevenue.toFixed(2)}`;
+                        } else {
+                          return `Rs ${Math.round(totalRevenue)}`;
+                        }
+                      })()}
                     </p>
                   </div>
                 </div>
@@ -564,6 +574,12 @@ const AirportTransferBookings = () => {
                         scope="col"
                         className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                       >
+                        Currency
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
                         Status
                       </th>
                       <th
@@ -582,7 +598,6 @@ const AirportTransferBookings = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {bookings.map((booking) => {
-                      // Determine if this transfer is linked to an activity
                       const isLinked = 
                         (booking.specialRequests && 
                          (booking.specialRequests.includes('Booking Ref:') || 
@@ -635,7 +650,17 @@ const AirportTransferBookings = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            RS {booking.totalPrice}
+                            {/* UPDATED: Use formatBookingPrice */}
+                            {formatBookingPrice(booking.totalPrice, booking)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                              booking.currency === 'EUR' 
+                                ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                                : 'bg-green-100 text-green-800 border border-green-200'
+                            }`}>
+                              {booking.currency || 'MUR'}
+                            </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             {getStatusBadge(booking.status)}
@@ -713,6 +738,9 @@ const AirportTransferBookings = () => {
                 </p>
                 <p className="text-sm text-gray-600">
                   Customer: {selectedBooking.guestName}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Amount: {formatBookingPrice(selectedBooking.totalPrice, selectedBooking)}
                 </p>
                 {/* Show transfer type in modal */}
                 {(() => {
