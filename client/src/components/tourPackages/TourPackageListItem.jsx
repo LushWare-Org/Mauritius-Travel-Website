@@ -2,54 +2,66 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaStar, FaRegStar } from 'react-icons/fa';
 
-const TourPackageListItem = ({ pkg }) => {
+const TourPackageListItem = ({ pkg, getDisplayPrice, userCurrency }) => {
     if (!pkg) return null;
 
-    // Helper function to get display price based on currency type
-    const getDisplayPrice = (tour) => {
-        if (!tour) return { display: '', rs: 0, euro: 0, currencyType: 'default' };
+    // Get price information based on user's selected currency
+    const priceInfo = getDisplayPrice ? getDisplayPrice(pkg) : getFallbackDisplayPrice(pkg);
+
+    // Fallback function if getDisplayPrice is not provided
+    const getFallbackDisplayPrice = (tour) => {
+        if (!tour) return { display: '', price: 0, currency: 'MUR', hasAlternative: false };
         
-        // Check if tour has the new currency fields
         if (tour.currencyType && (tour.priceRs !== undefined || tour.priceEuro !== undefined)) {
+            // Default to MUR if userCurrency is not provided
+            const currency = userCurrency || 'rs';
+            
             switch(tour.currencyType) {
                 case 'both':
-                    return {
-                        rs: tour.priceRs || tour.price || 0,
-                        euro: tour.priceEuro || 0,
-                        display: `Rs ${tour.priceRs || tour.price || 0} / € ${tour.priceEuro || 0}`,
-                        currencyType: 'both'
-                    };
+                    if (currency === 'euro' && tour.priceEuro) {
+                        return {
+                            display: `€ ${tour.priceEuro.toFixed(2)}`,
+                            price: tour.priceEuro,
+                            currency: 'EUR',
+                            hasAlternative: false // Changed to false to hide alternatives
+                        };
+                    } else {
+                        return {
+                            display: `Rs ${Math.round(tour.priceRs)}`,
+                            price: tour.priceRs,
+                            currency: 'MUR',
+                            hasAlternative: false // Changed to false to hide alternatives
+                        };
+                    }
                 case 'rs-only':
                     return {
-                        rs: tour.priceRs || tour.price || 0,
-                        euro: null,
-                        display: `Rs ${tour.priceRs || tour.price || 0}`,
-                        currencyType: 'rs-only'
+                        display: `Rs ${Math.round(tour.priceRs || tour.price)}`,
+                        price: tour.priceRs || tour.price,
+                        currency: 'MUR',
+                        hasAlternative: false
                     };
                 case 'euro-only':
                     return {
-                        rs: null,
-                        euro: tour.priceEuro || tour.price || 0,
-                        display: `€ ${tour.priceEuro || tour.price || 0}`,
-                        currencyType: 'euro-only'
+                        display: `€ ${(tour.priceEuro || tour.price).toFixed(2)}`,
+                        price: tour.priceEuro || tour.price,
+                        currency: 'EUR',
+                        hasAlternative: false
                     };
                 default:
-                    // Fallback to original price field
                     return {
-                        rs: tour.price || 0,
-                        euro: null,
-                        display: `Rs ${tour.price || 0}`,
-                        currencyType: 'default'
+                        display: `Rs ${Math.round(tour.price)}`,
+                        price: tour.price,
+                        currency: 'MUR',
+                        hasAlternative: false
                     };
             }
         }
         
-        // For backward compatibility with older packages
         return {
-            rs: tour.price || 0,
-            euro: null,
-            display: `Rs ${tour.price || 0}`,
-            currencyType: 'default'
+            display: `Rs ${Math.round(tour.price || 0)}`,
+            price: tour.price || 0,
+            currency: 'MUR',
+            hasAlternative: false
         };
     };
 
@@ -90,10 +102,13 @@ const TourPackageListItem = ({ pkg }) => {
         return stars;
     };
 
-    const priceDisplay = getDisplayPrice(pkg);
+    // Get currency symbol for display
+    const getCurrencySymbol = (currencyCode) => {
+        return currencyCode === 'EUR' ? '€' : 'Rs';
+    };
 
     return (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col sm:flex-row">
+        <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col sm:flex-row border border-gray-200">
             <div className="sm:w-1/3 h-48 sm:h-auto relative">
                 <img 
                     src={pkg.image || '/images/placeholder.jpg'} 
@@ -106,22 +121,34 @@ const TourPackageListItem = ({ pkg }) => {
                     </span>
                 )}
                 
-                {/* Currency Type Badge */}
-                {priceDisplay.currencyType !== 'default' && (
+                {/* Currency Availability Badge */}
+                {pkg.currencyType && pkg.currencyType !== 'default' && (
                     <span className={`absolute top-3 right-0 py-1 px-3 font-semibold text-xs uppercase ${
-                        priceDisplay.currencyType === 'both' 
-                            ? 'bg-green-500 text-white'
-                            : priceDisplay.currencyType === 'rs-only'
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-yellow-500 text-white'
+                        pkg.currencyType === 'both' 
+                            ? 'bg-green-500 text-white border border-green-600'
+                            : pkg.currencyType === 'rs-only'
+                            ? 'bg-blue-500 text-white border border-blue-600'
+                            : 'bg-yellow-500 text-white border border-yellow-600'
                     }`}>
-                        {priceDisplay.currencyType === 'both' 
-                            ? 'Rs & €' 
-                            : priceDisplay.currencyType === 'rs-only'
+                        {pkg.currencyType === 'both' 
+                            ? 'Dual Currency' 
+                            : pkg.currencyType === 'rs-only'
                             ? 'Rs Only'
                             : '€ Only'}
                     </span>
                 )}
+
+                {/* Current Currency Display */}
+                <div className="absolute bottom-3 left-3 bg-white bg-opacity-90 backdrop-blur-sm py-1 px-3 rounded-full shadow-sm">
+                    <span className={`text-xs font-bold ${
+                        priceInfo.currency === 'EUR' ? 'text-blue-700' : 'text-green-700'
+                    }`}>
+                        <i className={`fas fa-money-bill-wave mr-1 ${
+                            priceInfo.currency === 'EUR' ? 'text-blue-500' : 'text-green-500'
+                        }`}></i>
+                        {priceInfo.currency} {getCurrencySymbol(priceInfo.currency)}
+                    </span>
+                </div>
             </div>
 
             <div className="p-5 flex flex-col flex-grow sm:w-2/3 relative">
@@ -174,37 +201,46 @@ const TourPackageListItem = ({ pkg }) => {
                     {pkg.description || pkg.shortDescription || 'No description available'}
                 </p>
 
+
                 <div className="mt-auto flex flex-col sm:flex-row justify-between items-start sm:items-center pt-4 border-t border-gray-100">
                     <div className="mb-3 sm:mb-0">
-                        {/* Price Display without icons */}
-                        <div className="text-blue-800 font-bold text-xl mb-1">
-                            {priceDisplay.display}
+                        {/* Main Price Display */}
+                        <div className="flex items-center mb-1">
+                            <span className="text-blue-800 font-bold text-2xl mr-2">
+                                {priceInfo.display}
+                            </span>
+                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                priceInfo.currency === 'EUR' 
+                                    ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                                    : 'bg-green-100 text-green-800 border border-green-200'
+                            }`}>
+                                {priceInfo.currency}
+                            </span>
                         </div>
                         
-                        {/* Secondary Price (for both currencies) */}
-                        {priceDisplay.currencyType === 'both' && priceDisplay.euro && (
-                            <div className="text-gray-600 text-sm">
-                                € {priceDisplay.euro} only
-                            </div>
-                        )}
+                     
                         
-                        <div className="text-gray-500 text-sm mt-1">per package</div>
+                        <div className="text-gray-500 text-sm">per package</div>
                         
-                        {/* Currency Option Info */}
-                        {priceDisplay.currencyType === 'both' && (
-                            <div className="text-xs text-green-600 mt-1">
-                                <i className="fas fa-check-circle mr-1"></i>
-                                Pay in Rs or Euros
+                        {/* Currency Availability Info - Simplified */}
+                        {pkg.currencyType === 'both' && (
+                            <div className="text-xs text-green-600 mt-1 flex items-center">
+                                <i className="fas fa-exchange-alt mr-1"></i>
+                                Available in both currencies
                             </div>
                         )}
                     </div>
                     
-                    <Link 
-                        to={`/tour-packages/${pkg._id || pkg.id}`}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors font-medium text-sm"
-                    >
-                        View Details
-                    </Link>
+                    <div className="flex flex-col gap-2">
+                        <Link 
+                            to={`/tour-packages/${pkg._id || pkg.id}`}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors font-medium text-sm flex items-center justify-center"
+                        >
+                            <i className="fas fa-eye mr-2"></i>
+                            View Details
+                        </Link>
+                       
+                    </div>
                 </div>
             </div>
         </div>

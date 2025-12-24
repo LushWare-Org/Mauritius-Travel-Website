@@ -1,7 +1,7 @@
 import React from 'react';
 import TourPackageListItem from './TourPackageListItem';
 
-const TourPackageList = ({ packages }) => {
+const TourPackageList = ({ packages, getDisplayPrice, userCurrency }) => {
     if (!packages || packages.length === 0) {
         return (
             <div className="bg-white p-8 rounded-lg shadow text-center">
@@ -14,7 +14,12 @@ const TourPackageList = ({ packages }) => {
     return (
         <div className="space-y-4">
             {packages.map(pkg => (
-                <TourPackageListItem key={pkg._id || pkg.id} pkg={pkg} />
+                <TourPackageListItem 
+                    key={pkg._id || pkg.id} 
+                    pkg={pkg} 
+                    getDisplayPrice={getDisplayPrice}
+                    userCurrency={userCurrency}
+                />
             ))}
         </div>
     );

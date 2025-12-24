@@ -1,27 +1,37 @@
-// Update your TourPackageBookingConfirmation.jsx
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+// src/pages/TourPackageBookingConfirmation.jsx
+import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { tourPackageBookingsAPI } from '../../utils/api';
+import { tourPackageBookingsAPI, tourPackagesAPI } from '../../utils/api';
 
 const TourPackageBookingConfirmation = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { id: tourId } = useParams();
+  const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
 
+  // Get user currency preference
+  const userCurrency = useMemo(() => 
+    searchParams.get('currency') || 
+    localStorage.getItem('preferredCurrency') || 
+    'rs'
+  , [searchParams]);
+
+  // Extract state data
   const {
     selectedDate,
-    guests,
+    guests = 1,
     selectedActivities = [],
+    activitiesData = [],
     includeTransfer = false,
     transferDetails = null,
-    totalPrice: initialTotalPrice,
-    basePrice,
+    packageTotal = 0,
     activitiesTotal = 0,
     transferTotal = 0,
   } = location.state || {};
 
+  const [tour, setTour] = useState(null);
   const [formData, setFormData] = useState({
     fullName: currentUser?.name || '',
     email: currentUser?.email || '',
@@ -30,128 +40,286 @@ const TourPackageBookingConfirmation = () => {
     specialRequests: '',
   });
   const [loading, setLoading] = useState(false);
+  const [fetchingTour, setFetchingTour] = useState(true);
   const [error, setError] = useState('');
   const [calculatedPrices, setCalculatedPrices] = useState(null);
+  const [formattedDate, setFormattedDate] = useState('');
 
-  // If no state data, redirect back
-  if (!selectedDate) {
-    navigate(-1);
-    return null;
-  }
-
-  // Calculate prices on component mount
+  // Format date
   useEffect(() => {
-    const calculatePrices = () => {
-      console.log('=== CALCULATING PRICES (Rs only) ===');
+    if (selectedDate) {
+      try {
+        let dateObj;
+        
+        if (typeof selectedDate === 'string') {
+          if (selectedDate.includes(',')) {
+            setFormattedDate(selectedDate);
+            return;
+          } else if (selectedDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            const [year, month, day] = selectedDate.split('-');
+            dateObj = new Date(year, month - 1, day);
+          } else {
+            dateObj = new Date(selectedDate);
+          }
+        } else if (selectedDate instanceof Date) {
+          dateObj = selectedDate;
+        } else {
+          setFormattedDate(String(selectedDate));
+          return;
+        }
 
-      // Ensure basePrice is a number
-      const basePriceNum = parseFloat(basePrice) || 0;
-      const guestsNum = parseInt(guests) || 1;
+        if (isNaN(dateObj.getTime())) {
+          setFormattedDate(String(selectedDate));
+          return;
+        }
 
-      // Calculate package total
-      const packageTotal = basePriceNum * guestsNum;
-      console.log(
-        'Package total:',
-        basePriceNum,
-        '×',
-        guestsNum,
-        '=',
-        packageTotal
-      );
-
-      // Calculate activities total
-      const activitiesTotal = selectedActivities.reduce((sum, activity) => {
-        const activityPrice = parseFloat(activity.price) || 0;
-        const activityTotal = activityPrice * guestsNum;
-        console.log(
-          `Activity "${activity.title}": Rs ${activityPrice} × ${guestsNum} = Rs ${activityTotal}`
-        );
-        return sum + activityTotal;
-      }, 0);
-      console.log('Activities total:', activitiesTotal);
-
-      // Calculate transfer total
-      const transferTotal =
-        includeTransfer && transferDetails
-          ? parseFloat(transferDetails.transferPrice) || 0
-          : 0;
-      console.log('Transfer total:', transferTotal);
-
-      // Calculate grand total in Rs
-      const grandTotal = packageTotal + activitiesTotal + transferTotal;
-      console.log(
-        'Grand total (Rs):',
-        packageTotal,
-        '+',
-        activitiesTotal,
-        '+',
-        transferTotal,
-        '=',
-        grandTotal
-      );
-
-      setCalculatedPrices({
-        packageTotal,
-        activitiesTotal,
-        transferTotal,
-        grandTotal,
-        formattedGrandTotal: parseFloat(grandTotal.toFixed(2)),
-      });
-    };
-
-    if (basePrice && guests) {
-      calculatePrices();
+        const displayString = dateObj.toLocaleDateString('en-US', { 
+          weekday: 'short', 
+          month: 'short', 
+          day: 'numeric',
+          year: 'numeric'
+        });
+        
+        setFormattedDate(displayString);
+        
+      } catch (error) {
+        setFormattedDate(String(selectedDate));
+      }
     }
-  }, [basePrice, guests, selectedActivities, includeTransfer, transferDetails]);
+  }, [selectedDate]);
 
-  // In handleSubmit, send Rs values directly
+  // Get date for submission
+  const getDateForSubmission = () => {
+    if (!selectedDate) return '';
+    
+    try {
+      let dateObj;
+      
+      if (typeof selectedDate === 'string') {
+        if (selectedDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          return selectedDate;
+        } else if (selectedDate.includes('T')) {
+          dateObj = new Date(selectedDate);
+        } else if (selectedDate.includes(',')) {
+          dateObj = new Date(selectedDate);
+        } else {
+          dateObj = new Date(selectedDate);
+        }
+      } else if (selectedDate instanceof Date) {
+        dateObj = selectedDate;
+      } else {
+        return String(selectedDate);
+      }
+      
+      if (isNaN(dateObj.getTime())) {
+        return String(selectedDate);
+      }
+      
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      return String(selectedDate);
+    }
+  };
+
+  // Redirect if no state data
+  useEffect(() => {
+    if (!selectedDate) {
+      navigate(-1);
+    }
+  }, [selectedDate, navigate]);
+
+  // Fetch tour details
+  useEffect(() => {
+    const fetchTourDetails = async () => {
+      if (!tourId) return;
+      
+      try {
+        setFetchingTour(true);
+        const params = {};
+        if (userCurrency) params.currency = userCurrency;
+        
+        const response = await tourPackagesAPI.getById(tourId, params);
+        const tourData = response?.data?.data;
+        
+        if (tourData) {
+          setTour({
+            ...tourData,
+            priceRs: tourData.priceRs || tourData.price || 0,
+            priceEuro: tourData.priceEuro || tourData.price || 0,
+            currencyType: tourData.currencyType || 'rs-only',
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching tour:', err);
+        setError('Failed to load tour details.');
+      } finally {
+        setFetchingTour(false);
+      }
+    };
+    
+    fetchTourDetails();
+  }, [tourId, userCurrency]);
+
+  // Helper functions
+  const getPriceInCurrency = useMemo(() => (priceRs, priceEuro, currencyType) => {
+    if (userCurrency === 'euro') {
+      return priceEuro || priceRs || 0;
+    } else {
+      return priceRs || 0;
+    }
+  }, [userCurrency]);
+
+  const formatPrice = useMemo(() => (price) => {
+    const num = parseFloat(price) || 0;
+    if (userCurrency === 'euro') {
+      return `€ ${num.toFixed(2)}`;
+    } else {
+      return `Rs ${Math.round(num).toLocaleString()}`;
+    }
+  }, [userCurrency]);
+
+  const getCurrencyDisplayName = useMemo(() => () => {
+    return userCurrency === 'euro' ? 'EUR (€)' : 'MUR (Rs)';
+  }, [userCurrency]);
+
+  const getCurrencyBadgeInfo = useMemo(() => (currencyType) => {
+    switch (currencyType) {
+      case 'both':
+        return {
+          bg: 'bg-green-100',
+          text: 'text-green-800',
+          label: 'Both Rs & Euro',
+        };
+      case 'rs-only':
+        return {
+          bg: 'bg-blue-100',
+          text: 'text-blue-800',
+          label: 'Rs Only',
+        };
+      case 'euro-only':
+        return {
+          bg: 'bg-yellow-100',
+          text: 'text-yellow-800',
+          label: 'Euro Only',
+        };
+      default:
+        return {
+          bg: 'bg-blue-100',
+          text: 'text-blue-800',
+          label: 'Rs Only',
+        };
+    };
+  }, []);
+
+  // Calculate prices
+  useEffect(() => {
+    if (!tour) return;
+
+    // Use passed totals or calculate
+    let finalPackageTotal = packageTotal || 0;
+    let finalActivitiesTotal = activitiesTotal || 0;
+    let finalTransferTotal = transferTotal || 0;
+
+    // Calculate if needed
+    if (!packageTotal || !activitiesTotal) {
+      const tourPriceInCurrency = getPriceInCurrency(
+        tour.priceRs,
+        tour.priceEuro,
+        tour.currencyType
+      );
+      finalPackageTotal = parseFloat(tourPriceInCurrency) || 0;
+
+      if (activitiesData && activitiesData.length > 0) {
+        finalActivitiesTotal = activitiesData.reduce((sum, activity) => {
+          const activityPrice = parseFloat(activity.price) || 0;
+          return sum + activityPrice;
+        }, 0);
+      } else if (selectedActivities && selectedActivities.length > 0) {
+        finalActivitiesTotal = selectedActivities.reduce((sum, activity) => {
+          const activityPrice = getPriceInCurrency(
+            activity.priceRs || activity.price,
+            activity.priceEuro,
+            activity.currencyType
+          );
+          return sum + activityPrice;
+        }, 0);
+      }
+
+      if (includeTransfer && transferDetails) {
+        const transferPrice = getPriceInCurrency(
+          transferDetails.transferPrice,
+          transferDetails.transferPriceEuro,
+          transferDetails.currencyType
+        );
+        finalTransferTotal = parseFloat(transferPrice) || 0;
+      }
+    }
+
+    const grandTotal = finalPackageTotal + finalActivitiesTotal + finalTransferTotal;
+    
+    setCalculatedPrices({
+      packageTotal: finalPackageTotal,
+      activitiesTotal: finalActivitiesTotal,
+      transferTotal: finalTransferTotal,
+      grandTotal,
+      formattedGrandTotal: formatPrice(grandTotal),
+      guests: parseInt(guests) || 1,
+    });
+  }, [tour, selectedActivities, activitiesData, includeTransfer, transferDetails, userCurrency, packageTotal, activitiesTotal, transferTotal, getPriceInCurrency, formatPrice, guests]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      // Build booking data with Rs values
+      const submissionDate = getDateForSubmission();
+      
       const bookingData = {
         tourPackage: tourId,
         user: currentUser._id,
-        guests: parseInt(guests),
-        startDate: new Date(selectedDate).toISOString().split('T')[0],
+        guests: parseInt(guests) || 1,
+        startDate: submissionDate,
         fullName: formData.fullName || currentUser.name,
         email: formData.email || currentUser.email,
         phone: `${formData.countryCode}${formData.phone}`,
-
-        // Send Rs values directly
-        totalPrice: calculatedPrices?.grandTotal || 0,
-        packagePrice: parseFloat(basePrice) || 0,
-        activitiesTotal: calculatedPrices?.activitiesTotal || 0,
-        transferTotal: calculatedPrices?.transferTotal || 0,
-
         specialRequests: formData.specialRequests || '',
         status: 'pending',
         bookingDate: new Date().toISOString().split('T')[0],
-        currency: 'MUR', // Send currency explicitly
+        currency: userCurrency === 'euro' ? 'EUR' : 'MUR',
+        currencyType: tour?.currencyType || 'rs-only',
+        totalPrice: calculatedPrices?.grandTotal || 0,
+        packagePrice: calculatedPrices?.packageTotal || 0,
+        activitiesTotal: calculatedPrices?.activitiesTotal || 0,
+        transferTotal: calculatedPrices?.transferTotal || 0,
       };
 
-      console.log('=== FINAL PAYLOAD (Rs) ===');
-      console.log('Total Price (Rs):', bookingData.totalPrice);
-      console.log('Package Price (Rs):', bookingData.packagePrice);
-      console.log('Activities Total (Rs):', bookingData.activitiesTotal);
-      console.log('Transfer Total (Rs):', bookingData.transferTotal);
-
-      // Activities data in Rs
-      if (selectedActivities && selectedActivities.length > 0) {
-        bookingData.selectedActivities = selectedActivities.map((act) => ({
-          activity: act._id || act.activity,
-          title: act.title,
-          price: Number(act.price) || 0, // Keep as Rs
-          quantity: parseInt(guests),
+      // Activities data
+      if (activitiesData && activitiesData.length > 0) {
+        bookingData.selectedActivities = activitiesData.map((activity) => ({
+          activity: activity.activity || activity._id,
+          title: activity.title,
+          price: activity.price || 0,
+          quantity: activity.quantity || 1,
+          duration: activity.duration || null,
+          durationType: activity.durationType || null,
+          currency: bookingData.currency,
         }));
-      } else {
-        bookingData.selectedActivities = [];
+      } else if (selectedActivities && selectedActivities.length > 0) {
+        bookingData.selectedActivities = selectedActivities.map((activity) => ({
+          activity: activity._id || activity.activity,
+          title: activity.title,
+          price: getPriceInCurrency(activity.priceRs || activity.price, activity.priceEuro, activity.currencyType) || 0,
+          quantity: guests,
+          currency: bookingData.currency,
+        }));
       }
 
-      // Transfer data in Rs
+      // Transfer data
       if (includeTransfer && transferDetails) {
         bookingData.airportTransfer = {
           transferId: transferDetails.transferId || transferDetails._id,
@@ -164,20 +332,20 @@ const TourPackageBookingConfirmation = () => {
           arrivalTime: transferDetails.arrivalTime,
           departureDate: transferDetails.departureDate || '',
           departureTime: transferDetails.departureTime || '',
-          transferPrice: calculatedPrices?.transferTotal || 0, // Keep as Rs
+          transferPrice: calculatedPrices?.transferTotal || 0,
+          currency: bookingData.currency,
         };
       }
 
-      // Make API call
-      const response = await tourPackageBookingsAPI.createWithActivities(
-        bookingData
-      );
+      const response = await tourPackageBookingsAPI.createWithActivities(bookingData);
 
       if (response.data.success) {
         navigate('/dashboard/tour-package-bookings', {
           state: {
             bookingReference: response.data.data.bookingReference,
             success: true,
+            currency: userCurrency,
+            totalAmount: calculatedPrices?.grandTotal,
           },
         });
       } else {
@@ -185,11 +353,7 @@ const TourPackageBookingConfirmation = () => {
       }
     } catch (err) {
       console.error('Error:', err);
-      if (err.response?.data?.message) {
-        setError(err.response.data.message);
-      } else {
-        setError('An error occurred. Please try again.');
-      }
+      setError(err.response?.data?.message || 'An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -202,326 +366,516 @@ const TourPackageBookingConfirmation = () => {
     });
   };
 
-  // If prices aren't calculated yet, show loading
-  if (!calculatedPrices) {
+  // Loading state
+  if (fetchingTour || !calculatedPrices) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Calculating prices...</p>
+      <div className="container mx-auto px-4 py-8 flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+        <p className="text-gray-600">Loading booking details...</p>
+      </div>
+    );
+  }
+
+  if (!selectedDate || !tour) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 sm:p-6">
+          <div className="flex items-center mb-4">
+            <i className="fas fa-exclamation-circle text-red-500 text-xl mr-3"></i>
+            <h2 className="text-lg sm:text-xl font-bold text-red-700">Booking Information Missing</h2>
+          </div>
+          <p className="text-red-600 mb-4">Please go back and select your booking options.</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+          >
+            Go Back
+          </button>
         </div>
       </div>
     );
   }
 
+  const currencyBadge = getCurrencyBadgeInfo(tour.currencyType);
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-800 mb-2">
-        Complete Your Booking
-      </h1>
-      <p className="text-gray-600 mb-8">
-        Review your selection and fill in your details
-      </p>
+    <div className="bg-gray-50 min-h-screen">
+      <div className="container mx-auto px-3 sm:px-4 py-6">
+        {/* Header */}
+        <div className="mb-6 bg-white rounded-xl shadow-sm p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-blue-800 mb-1">Complete Your Booking</h1>
+              <p className="text-gray-600 text-sm sm:text-base">Review details and confirm booking</p>
+            </div>
+            <div className="flex items-center bg-blue-50 px-3 py-2 rounded-lg">
+              <i className="fas fa-money-bill-wave text-blue-500 mr-2 text-sm"></i>
+              <span className="text-sm font-medium text-blue-700">
+                {getCurrencyDisplayName()}
+              </span>
+            </div>
+          </div>
+          
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm">
+            <div className="flex items-start">
+              <i className="fas fa-info-circle text-blue-500 mt-0.5 mr-2"></i>
+              <div>
+                <p className="text-blue-800 font-medium">Prices shown in {userCurrency === 'euro' ? 'Euros (€)' : 'Mauritian Rupees (Rs)'}</p>
+                <p className="text-blue-600 mt-1">
+                  <i className="fas fa-users mr-1"></i>
+                  For {guests} guest(s) • 
+                  <i className="far fa-calendar ml-2 mr-1"></i>
+                  {formattedDate}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Booking Summary */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              Booking Summary
-            </h2>
-
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Left Column - Main Content */}
+          <div className="lg:w-2/3">
             {/* Tour Package Details */}
-            <div className="mb-6 pb-6 border-b">
-              <h3 className="font-medium text-gray-700 mb-2">Tour Package</h3>
-              <div className="flex justify-between">
-                <span>
-                  Rs {basePrice} × {guests} guests
-                </span>
-                <span className="font-medium">
-                  Rs {calculatedPrices.packageTotal}
-                </span>
+            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6">
+              <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                <i className="fas fa-map-marked-alt mr-2 text-blue-500"></i>
+                Tour Package
+              </h2>
+              
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="sm:w-1/4">
+                  <img 
+                    src={tour.image || '/api/placeholder/400/300'} 
+                    alt={tour.title}
+                    className="w-full h-40 object-cover rounded-lg"
+                  />
+                  <div className="mt-3">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${currencyBadge.bg} ${currencyBadge.text}`}>
+                      {currencyBadge.label}
+                    </span>
+                  </div>
+                </div>
+                <div className="sm:w-3/4">
+                  <h3 className="text-xl font-bold text-blue-700 mb-2">{tour.title}</h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 text-sm">
+                    <div className="flex items-center">
+                      <i className="fas fa-map-marker-alt text-gray-400 w-4 mr-2"></i>
+                      <span>{tour.location || 'Multiple locations'}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <i className="fas fa-clock text-gray-400 w-4 mr-2"></i>
+                      <span>{tour.duration || '1'} day(s)</span>
+                    </div>
+                    <div className="flex items-center">
+                      <i className="fas fa-users text-gray-400 w-4 mr-2"></i>
+                      <span>{guests} guest(s)</span>
+                    </div>
+                    <div className="flex items-center">
+                      <i className="fas fa-calendar text-gray-400 w-4 mr-2"></i>
+                      <span>{formattedDate}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="text-xs text-gray-500">Package Price</div>
+                        <div className="text-lg sm:text-xl font-bold text-blue-700">
+                          {formatPrice(calculatedPrices.packageTotal)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Selected Activities */}
             {selectedActivities && selectedActivities.length > 0 && (
-              <div className="mb-6 pb-6 border-b">
-                <h3 className="font-medium text-gray-700 mb-3">
+              <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6">
+                <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                  <i className="fas fa-hiking mr-2 text-green-500"></i>
                   Selected Activities
-                </h3>
+                </h2>
+                
                 <div className="space-y-3">
-                  {selectedActivities.map((activity, index) => (
-                    <div
-                      key={activity._id || index}
-                      className="flex justify-between"
-                    >
-                      <div>
-                        <span className="block">{activity.title}</span>
-                        <span className="text-sm text-gray-500">
-                          Rs {activity.price} × {guests} guests
-                        </span>
+                  {(activitiesData.length > 0 ? activitiesData : selectedActivities).map((activity, index) => {
+                    let activityPrice = 0;
+                    let activityTitle = '';
+                    
+                    if (activitiesData.length > 0) {
+                      activityPrice = activity.price || 0;
+                      activityTitle = activity.title;
+                    } else {
+                      activityPrice = getPriceInCurrency(
+                        activity.priceRs || activity.price,
+                        activity.priceEuro,
+                        activity.currencyType
+                      );
+                      activityTitle = activity.title;
+                    }
+                    
+                    return (
+                      <div key={activity._id || activity.activity || index} className="border border-gray-200 rounded-lg p-3">
+                        <div className="flex flex-col sm:flex-row justify-between gap-2">
+                          <div>
+                            <h4 className="font-bold text-gray-800 text-sm sm:text-base">{activityTitle}</h4>
+                            {activity.description && (
+                              <p className="text-gray-600 text-xs mt-1 line-clamp-2">{activity.description}</p>
+                            )}
+                            <div className="mt-2 flex items-center">
+                              <span className={`text-xs px-2 py-1 rounded ${currencyBadge.bg} ${currencyBadge.text}`}>
+                                {currencyBadge.label}
+                              </span>
+                              {activity.durationType && (
+                                <span className="ml-2 text-xs text-blue-600">
+                                  <i className="fas fa-clock mr-1"></i>
+                                  {activity.durationType}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm sm:text-base font-bold text-green-600">
+                              {formatPrice(activityPrice)}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <span className="font-medium">
-                        Rs {parseFloat(activity.price) * guests}
+                    );
+                  })}
+                  
+                  <div className="pt-3 border-t border-gray-300">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">Activities Total:</span>
+                      <span className="text-lg font-bold text-green-600">
+                        {formatPrice(calculatedPrices.activitiesTotal)}
                       </span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Airport Transfer Details */}
-            {includeTransfer && transferDetails && (
-              <div className="mb-6 pb-6 border-b">
-                <h3 className="font-medium text-gray-700 mb-3">
-                  Airport Transfer
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <div>
-                      <span className="block font-medium">
-                        {transferDetails.transferName}
-                      </span>
-                      <span className="text-sm text-gray-500">
-                        {transferDetails.vehicleType} •{' '}
-                        {transferDetails.transferCode}
-                      </span>
-                      <div className="text-sm text-gray-500 mt-1">
-                        {transferDetails.tripType === 'one-way'
-                          ? 'One Way'
-                          : 'Round Trip'}{' '}
-                        •
-                        {transferDetails.transferType === 'airport-to-hotel'
-                          ? ' Airport → Hotel'
-                          : ' Hotel → Airport'}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        Arrival: {transferDetails.arrivalDate} at{' '}
-                        {transferDetails.arrivalTime}
-                        {transferDetails.departureDate && (
-                          <span>
-                            {' '}
-                            • Departure: {transferDetails.departureDate} at{' '}
-                            {transferDetails.departureTime}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <span className="font-medium">
-                      Rs {transferDetails.transferPrice}
-                    </span>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Total Price */}
-            <div className="flex justify-between items-center pt-4 border-t">
-              <span className="text-lg font-semibold text-gray-800">
-                Total Amount (Rs)
-              </span>
-              <span className="text-2xl font-bold text-blue-600">
-                Rs {calculatedPrices.grandTotal}
-              </span>
-            </div>
-            {/*<div className="flex justify-between items-center pt-2 mt-2 border-t">
-              <span className="text-sm text-gray-600">Equivalent in USD (for backend)</span>
-              <span className="text-lg font-semibold text-green-600">${calculatedPrices.inUSD}</span>
-            </div>
-            <div className="flex justify-between items-center pt-2">
-              <span className="text-sm text-gray-600">Backend expects</span>
-              <span className="text-lg font-semibold text-red-600">${calculatedPrices.expectedBackendUSD}</span>
-            </div>*/}
-            {Math.abs(
-              calculatedPrices.inUSD - calculatedPrices.expectedBackendUSD
-            ) > 0.01 && (
-              <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
-                <p className="text-sm text-yellow-700">
-                  ⚠️ Price mismatch detected! Frontend calculates $
-                  {calculatedPrices.inUSD}, but backend expects $
-                  {calculatedPrices.expectedBackendUSD}.
-                </p>
+            {/* Airport Transfer */}
+            {includeTransfer && transferDetails && (
+              <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6">
+                <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                  <i className="fas fa-shuttle-van mr-2 text-purple-500"></i>
+                  Airport Transfer
+                </h2>
+                
+                <div className="border border-gray-200 rounded-lg p-3">
+                  <div className="flex flex-col sm:flex-row justify-between gap-2">
+                    <div>
+                      <h4 className="font-bold text-gray-800 text-sm sm:text-base">{transferDetails.transferName}</h4>
+                      <div className="space-y-1 mt-2 text-xs sm:text-sm">
+                        <div className="flex items-center text-gray-600">
+                          <i className="fas fa-car mr-2 text-gray-400"></i>
+                          {transferDetails.vehicleType} • {transferDetails.transferCode}
+                        </div>
+                        <div className="flex items-center text-gray-600">
+                          <i className="fas fa-route mr-2 text-gray-400"></i>
+                          {transferDetails.tripType === 'one-way' ? 'One Way' : 'Round Trip'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm sm:text-base font-bold text-purple-600">
+                        {formatPrice(calculatedPrices.transferTotal)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
-          </div>
 
-          {/* Booking Form */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              Your Details
-            </h2>
-            <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-gray-700 text-sm font-medium mb-1">
-                    Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="fullName"
-                    value={formData.fullName}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
+            {/* Mobile Booking Summary - Placed immediately before the form */}
+            <div className="lg:hidden bg-white rounded-xl shadow-sm p-4 mb-6">
+              <h3 className="font-bold text-gray-800 text-lg mb-4">Booking Summary</h3>
+
+              <div className="space-y-3 mb-4 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Date:</span>
+                  <span className="font-medium">{formattedDate}</span>
                 </div>
-                <div>
-                  <label className="block text-gray-700 text-sm font-medium mb-1">
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Guests:</span>
+                  <span className="font-medium">{guests} person(s)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Activities:</span>
+                  <span className="font-medium">
+                    {selectedActivities?.length || 0} selected
+                  </span>
+                </div>
+                {includeTransfer && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Airport Transfer:</span>
+                    <span className="font-medium text-green-600">Included</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-3 border-t">
+                  <span className="text-gray-600">Currency:</span>
+                  <span className={`font-medium px-2 py-1 rounded text-xs ${currencyBadge.bg} ${currencyBadge.text}`}>
+                    {getCurrencyDisplayName()}
+                  </span>
                 </div>
               </div>
 
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-medium mb-1">
-                  Phone Number *
-                </label>
-
-                <div className="flex gap-2">
-                  {/* Country Code */}
-                  <input
-                    type="text"
-                    name="countryCode"
-                    value={formData.countryCode}
-                    onChange={(e) =>
-                      setFormData({ ...formData, countryCode: e.target.value })
-                    }
-                    className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-
-                  {/* Local Number */}
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
+              {/* Price Breakdown */}
+              <div className="pt-4 border-t">
+                <h4 className="font-semibold text-gray-700 mb-3 text-sm">Price Breakdown</h4>
+                
+                <div className="space-y-2 mb-4 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Tour Package:</span>
+                    <span className="font-medium">
+                      {formatPrice(calculatedPrices.packageTotal)}
+                    </span>
+                  </div>
+                  
+                  {calculatedPrices.activitiesTotal > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Activities:</span>
+                      <span className="font-medium">
+                        {formatPrice(calculatedPrices.activitiesTotal)}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {calculatedPrices.transferTotal > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Airport Transfer:</span>
+                      <span className="font-medium">
+                        {formatPrice(calculatedPrices.transferTotal)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Total Amount */}
+                <div className="pt-4 border-t border-gray-300">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="font-bold text-gray-800 text-base">Total Amount:</span>
+                      <div className="text-xs text-gray-500 mt-1">
+                        For {guests} guest(s) in {getCurrencyDisplayName()}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-bold text-blue-600">
+                        {calculatedPrices.formattedGrandTotal}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              <div className="mb-6">
-                <label className="block text-gray-700 text-sm font-medium mb-1">
-                  Special Requests (Optional)
-                </label>
-                <textarea
-                  name="specialRequests"
-                  value={formData.specialRequests}
-                  onChange={handleChange}
-                  rows="3"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                  placeholder="Any special requirements or requests..."
-                />
-              </div>
-
-              {error && (
-                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
-                  {error}
-                </div>
-              )}
-
-              {/*<div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <p className="text-sm text-blue-700">
-                  <strong>Note:</strong> The backend expects a total of <strong>$244.00</strong>. 
-                  We're sending this amount to match the backend's expectation, even though 
-                  our calculation shows ${calculatedPrices?.inUSD}.
-                </p>
-              </div>*/}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Processing...' : 'Confirm Booking'}
-              </button>
-            </form>
-          </div>
-        </div>
-
-        {/* Right Column: Booking Details */}
-        <div>
-          <div className="bg-white rounded-lg shadow-md p-6 sticky top-6">
-            <h3 className="font-semibold text-gray-800 mb-4">
-              Booking Details
-            </h3>
-
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Date:</span>
-                <span className="font-medium">
-                  {new Date(selectedDate).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Guests:</span>
-                <span className="font-medium">{guests} people</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Activities:</span>
-                <span className="font-medium">
-                  {selectedActivities?.length || 0} selected
-                </span>
-              </div>
-              {includeTransfer && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Airport Transfer:</span>
-                  <span className="font-medium text-green-600">Included</span>
-                </div>
-              )}
             </div>
 
-            <div className="pt-4 border-t">
-              <div className="flex justify-between mb-2">
-                <span className="text-gray-700">Package Total:</span>
-                <span className="font-medium">
-                  Rs {calculatedPrices.packageTotal}
-                </span>
-              </div>
-              {calculatedPrices.activitiesTotal > 0 && (
-                <div className="flex justify-between mb-2">
-                  <span className="text-gray-700">Activities Total:</span>
+            {/* Booking Form - Comes after booking summary on mobile */}
+            <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+              <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                <i className="fas fa-user-circle mr-2 text-blue-500"></i>
+                Your Details
+              </h2>
+              
+              <form onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                  <div>
+                    <label className="block text-gray-700 text-sm font-medium mb-1">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={formData.fullName}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 text-sm font-medium mb-1">
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-gray-700 text-sm font-medium mb-1">
+                    Phone Number *
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      name="countryCode"
+                      value={formData.countryCode}
+                      onChange={(e) =>
+                        setFormData({ ...formData, countryCode: e.target.value })
+                      }
+                      className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                      required
+                    />
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-gray-700 text-sm font-medium mb-1">
+                    Special Requests (Optional)
+                  </label>
+                  <textarea
+                    name="specialRequests"
+                    value={formData.specialRequests}
+                    onChange={handleChange}
+                    rows="3"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                    placeholder="Any special requirements or requests..."
+                  />
+                </div>
+
+                {error && (
+                  <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+                    <i className="fas fa-exclamation-circle mr-2"></i>
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`w-full py-3 px-4 rounded-lg font-medium text-sm sm:text-base ${
+                    loading 
+                      ? 'bg-blue-400 cursor-not-allowed' 
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  } text-white transition-colors flex items-center justify-center`}
+                >
+                  {loading ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin mr-2"></i>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-paper-plane mr-2"></i>
+                      Confirm Booking
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {/* Right Column - Desktop Total Summary */}
+          <div className="hidden lg:block lg:w-1/3">
+            <div className="sticky top-6 bg-white rounded-xl shadow-sm p-6">
+              <h3 className="font-semibold text-gray-800 mb-4 text-lg">
+                Booking Summary
+              </h3>
+
+              <div className="space-y-3 mb-6 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Date:</span>
+                  <span className="font-medium">{formattedDate}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Guests:</span>
+                  <span className="font-medium">{guests} person(s)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Activities:</span>
                   <span className="font-medium">
-                    Rs {calculatedPrices.activitiesTotal}
+                    {selectedActivities?.length || 0} selected
                   </span>
                 </div>
-              )}
-              {calculatedPrices.transferTotal > 0 && (
-                <div className="flex justify-between mb-2">
-                  <span className="text-gray-700">Transfer Total:</span>
-                  <span className="font-medium">
-                    Rs {calculatedPrices.transferTotal}
+                {includeTransfer && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Airport Transfer:</span>
+                    <span className="font-medium text-green-600">Included</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-3 border-t">
+                  <span className="text-gray-600">Currency:</span>
+                  <span className={`font-medium px-2 py-1 rounded text-xs ${currencyBadge.bg} ${currencyBadge.text}`}>
+                    {getCurrencyDisplayName()}
                   </span>
                 </div>
-              )}
-              <div className="flex justify-between text-lg font-bold pt-2 border-t">
-                <span>Total (Rs):</span>
-                <span className="text-blue-600">
-                  Rs {calculatedPrices.grandTotal}
-                </span>
               </div>
-              {/*<div className="flex justify-between text-sm pt-2 mt-2 border-t">
-                <span className="text-gray-600">Sending to backend:</span>
-                <span className="font-medium text-green-600">$244.00</span>
-              </div>*/}
+
+              {/* Price Breakdown */}
+              <div className="pt-4 border-t">
+                <h4 className="font-semibold text-gray-700 mb-3">Price Breakdown</h4>
+                
+                <div className="space-y-2 mb-4 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Tour Package:</span>
+                    <span className="font-medium">
+                      {formatPrice(calculatedPrices.packageTotal)}
+                    </span>
+                  </div>
+                  
+                  {calculatedPrices.activitiesTotal > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Activities:</span>
+                      <span className="font-medium">
+                        {formatPrice(calculatedPrices.activitiesTotal)}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {calculatedPrices.transferTotal > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Airport Transfer:</span>
+                      <span className="font-medium">
+                        {formatPrice(calculatedPrices.transferTotal)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Total Amount */}
+                <div className="pt-4 border-t border-gray-300">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-gray-800">Total Amount:</span>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {calculatedPrices.formattedGrandTotal}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        For {guests} guest(s)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Back Button */}
+              <button
+                onClick={() => navigate(-1)}
+                className="w-full mt-4 py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors text-sm sm:text-base flex items-center justify-center"
+              >
+                <i className="fas fa-arrow-left mr-2"></i>
+                Go Back
+              </button>
             </div>
           </div>
         </div>
