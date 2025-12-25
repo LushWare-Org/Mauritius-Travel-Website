@@ -766,10 +766,7 @@ const generatePDF = () => {
                   <span className="text-gray-600">Start Date:</span>
                   <span className="font-medium">{formatDate(booking.startDate)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Number of Guests:</span>
-                  <span className="font-medium">{booking.guests} {booking.guests === 1 ? 'person' : 'people'}</span>
-                </div>
+               
                 <div className="flex justify-between">
                   <span className="text-gray-600">Price:</span>
                   <span className="font-medium">{formatCurrency(pricePerPerson)}</span>
@@ -865,10 +862,7 @@ const generatePDF = () => {
                 </div>
               </div>
               <div>
-                <div className="mb-3">
-                  <p className="text-sm text-gray-500 mb-1">Passengers</p>
                 
-                </div>
                 {airportTransferDetails.arrivalDate && (
                   <div className="mb-3">
                     <p className="text-sm text-gray-500 mb-1">Arrival Date & Time</p>
@@ -913,7 +907,7 @@ const generatePDF = () => {
               <div className="pl-4">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Base Price:</span>
-                  <span>{formatCurrency(pricePerPerson)} × {booking.guests} {booking.guests === 1 ? 'person' : 'people'}</span>
+                 
                 </div>
                 <div className="flex justify-between font-medium mt-1">
                   <span>Package Total:</span>

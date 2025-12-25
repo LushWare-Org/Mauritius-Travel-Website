@@ -376,10 +376,7 @@ const MyTourPackageBookings = () => {
                             <p className="text-sm text-gray-500 mb-1">Booking Reference</p>
                             <p className="font-medium text-gray-800">{booking.bookingReference}</p>
                           </div>
-                          <div>
-                            <p className="text-sm text-gray-500 mb-1">Guests</p>
-                            <p className="font-medium text-gray-800">{booking.guests} {booking.guests === 1 ? 'person' : 'people'}</p>
-                          </div>
+                         
                           <div>
                             <p className="text-sm text-gray-500 mb-1">Currency</p>
                             <p className="font-medium text-gray-800">

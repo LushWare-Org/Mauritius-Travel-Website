@@ -20,7 +20,7 @@ const TourPackageBookingDetail = () => {
       try {
         console.log('🔍 Fetching booking details for ID:', id);
         const response = await tourPackageBookingsAPI.getById(id);
-        
+
         if (response.data.success) {
           console.log('✅ Booking fetched successfully:', response.data.data);
           console.log('💰 Currency data:', {
@@ -29,11 +29,13 @@ const TourPackageBookingDetail = () => {
             totalPriceEur: response.data.data?.totalPriceEur,
             totalPriceMur: response.data.data?.totalPriceMur,
             packagePrice: response.data.data?.packagePrice,
-            packagePriceEur: response.data.data?.packagePriceEur
+            packagePriceEur: response.data.data?.packagePriceEur,
           });
           setBooking(response.data.data);
         } else {
-          setError('Failed to fetch booking details: ' + (response.data.message || ''));
+          setError(
+            'Failed to fetch booking details: ' + (response.data.message || '')
+          );
         }
       } catch (err) {
         console.error('❌ Error fetching booking:', err);
@@ -58,9 +60,9 @@ const TourPackageBookingDetail = () => {
   // Get display price based on booking currency
   const getDisplayPrice = (priceType) => {
     if (!booking) return 0;
-    
+
     const bookingCurrency = booking.currency || 'MUR';
-    
+
     switch (priceType) {
       case 'total':
         if (bookingCurrency === 'EUR') {
@@ -105,7 +107,9 @@ const TourPackageBookingDetail = () => {
       if (response.data.success) {
         setBooking({ ...booking, status: newStatus });
       } else {
-        setError('Failed to update booking status: ' + (response.data.message || ''));
+        setError(
+          'Failed to update booking status: ' + (response.data.message || '')
+        );
       }
     } catch (err) {
       console.error('Error updating booking status:', err);
@@ -120,11 +124,19 @@ const TourPackageBookingDetail = () => {
       confirmed: 'bg-green-100 text-green-800 border border-green-200',
       pending: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
       cancelled: 'bg-red-100 text-red-800 border border-red-200',
-      completed: 'bg-blue-100 text-blue-800 border border-blue-200'
+      completed: 'bg-blue-100 text-blue-800 border border-blue-200',
     };
     return (
-      <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${styles[status] || 'bg-gray-100 text-gray-800 border border-gray-200'}`}>
-        <span className={`h-2 w-2 rounded-full mr-2 ${styles[status]?.split(' ')[0]?.replace('bg-', 'bg-')}`}></span>
+      <span
+        className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
+          styles[status] || 'bg-gray-100 text-gray-800 border border-gray-200'
+        }`}
+      >
+        <span
+          className={`h-2 w-2 rounded-full mr-2 ${styles[status]
+            ?.split(' ')[0]
+            ?.replace('bg-', 'bg-')}`}
+        ></span>
         {status?.charAt(0).toUpperCase() + status?.slice(1)}
       </span>
     );
@@ -133,15 +145,19 @@ const TourPackageBookingDetail = () => {
   // Currency badge component
   const CurrencyBadge = () => {
     if (!booking) return null;
-    
+
     const bookingCurrency = booking.currency || 'MUR';
     const styles = {
       MUR: 'bg-green-100 text-green-800 border border-green-200',
-      EUR: 'bg-blue-100 text-blue-800 border border-blue-200'
+      EUR: 'bg-blue-100 text-blue-800 border border-blue-200',
     };
-    
+
     return (
-      <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${styles[bookingCurrency] || styles.MUR}`}>
+      <span
+        className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
+          styles[bookingCurrency] || styles.MUR
+        }`}
+      >
         <i className="fas fa-money-bill-wave mr-2"></i>
         {bookingCurrency === 'MUR' ? 'Mauritian Rupees (Rs)' : 'Euro (€)'}
       </span>
@@ -179,7 +195,9 @@ const TourPackageBookingDetail = () => {
     return (
       <AdminLayout>
         <div className="text-center py-12">
-          <h2 className="text-xl font-semibold text-gray-600">Booking not found</h2>
+          <h2 className="text-xl font-semibold text-gray-600">
+            Booking not found
+          </h2>
           <button
             onClick={() => navigate('/admin/tour-packages/bookings')}
             className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
@@ -206,7 +224,9 @@ const TourPackageBookingDetail = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-800">
               Booking Details
-              <span className="ml-2 text-gray-500 text-lg font-normal">#{booking.bookingReference}</span>
+              <span className="ml-2 text-gray-500 text-lg font-normal">
+                #{booking.bookingReference}
+              </span>
             </h1>
             <div className="mt-2 flex flex-wrap gap-2">
               <CurrencyBadge />
@@ -232,59 +252,71 @@ const TourPackageBookingDetail = () => {
         <div className="lg:col-span-2">
           <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
             <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Booking Summary</h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">Complete booking information</p>
+              <h3 className="text-lg leading-6 font-medium text-gray-900">
+                Booking Summary
+              </h3>
+              <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                Complete booking information
+              </p>
             </div>
             <div className="border-t border-gray-200">
               <dl>
                 <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                  <dt className="text-sm font-medium text-gray-500">Tour Package</dt>
+                  <dt className="text-sm font-medium text-gray-500">
+                    Tour Package
+                  </dt>
                   <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                     {booking.tourPackage?.title || 'Unknown Package'}
                   </dd>
                 </div>
                 <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                  <dt className="text-sm font-medium text-gray-500">Start Date</dt>
+                  <dt className="text-sm font-medium text-gray-500">
+                    Start Date
+                  </dt>
                   <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                     {formatDate(booking.startDate || booking.date)}
                   </dd>
                 </div>
-                <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                  <dt className="text-sm font-medium text-gray-500">Number of Guests</dt>
-                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                    {booking.guests} {booking.guests === 1 ? 'person' : 'people'}
-                  </dd>
-                </div>
+
                 <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                  <dt className="text-sm font-medium text-gray-500">Package Price</dt>
+                  <dt className="text-sm font-medium text-gray-500">
+                    Package Price
+                  </dt>
                   <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                    {formatBookingPrice(packagePrice)} × {booking.guests} = {formatBookingPrice(totalPackagePrice)}
+                    
+                    {formatBookingPrice(totalPackagePrice)}
                   </dd>
                 </div>
-                
+
                 {/* Activities */}
                 {activitiesTotal > 0 && (
                   <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                    <dt className="text-sm font-medium text-gray-500">Activities Total</dt>
+                    <dt className="text-sm font-medium text-gray-500">
+                      Activities Total
+                    </dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                       {formatBookingPrice(activitiesTotal)}
                     </dd>
                   </div>
                 )}
-                
+
                 {/* Transfer */}
                 {transferTotal > 0 && (
                   <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                    <dt className="text-sm font-medium text-gray-500">Transfer Total</dt>
+                    <dt className="text-sm font-medium text-gray-500">
+                      Transfer Total
+                    </dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                       {formatBookingPrice(transferTotal)}
                     </dd>
                   </div>
                 )}
-                
+
                 {/* Total Price */}
                 <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                  <dt className="text-sm font-medium text-gray-500">Total Price</dt>
+                  <dt className="text-sm font-medium text-gray-500">
+                    Total Price
+                  </dt>
                   <dd className="mt-1 text-2xl font-bold text-blue-700 sm:mt-0 sm:col-span-2">
                     {formatBookingPrice(totalPrice)}
                   </dd>
@@ -294,66 +326,84 @@ const TourPackageBookingDetail = () => {
           </div>
 
           {/* Activities Details */}
-          {booking.selectedActivities && booking.selectedActivities.length > 0 && (
-            <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-              <div className="px-4 py-5 sm:px-6">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">Selected Activities</h3>
-                <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                  {booking.selectedActivities.length} activities selected
-                </p>
-              </div>
-              <div className="border-t border-gray-200">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Activity
-                        </th>
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Quantity
-                        </th>
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Price
-                        </th>
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Total
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {booking.selectedActivities.map((activity, index) => {
-                        const activityPrice = bookingCurrency === 'EUR' ? 
-                          (activity.priceEur || activity.price || 0) : 
-                          (activity.price || 0);
-                        const activityQuantity = activity.quantity || booking.guests || 1;
-                        const activityTotal = activityPrice * activityQuantity;
-                        
-                        return (
-                          <tr key={index}>
-                            <td className="px-4 py-4">
-                              <div className="text-sm font-medium text-gray-900">
-                                {activity.title}
-                              </div>
-                            </td>
-                            <td className="px-4 py-4 text-sm text-gray-900">
-                              {activityQuantity}
-                            </td>
-                            <td className="px-4 py-4 text-sm text-gray-900">
-                              {formatBookingPrice(activityPrice)}
-                            </td>
-                            <td className="px-4 py-4 text-sm font-medium text-gray-900">
-                              {formatBookingPrice(activityTotal)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+          {booking.selectedActivities &&
+            booking.selectedActivities.length > 0 && (
+              <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+                <div className="px-4 py-5 sm:px-6">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    Selected Activities
+                  </h3>
+                  <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                    {booking.selectedActivities.length} activities selected
+                  </p>
+                </div>
+                <div className="border-t border-gray-200">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th
+                            scope="col"
+                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            Activity
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            Quantity
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            Price
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            Total
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {booking.selectedActivities.map((activity, index) => {
+                          const activityPrice =
+                            bookingCurrency === 'EUR'
+                              ? activity.priceEur || activity.price || 0
+                              : activity.price || 0;
+                          const activityQuantity =
+                            activity.quantity || booking.guests || 1;
+                          const activityTotal =
+                            activityPrice * activityQuantity;
+
+                          return (
+                            <tr key={index}>
+                              <td className="px-4 py-4">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {activity.title}
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 text-sm text-gray-900">
+                                {activityQuantity}
+                              </td>
+                              <td className="px-4 py-4 text-sm text-gray-900">
+                                {formatBookingPrice(activityPrice)}
+                              </td>
+                              <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                                {formatBookingPrice(activityTotal)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
 
         {/* Sidebar */}
@@ -361,26 +411,40 @@ const TourPackageBookingDetail = () => {
           {/* Customer Information */}
           <div className="bg-white shadow overflow-hidden sm:rounded-lg">
             <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Customer Information</h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">Personal and contact details</p>
+              <h3 className="text-lg leading-6 font-medium text-gray-900">
+                Customer Information
+              </h3>
+              <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                Personal and contact details
+              </p>
             </div>
             <div className="border-t border-gray-200">
               <dl>
                 <div className="bg-gray-50 px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                  <dt className="text-sm font-medium text-gray-500">Full name</dt>
-                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{booking.fullName}</dd>
+                  <dt className="text-sm font-medium text-gray-500">
+                    Full name
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                    {booking.fullName}
+                  </dd>
                 </div>
                 <div className="bg-white px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                   <dt className="text-sm font-medium text-gray-500">Email</dt>
-                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{booking.email}</dd>
+                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                    {booking.email}
+                  </dd>
                 </div>
                 <div className="bg-gray-50 px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                   <dt className="text-sm font-medium text-gray-500">Phone</dt>
-                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{booking.phone}</dd>
+                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                    {booking.phone}
+                  </dd>
                 </div>
                 {booking.user && (
                   <div className="bg-white px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                    <dt className="text-sm font-medium text-gray-500">User Account</dt>
+                    <dt className="text-sm font-medium text-gray-500">
+                      User Account
+                    </dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                       {booking.user.name} ({booking.user.email})
                     </dd>
@@ -393,7 +457,9 @@ const TourPackageBookingDetail = () => {
           {/* Special Requests */}
           <div className="bg-white shadow overflow-hidden sm:rounded-lg">
             <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Special Requests</h3>
+              <h3 className="text-lg leading-6 font-medium text-gray-900">
+                Special Requests
+              </h3>
             </div>
             <div className="border-t border-gray-200">
               <div className="px-4 py-4">
@@ -407,7 +473,9 @@ const TourPackageBookingDetail = () => {
           {/* Booking Actions */}
           <div className="bg-white shadow overflow-hidden sm:rounded-lg">
             <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Booking Actions</h3>
+              <h3 className="text-lg leading-6 font-medium text-gray-900">
+                Booking Actions
+              </h3>
             </div>
             <div className="border-t border-gray-200">
               <div className="px-4 py-5 sm:p-6 space-y-3">
@@ -463,45 +531,6 @@ const TourPackageBookingDetail = () => {
                   </button>
                 )}
               </div>
-            </div>
-          </div>
-
-          {/* Currency Information */}
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Currency Information</h3>
-            </div>
-            <div className="border-t border-gray-200">
-              <dl>
-                <div className="bg-gray-50 px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                  <dt className="text-sm font-medium text-gray-500">Booking Currency</dt>
-                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                    {bookingCurrency === 'MUR' ? 'Mauritian Rupees (Rs)' : 'Euro (€)'}
-                  </dd>
-                </div>
-                <div className="bg-white px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                  <dt className="text-sm font-medium text-gray-500">Original Amount</dt>
-                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                    {formatBookingPrice(totalPrice)}
-                  </dd>
-                </div>
-                {booking.currency === 'EUR' && booking.totalPriceMur && (
-                  <div className="bg-gray-50 px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                    <dt className="text-sm font-medium text-gray-500">Equivalent in Rs</dt>
-                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                      Rs {booking.totalPriceMur.toLocaleString()}
-                    </dd>
-                  </div>
-                )}
-                {booking.currency === 'MUR' && booking.totalPriceEur && (
-                  <div className="bg-white px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                    <dt className="text-sm font-medium text-gray-500">Equivalent in €</dt>
-                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                      €{booking.totalPriceEur.toFixed(2)}
-                    </dd>
-                  </div>
-                )}
-              </dl>
             </div>
           </div>
         </div>

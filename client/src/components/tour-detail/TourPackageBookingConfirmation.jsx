@@ -758,10 +758,7 @@ const TourPackageBookingConfirmation = () => {
                       <i className="fas fa-clock text-gray-400 w-4 mr-2"></i>
                       <span>{tour.duration || '1'} day(s)</span>
                     </div>
-                    <div className="flex items-center">
-                      <i className="fas fa-users text-gray-400 w-4 mr-2"></i>
-                      <span>{guests} guest(s)</span>
-                    </div>
+                  
                     <div className="flex items-center">
                       <i className="fas fa-calendar text-gray-400 w-4 mr-2"></i>
                       <span>{formattedDate}</span>
@@ -772,14 +769,12 @@ const TourPackageBookingConfirmation = () => {
                     <div className="flex justify-between items-center">
                       <div>
                         <div className="text-xs text-gray-500">
-                          Package Price per person
+                          Package Price
                         </div>
                         <div className="text-lg sm:text-xl font-bold text-blue-700">
                           {priceInfo.display}
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {guests} guest(s) × {priceInfo.display}
-                        </div>
+                       
                       </div>
                       <div className="text-right">
                         <div className="text-lg sm:text-xl font-bold text-blue-800">
@@ -943,10 +938,7 @@ const TourPackageBookingConfirmation = () => {
                   <span className="text-gray-600">Date:</span>
                   <span className="font-medium">{formattedDate}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Guests:</span>
-                  <span className="font-medium">{guests} person(s)</span>
-                </div>
+               
                 <div className="flex justify-between">
                   <span className="text-gray-600">Activities:</span>
                   <span className="font-medium">
@@ -1027,9 +1019,7 @@ const TourPackageBookingConfirmation = () => {
                       <span className="font-bold text-gray-800 text-base">
                         Total Amount:
                       </span>
-                      <div className="text-xs text-gray-500 mt-1">
-                        For {guests} guest(s) in {bookingCurrency}
-                      </div>
+                     
                     </div>
                     <div className="text-right">
                       <div className="text-xl font-bold text-blue-600">
@@ -1167,10 +1157,7 @@ const TourPackageBookingConfirmation = () => {
                   <span className="text-gray-600">Date:</span>
                   <span className="font-medium">{formattedDate}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Guests:</span>
-                  <span className="font-medium">{guests} person(s)</span>
-                </div>
+            
                 <div className="flex justify-between">
                   <span className="text-gray-600">Activities:</span>
                   <span className="font-medium">
@@ -1254,9 +1241,7 @@ const TourPackageBookingConfirmation = () => {
                       <div className="text-2xl font-bold text-blue-600">
                         {calculatedPrices.formattedGrandTotal}
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        For {guests} guest(s) in {bookingCurrency}
-                      </div>
+                      
                     </div>
                   </div>
                 </div>

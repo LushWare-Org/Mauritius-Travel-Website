@@ -685,9 +685,7 @@ const handleSubmit = async (e) => {
                   
                   <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                     <div className="text-xs text-gray-500">Price per person</div>
-                    <div className="text-2xl sm:text-3xl font-bold text-blue-700">
-                      {priceInfo.display}
-                    </div>
+                   
                     <div className="text-xs text-gray-500 mt-1 flex items-center">
                       <i className={`fas fa-money-bill-wave mr-1 ${
                         priceInfo.currency === 'EUR' ? 'text-yellow-500' : 'text-green-500'
