@@ -5,11 +5,38 @@ import { tourPackagesAPI, tourPackageBookingsAPI, userBookingsAPI } from '../uti
 import ConfirmationModal from '../components/booking/ConfirmationModal';
 import { useAuth } from '../contexts/AuthContext';
 
-const TourPackageBookingRequest = () => {
+// Extract currency logic into a separate hook for reusability
+const useCurrency = (initialCurrency = null) => {
+  const [searchParams] = useSearchParams();
+  
+  const userCurrency = useMemo(() => {
+    // Priority: prop > URL param > localStorage > default
+    const currency = initialCurrency || 
+                    searchParams.get('currency') || 
+                    localStorage.getItem('preferredCurrency') || 
+                    'MUR'; // Default to 'MUR'
+    
+    // Normalize to 'MUR' or 'EUR' (uppercase)
+    const normalized = currency.toString().toUpperCase();
+    if (normalized === 'EUR' || normalized === 'EURO' || normalized === '€') {
+      return 'EUR';
+    } else if (normalized === 'RS' || normalized === 'MUR' || normalized === 'RUPEES' || normalized === '₹') {
+      return 'MUR';
+    } else {
+      return 'MUR';
+    }
+  }, [initialCurrency, searchParams]);
+
+  return userCurrency;
+};
+
+const TourPackageBookingRequest = ({ 
+  currency: propCurrency = null, 
+  onCurrencyChange = null 
+}) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
 
   const [tour, setTour] = useState(null);
@@ -20,12 +47,18 @@ const TourPackageBookingRequest = () => {
   const [bookingReference, setBookingReference] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // User currency preference
-  const userCurrency = useMemo(() => 
-    searchParams.get('currency') || 
-    localStorage.getItem('preferredCurrency') || 
-    'MUR'
-  , [searchParams]);
+  // Use the custom hook with prop priority
+  const userCurrency = useCurrency(propCurrency);
+
+  // Also get currency from location state if available (from booking form)
+  const bookingCurrency = useMemo(() => {
+    // Priority: location state > hook > localStorage
+    if (location.state?.currency) {
+      const curr = location.state.currency.toString().toUpperCase();
+      return curr === 'EUR' ? 'EUR' : 'MUR';
+    }
+    return userCurrency;
+  }, [location.state, userCurrency]);
 
   const [formData, setFormData] = useState({
     date: '',
@@ -39,40 +72,78 @@ const TourPackageBookingRequest = () => {
     transferDetails: null
   });
 
-  // Memoized currency helpers
+  // Memoized currency helpers - FIXED: Use bookingCurrency from location state when available
   const currencyHelpers = useMemo(() => {
-    const simpleCurrency = userCurrency.toUpperCase() === 'EUR' ? 'euro' : 'rs';
-    const currencyCode = simpleCurrency === 'euro' ? 'EUR' : 'MUR';
+    const normalizedCurrency = bookingCurrency; // Use bookingCurrency which includes location state
+    const isEuro = normalizedCurrency === 'EUR';
     
-    const formatCurrency = (amount) => {
-      const num = parseFloat(amount) || 0;
-      if (simpleCurrency === 'euro') {
-        return new Intl.NumberFormat('de-DE', {
-          style: 'currency',
-          currency: 'EUR',
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }).format(num);
+    // Get display price function similar to TourPackageListItem
+    const getDisplayPrice = (tourData) => {
+      if (!tourData) return { display: '', price: 0, currency: normalizedCurrency };
+      
+      const priceMUR = parseFloat(tourData.priceMUR || tourData.priceRs || tourData.price || 0);
+      const priceEUR = parseFloat(tourData.priceEUR || tourData.priceEur || tourData.priceEuro || 0);
+      const currencyType = tourData.currencyType || tourData.supportsCurrency || 'rs-only';
+      
+      // Determine available currencies
+      const isMurAvailable = currencyType === 'both' || 
+                            currencyType === 'rs-only' || 
+                            currencyType === 'mur-only';
+      const isEurAvailable = currencyType === 'both' || 
+                            currencyType === 'eur-only' || 
+                            currencyType === 'euro-only';
+      
+      let displayPrice, displayCurrency;
+      
+      if (isEuro && isEurAvailable && priceEUR > 0) {
+        displayPrice = priceEUR;
+        displayCurrency = 'EUR';
+      } else if (isMurAvailable && priceMUR > 0) {
+        displayPrice = priceMUR;
+        displayCurrency = 'MUR';
+      } else if (isEurAvailable && priceEUR > 0) {
+        // Fallback to EUR if MUR not available
+        displayPrice = priceEUR;
+        displayCurrency = 'EUR';
       } else {
-        return new Intl.NumberFormat('en-MU', {
-          style: 'currency',
-          currency: 'MUR',
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }).format(num);
+        displayPrice = 0;
+        displayCurrency = 'MUR';
+      }
+      
+      // Format display string
+      let display = '';
+      if (displayCurrency === 'EUR') {
+        display = `€ ${displayPrice.toFixed(2)}`;
+      } else {
+        display = `Rs ${Math.round(displayPrice)}`;
+      }
+      
+      return {
+        display,
+        price: displayPrice,
+        currency: displayCurrency,
+        hasAlternative: (isMurAvailable && isEurAvailable && priceMUR > 0 && priceEUR > 0),
+        alternativeCurrency: isEuro ? 'MUR' : 'EUR',
+        alternativePrice: isEuro ? priceMUR : priceEUR
+      };
+    };
+
+    const formatCurrency = (amount, currencyCode = normalizedCurrency) => {
+      const num = parseFloat(amount) || 0;
+      if (currencyCode === 'EUR') {
+        return `€ ${num.toFixed(2)}`;
+      } else {
+        return `Rs ${Math.round(num)}`;
       }
     };
 
     const getCurrencyDisplayName = () => 
-      simpleCurrency === 'euro' ? 'Euros (€)' : 'Mauritian Rupees (Rs)';
+      normalizedCurrency === 'EUR' ? 'Euros (€)' : 'Mauritian Rupees (Rs)';
 
     const getTourPrice = (tourData) => {
       if (!tourData) return 0;
-      if (simpleCurrency === 'euro') {
-        return parseFloat(tourData.priceEUR || tourData.priceEuro || tourData.price || 0);
-      } else {
-        return parseFloat(tourData.priceMUR || tourData.priceRs || tourData.price || 0);
-      }
+      const priceInfo = getDisplayPrice(tourData);
+      return priceInfo.price;
     };
 
     const getActivityPrice = (activity) => {
@@ -81,43 +152,70 @@ const TourPackageBookingRequest = () => {
       const supportsDuration = activity.halfDayPrice || activity.fullDayPrice;
       
       if (supportsDuration) {
-        if (simpleCurrency === 'euro') {
+        if (isEuro) {
           if (duration.includes('half')) {
-            return activity.halfDayPriceEUR || activity.halfDayPrice || 0;
+            return parseFloat(activity.halfDayPriceEUR || activity.halfDayPriceEur || activity.halfDayPrice || 0);
           }
-          return activity.fullDayPriceEUR || activity.fullDayPrice || 0;
+          return parseFloat(activity.fullDayPriceEUR || activity.fullDayPriceEur || activity.fullDayPrice || 0);
         } else {
           if (duration.includes('half')) {
-            return activity.halfDayPriceMUR || activity.halfDayPrice || 0;
+            return parseFloat(activity.halfDayPriceMUR || activity.halfDayPriceRs || activity.halfDayPrice || 0);
           }
-          return activity.fullDayPriceMUR || activity.fullDayPrice || 0;
+          return parseFloat(activity.fullDayPriceMUR || activity.fullDayPriceRs || activity.fullDayPrice || 0);
         }
       } else {
-        return simpleCurrency === 'euro' 
-          ? activity.priceEUR || activity.price || 0
-          : activity.priceMUR || activity.price || 0;
+        return isEuro 
+          ? parseFloat(activity.priceEUR || activity.priceEur || activity.price || 0)
+          : parseFloat(activity.priceMUR || activity.priceRs || activity.price || 0);
       }
     };
 
-    const getCurrencyBadgeInfo = (currencyType) => {
-      if (currencyType === 'both' || currencyType === 'dual') {
-        return { bg: 'bg-green-100', text: 'text-green-800', label: 'Both MUR & EUR' };
+    const getCurrencyBadgeInfo = (tourData) => {
+      if (!tourData) return { bg: 'bg-blue-100', text: 'text-blue-800', label: 'MUR Only' };
+      
+      const currencyType = tourData.currencyType || tourData.supportsCurrency;
+      const priceMUR = parseFloat(tourData.priceMUR || tourData.priceRs || tourData.price || 0);
+      const priceEUR = parseFloat(tourData.priceEUR || tourData.priceEur || tourData.priceEuro || 0);
+      
+      // Similar logic to TourPackageListItem
+      if (currencyType === 'both' && priceMUR > 0 && priceEUR > 0) {
+        return { 
+          bg: 'bg-gradient-to-r from-green-100 to-emerald-100', 
+          text: 'text-green-800', 
+          label: 'Dual Currency',
+          icon: 'fas fa-exchange-alt'
+        };
+      } else if ((currencyType === 'eur-only' || currencyType === 'euro-only') && priceEUR > 0) {
+        return { 
+          bg: 'bg-gradient-to-r from-yellow-100 to-amber-100', 
+          text: 'text-yellow-800', 
+          label: '€ Only',
+          icon: 'fas fa-euro-sign'
+        };
+      } else {
+        return { 
+          bg: 'bg-gradient-to-r from-blue-100 to-blue-200', 
+          text: 'text-blue-800', 
+          label: 'Rs Only',
+          icon: 'fas fa-rupee-sign'
+        };
       }
-      return simpleCurrency === 'euro' 
-        ? { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'EUR Only' }
-        : { bg: 'bg-blue-100', text: 'text-blue-800', label: 'MUR Only' };
     };
+
+    const getCurrencySymbol = () => isEuro ? '€' : 'Rs';
 
     return {
-      simpleCurrency,
-      currencyCode,
+      currency: normalizedCurrency,
+      isEuro,
+      currencySymbol: getCurrencySymbol(),
       formatCurrency,
       getCurrencyDisplayName,
+      getDisplayPrice,
       getTourPrice,
       getActivityPrice,
       getCurrencyBadgeInfo
     };
-  }, [userCurrency]);
+  }, [bookingCurrency]); // Changed dependency to bookingCurrency
 
   // Calculate totals
   const calculateActivityTotal = useMemo(() => 
@@ -148,7 +246,7 @@ const TourPackageBookingRequest = () => {
     }
   };
 
-  // Prefill form data
+  // Prefill form data - UPDATED: Also check for currency in location state
   useEffect(() => {
     const updates = {};
     
@@ -179,6 +277,11 @@ const TourPackageBookingRequest = () => {
       updates.transferDetails = location.state.transferDetails;
     }
     
+    // Check for currency in location state
+    if (location.state?.currency) {
+      console.log('Setting currency from location state:', location.state.currency);
+    }
+    
     if (currentUser) {
       if (currentUser.email && !formData.email) updates.email = currentUser.email;
       if (currentUser.name && !formData.fullName) updates.fullName = currentUser.name;
@@ -195,18 +298,28 @@ const TourPackageBookingRequest = () => {
     const fetchTour = async () => {
       setLoading(true);
       try {
-        const params = { currency: currencyHelpers.currencyCode };
-        const resp = await tourPackagesAPI.getById(id, params);
+        const resp = await tourPackagesAPI.getById(id);
         const found = resp?.data?.data;
         if (found) {
-          setTour({
+          // Map database fields to consistent names
+          const tourData = {
             ...found,
             priceMUR: parseFloat(found.priceMUR || found.priceRs || found.price || 0),
-            priceEUR: parseFloat(found.priceEUR || found.priceEuro || found.price || 0),
-            currencyType: found.currencyType || 
-              (found.priceMUR && found.priceEUR ? 'both' : 
-               found.priceEUR ? 'euro-only' : 'rs-only')
+            priceEUR: parseFloat(found.priceEUR || found.priceEur || found.priceEuro || 0),
+            currencyType: found.currencyType || found.supportsCurrency || 
+              (found.priceEUR > 0 && found.priceMUR > 0 ? 'both' :
+               found.priceEUR > 0 ? 'eur-only' : 'rs-only')
+          };
+          console.log('Tour data loaded:', {
+            id: tourData._id,
+            title: tourData.title,
+            priceMUR: tourData.priceMUR,
+            priceEUR: tourData.priceEUR,
+            currencyType: tourData.currencyType,
+            bookingCurrency: bookingCurrency,
+            isEuroAvailable: tourData.priceEUR > 0
           });
+          setTour(tourData);
         }
       } catch (err) {
         console.error('Error fetching tour:', err);
@@ -216,93 +329,187 @@ const TourPackageBookingRequest = () => {
       }
     };
     if (id) fetchTour();
-  }, [id, currencyHelpers]);
+  }, [id, bookingCurrency]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError('');
+  // In the handleSubmit function of TourPackageBookingConfirmation.jsx
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError('');
 
-    if (!formData.date || !formData.fullName || !formData.email || !formData.phone) {
-      setError('Please fill in all required fields.');
-      setSubmitting(false);
-      return;
+  try {
+    const submissionDate = getDateForSubmission();
+    
+    // Debug logging
+    console.log('Submitting booking with data:', {
+      packageTotal: calculatedPrices?.packageTotal,
+      activitiesTotal: calculatedPrices?.activitiesTotal,
+      transferTotal: calculatedPrices?.transferTotal,
+      grandTotal: calculatedPrices?.grandTotal,
+      hasActivities: activitiesData?.length || selectedActivities?.length || 0,
+      includeTransfer
+    });
+    
+    // Prepare booking data based on your actual database structure
+    const bookingData = {
+      tourPackageId: tourId,
+      startDate: submissionDate,
+      guests: parseInt(guests) || 1,
+      fullName: formData.fullName || currentUser?.name || '',
+      email: formData.email || currentUser?.email || '',
+      phone: `${formData.countryCode}${formData.phone}`,
+      specialRequests: formData.specialRequests || '',
+      bookingReference: `TPB-${Math.floor(100000 + Math.random() * 900000)}`,
+      currency: bookingCurrency,
+      
+      // Store the main totals (these should be in the booking currency)
+      totalPrice: calculatedPrices?.grandTotal || 0,
+      packagePrice: calculatedPrices?.packageTotal || 0,
+      activitiesTotal: calculatedPrices?.activitiesTotal || 0,
+      transferTotal: calculatedPrices?.transferTotal || 0,
+      
+      // Store EUR-specific fields
+      totalPriceEur: bookingCurrency === 'EUR' ? (calculatedPrices?.grandTotal || 0) : 0,
+      packagePriceEur: bookingCurrency === 'EUR' ? (calculatedPrices?.packageTotal || 0) : 0,
+      activitiesTotalEur: bookingCurrency === 'EUR' ? (calculatedPrices?.activitiesTotal || 0) : 0,
+      transferTotalEur: bookingCurrency === 'EUR' ? (calculatedPrices?.transferTotal || 0) : 0,
+      
+      // Store MUR-specific fields  
+      totalPriceMur: bookingCurrency === 'MUR' ? (calculatedPrices?.grandTotal || 0) : 0,
+      packagePriceMur: bookingCurrency === 'MUR' ? (calculatedPrices?.packageTotal || 0) : 0,
+      activitiesTotalMur: bookingCurrency === 'MUR' ? (calculatedPrices?.activitiesTotal || 0) : 0,
+      transferTotalMur: bookingCurrency === 'MUR' ? (calculatedPrices?.transferTotal || 0) : 0,
+      
+      status: 'pending',
+      paymentStatus: 'pending',
+      bookingSource: 'web'
+    };
+
+    // Add user if logged in
+    if (currentUser) {
+      bookingData.user = currentUser._id || currentUser.id;
     }
 
-    const reference = `TPB-${Math.floor(100000 + Math.random() * 900000)}`;
-    setBookingReference(reference);
-
-    try {
-      const selectedActivitiesWithPrices = formData.selectedActivities.map(activity => ({
-        ...activity,
+    // Activities data - store with price information
+    if (activitiesData && activitiesData.length > 0) {
+      bookingData.selectedActivities = activitiesData.map((activity) => ({
         activityId: activity._id || activity.activityId,
-        selectedPrice: currencyHelpers.getActivityPrice(activity),
-        quantity: activity.quantity || 1,
-        duration: activity.duration || 'halfDay',
-        selectedCurrency: currencyHelpers.currencyCode,
-        total: currencyHelpers.getActivityPrice(activity) * (activity.quantity || 1)
+        title: activity.title,
+        price: activity.price || 0,
+        priceEur: activity.priceEur || 0,
+        priceMUR: activity.priceMUR || 0,
+        quantity: activity.quantity || guests,
+        currency: activity.currency || bookingCurrency,
+        duration: activity.duration || null,
+        durationType: activity.durationType || null
       }));
-
-      const transferTotal = formData.includeTransfer && formData.transferDetails 
-        ? parseFloat(formData.transferDetails.transferPrice) || 0 
-        : 0;
-
-      const tourPrice = currencyHelpers.getTourPrice(tour);
-      const tourTotal = tourPrice * formData.guests;
-      const activitiesTotal = calculateActivityTotal;
-      const grandTotal = tourTotal + activitiesTotal + transferTotal;
-
-      const bookingData = {
-        tourPackageId: id,
-        startDate: formData.date,
-        guests: formData.guests,
-        fullName: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
-        specialRequests: formData.specialRequests,
-        bookingReference: reference,
-        selectedActivities: selectedActivitiesWithPrices,
-        currency: currencyHelpers.currencyCode,
-        includeTransfer: formData.includeTransfer,
-        transferDetails: formData.transferDetails,
-        tourPrice,
-        activitiesTotal,
-        transferTotal,
-        totalAmount: grandTotal,
-        bookingSource: 'web'
-      };
-
-      const response = await tourPackageBookingsAPI.create(bookingData);
-
-      if (response?.data?.success) {
-        setBookingId(response.data.data._id);
-        setIsModalOpen(true);
-        
-        // Refresh bookings in background
-        Promise.allSettled([
-          userBookingsAPI.getStats(),
-          userBookingsAPI.getUpcoming(),
-          userBookingsAPI.getHistory()
-        ]);
-      } else {
-        throw new Error(response?.data?.message || 'Unknown server error');
-      }
-    } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Failed to create booking.');
-    } finally {
-      setSubmitting(false);
+    } else if (selectedActivities && selectedActivities.length > 0) {
+      // Calculate activity prices if we only have selectedActivities
+      bookingData.selectedActivities = selectedActivities.map((activity) => {
+        const activityPrice = currencyHelpers.getActivityPrice(activity);
+        return {
+          activityId: activity._id || activity.activityId,
+          title: activity.title,
+          price: bookingCurrency === 'MUR' ? activityPrice : 0,
+          priceEur: bookingCurrency === 'EUR' ? activityPrice : 0,
+          priceMUR: bookingCurrency === 'MUR' ? activityPrice : 0,
+          quantity: guests,
+          currency: bookingCurrency,
+          duration: activity.duration || null,
+          durationType: activity.durationType || null
+        };
+      });
     }
-  };
+
+    // Transfer data
+    if (includeTransfer && transferDetails) {
+      bookingData.airportTransferBooking = {
+        transferId: transferDetails.transferId || transferDetails._id,
+        transferName: transferDetails.transferName,
+        transferCode: transferDetails.transferCode,
+        vehicleType: transferDetails.vehicleType,
+        tripType: transferDetails.tripType,
+        transferType: transferDetails.transferType,
+        transferPrice: calculatedPrices?.transferTotal || 0,
+        currency: bookingCurrency,
+      };
+    }
+
+    console.log('Final booking data being submitted:', bookingData);
+
+    const response = await tourPackageBookingsAPI.create(bookingData);
+
+    if (response?.data?.success) {
+      navigate('/dashboard/tour-package-bookings', {
+        state: {
+          bookingReference: response.data.data.bookingReference,
+          success: true,
+          currency: bookingCurrency,
+          totalAmount: calculatedPrices?.grandTotal,
+        },
+      });
+    } else {
+      setError(response.data.message || 'Failed to create booking');
+    }
+  } catch (err) {
+    console.error('Error:', err);
+    setError(err.response?.data?.message || 'An error occurred. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleModalClose = () => {
     setIsModalOpen(false);
     navigate('/bookings');
   };
+
+  // Handle currency change
+  const handleCurrencyChange = (newCurrency) => {
+    if (onCurrencyChange) {
+      onCurrencyChange(newCurrency);
+    }
+    // Also update localStorage for consistency
+    localStorage.setItem('preferredCurrency', newCurrency);
+  };
+
+  // Currency switcher component
+  const CurrencySwitcher = () => (
+    <div className="flex items-center space-x-2 mb-4">
+      <span className="text-sm font-medium text-gray-700">Currency:</span>
+      <div className="flex bg-gray-100 rounded-lg p-1">
+        <button
+          type="button"
+          onClick={() => handleCurrencyChange('MUR')}
+          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+            currencyHelpers.currency === 'MUR'
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          MUR (Rs)
+        </button>
+        <button
+          type="button"
+          onClick={() => handleCurrencyChange('EUR')}
+          disabled={!tour || !tour.priceEUR || tour.priceEUR <= 0}
+          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+            currencyHelpers.currency === 'EUR'
+              ? 'bg-white text-yellow-600 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          } ${(!tour || !tour.priceEUR || tour.priceEUR <= 0) ? 'opacity-50 cursor-not-allowed' : ''}`}
+          title={(!tour || !tour.priceEUR || tour.priceEUR <= 0) ? "EUR not available for this tour" : ""}
+        >
+          EUR (€)
+        </button>
+      </div>
+    </div>
+  );
 
   // Loading state
   if (loading) {
@@ -355,14 +562,25 @@ const TourPackageBookingRequest = () => {
     );
   }
 
-  // Calculate totals
+  // Calculate totals using consistent helpers
   const tourPrice = currencyHelpers.getTourPrice(tour);
+  const priceInfo = currencyHelpers.getDisplayPrice(tour);
   const tourTotal = tourPrice * formData.guests;
   const transferTotal = formData.includeTransfer && formData.transferDetails 
     ? parseFloat(formData.transferDetails.transferPrice) || 0 
     : 0;
   const grandTotal = tourTotal + calculateActivityTotal + transferTotal;
-  const currencyBadge = currencyHelpers.getCurrencyBadgeInfo(tour.currencyType);
+  const currencyBadge = currencyHelpers.getCurrencyBadgeInfo(tour);
+
+  // Debug info
+  console.log('Rendering with:', {
+    bookingCurrency: currencyHelpers.currency,
+    isEuro: currencyHelpers.isEuro,
+    tourPrice,
+    priceInfo,
+    hasEURPrice: tour.priceEUR > 0,
+    hasMURPrice: tour.priceMUR > 0
+  });
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -375,18 +593,41 @@ const TourPackageBookingRequest = () => {
               <p className="text-gray-600 text-sm sm:text-base">Review details and complete your booking request</p>
             </div>
             <div className="flex items-center bg-blue-50 px-3 py-2 rounded-lg">
-              <i className="fas fa-money-bill-wave text-blue-500 mr-2 text-sm"></i>
+              <i className={`fas fa-money-bill-wave mr-2 text-sm ${
+                currencyHelpers.isEuro ? 'text-yellow-500' : 'text-green-500'
+              }`}></i>
               <span className="text-sm font-medium text-blue-700">
                 {currencyHelpers.getCurrencyDisplayName()}
               </span>
             </div>
           </div>
           
+          {/* Currency Switcher - only show if onCurrencyChange is provided */}
+          {onCurrencyChange && (
+            <div className="mb-4">
+              <CurrencySwitcher />
+            </div>
+          )}
+          
           <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm">
             <div className="flex items-start">
               <i className="fas fa-info-circle text-blue-500 mt-0.5 mr-2"></i>
               <div>
-                <p className="text-blue-800 font-medium">Prices shown in {currencyHelpers.getCurrencyDisplayName()}</p>
+                <p className="text-blue-800 font-medium">
+                  Prices shown in {currencyHelpers.getCurrencyDisplayName()}
+                  {currencyBadge.label && (
+                    <span className={`ml-2 px-2 py-1 text-xs rounded-full ${currencyBadge.bg} ${currencyBadge.text}`}>
+                      <i className={`${currencyBadge.icon || 'fas fa-money-bill'} mr-1`}></i>
+                      {currencyBadge.label}
+                    </span>
+                  )}
+                </p>
+                {priceInfo.hasAlternative && (
+                  <p className="text-blue-600 text-xs mt-1">
+                    <i className="fas fa-exchange-alt mr-1"></i>
+                    Also available in {priceInfo.alternativeCurrency === 'EUR' ? '€' : 'Rs'}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -405,11 +646,24 @@ const TourPackageBookingRequest = () => {
                     alt={tour.title} 
                     className="w-full h-40 sm:h-48 object-cover rounded-lg"
                   />
-                  <div className="mt-3">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${currencyBadge.bg} ${currencyBadge.text}`}>
-                      {currencyBadge.label}
-                    </span>
-                  </div>
+                  {currencyBadge && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${currencyBadge.bg} ${currencyBadge.text}`}>
+                        <i className={`${currencyBadge.icon} mr-1`}></i>
+                        {currencyBadge.label}
+                      </span>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        currencyHelpers.isEuro 
+                          ? 'bg-yellow-100 text-yellow-800' 
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        <i className={`fas fa-eye mr-1 ${
+                          currencyHelpers.isEuro ? 'text-yellow-600' : 'text-green-600'
+                        }`}></i>
+                        Viewing in {currencyHelpers.currency}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="sm:w-2/3">
                   <h2 className="text-xl sm:text-2xl font-bold text-blue-700 mb-2 line-clamp-2">{tour.title}</h2>
@@ -432,8 +686,24 @@ const TourPackageBookingRequest = () => {
                   <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                     <div className="text-xs text-gray-500">Price per person</div>
                     <div className="text-2xl sm:text-3xl font-bold text-blue-700">
-                      {currencyHelpers.formatCurrency(tourPrice)}
+                      {priceInfo.display}
                     </div>
+                    <div className="text-xs text-gray-500 mt-1 flex items-center">
+                      <i className={`fas fa-money-bill-wave mr-1 ${
+                        priceInfo.currency === 'EUR' ? 'text-yellow-500' : 'text-green-500'
+                      }`}></i>
+                      {priceInfo.currency}
+                    </div>
+                    {priceInfo.hasAlternative && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        <i className="fas fa-exchange-alt mr-1"></i>
+                        {priceInfo.alternativeCurrency}: {
+                          priceInfo.alternativeCurrency === 'EUR' 
+                            ? `€ ${priceInfo.alternativePrice.toFixed(2)}`
+                            : `Rs ${Math.round(priceInfo.alternativePrice)}`
+                        }
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -473,7 +743,13 @@ const TourPackageBookingRequest = () => {
                           </div>
                           <div className="text-right">
                             <div className="text-sm sm:text-base font-bold text-blue-700">
-                              {currencyHelpers.formatCurrency(activityTotal)}
+                              {currencyHelpers.formatCurrency(activityTotal, currencyHelpers.currency)}
+                            </div>
+                            <div className="text-xs text-gray-500 flex items-center justify-end">
+                              <i className={`fas fa-money-bill-wave mr-1 ${
+                                currencyHelpers.isEuro ? 'text-yellow-500' : 'text-green-500'
+                              }`}></i>
+                              {currencyHelpers.currency}
                             </div>
                           </div>
                         </div>
@@ -485,7 +761,7 @@ const TourPackageBookingRequest = () => {
                     <div className="flex justify-between items-center">
                       <span className="font-medium">Activities Total:</span>
                       <span className="text-lg font-bold text-blue-700">
-                        {currencyHelpers.formatCurrency(calculateActivityTotal)}
+                        {currencyHelpers.formatCurrency(calculateActivityTotal, currencyHelpers.currency)}
                       </span>
                     </div>
                   </div>
@@ -510,7 +786,13 @@ const TourPackageBookingRequest = () => {
                     </div>
                     <div className="text-right">
                       <div className="text-lg sm:text-xl font-bold text-blue-700">
-                        {currencyHelpers.formatCurrency(transferTotal)}
+                        {currencyHelpers.formatCurrency(transferTotal, currencyHelpers.currency)}
+                      </div>
+                      <div className="text-xs text-gray-500 flex items-center justify-end">
+                        <i className={`fas fa-money-bill-wave mr-1 ${
+                          currencyHelpers.isEuro ? 'text-yellow-500' : 'text-green-500'
+                        }`}></i>
+                        {currencyHelpers.currency}
                       </div>
                     </div>
                   </div>
@@ -524,6 +806,23 @@ const TourPackageBookingRequest = () => {
             <div className="sticky top-6">
               <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
                 <h3 className="text-lg sm:text-xl font-bold text-blue-800 mb-4">Booking Details</h3>
+                
+                {/* Currency switcher inside form */}
+                {onCurrencyChange && (
+                  <div className="mb-4">
+                    <CurrencySwitcher />
+                  </div>
+                )}
+                
+                {/* Show warning if trying to book in EUR but EUR not available */}
+                {currencyHelpers.isEuro && (!tour.priceEUR || tour.priceEUR <= 0) && (
+                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-center text-yellow-800 text-sm">
+                      <i className="fas fa-exclamation-triangle mr-2"></i>
+                      <span>This tour is not available in EUR. Please switch to MUR.</span>
+                    </div>
+                  </div>
+                )}
                 
                 <div className="space-y-3">
                   <div>
@@ -607,25 +906,25 @@ const TourPackageBookingRequest = () => {
 
                 {/* Price Summary */}
                 <div className="mt-6 pt-4 border-t border-gray-200">
-                  <h4 className="font-bold text-gray-800 mb-3 text-sm sm:text-base">Price Summary</h4>
+                  <h4 className="font-bold text-gray-800 mb-3 text-sm sm:text-base">Price Summary ({currencyHelpers.getCurrencyDisplayName()})</h4>
                   
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>Tour × {formData.guests}</span>
-                      <span>{currencyHelpers.formatCurrency(tourTotal)}</span>
+                      <span>{currencyHelpers.formatCurrency(tourTotal, currencyHelpers.currency)}</span>
                     </div>
                     
                     {calculateActivityTotal > 0 && (
                       <div className="flex justify-between">
                         <span>Activities</span>
-                        <span>{currencyHelpers.formatCurrency(calculateActivityTotal)}</span>
+                        <span>{currencyHelpers.formatCurrency(calculateActivityTotal, currencyHelpers.currency)}</span>
                       </div>
                     )}
                     
                     {transferTotal > 0 && (
                       <div className="flex justify-between">
                         <span>Transfer</span>
-                        <span>{currencyHelpers.formatCurrency(transferTotal)}</span>
+                        <span>{currencyHelpers.formatCurrency(transferTotal, currencyHelpers.currency)}</span>
                       </div>
                     )}
                     
@@ -633,7 +932,7 @@ const TourPackageBookingRequest = () => {
                       <div className="flex justify-between items-center">
                         <span className="font-bold text-base">Total</span>
                         <span className="text-lg sm:text-xl font-bold text-blue-700">
-                          {currencyHelpers.formatCurrency(grandTotal)}
+                          {currencyHelpers.formatCurrency(grandTotal, currencyHelpers.currency)}
                         </span>
                       </div>
                     </div>
@@ -644,12 +943,13 @@ const TourPackageBookingRequest = () => {
                 <div className="mt-6 space-y-2">
                   <button
                     type="submit"
-                    disabled={submitting}
+                    disabled={submitting || (currencyHelpers.isEuro && (!tour.priceEUR || tour.priceEUR <= 0))}
                     className={`w-full py-3 px-4 rounded-lg font-medium text-sm sm:text-base ${
-                      submitting 
+                      submitting || (currencyHelpers.isEuro && (!tour.priceEUR || tour.priceEUR <= 0))
                         ? 'bg-blue-400 cursor-not-allowed' 
                         : 'bg-blue-600 hover:bg-blue-700'
                     } text-white transition-colors`}
+                    title={currencyHelpers.isEuro && (!tour.priceEUR || tour.priceEUR <= 0) ? "EUR booking not available for this tour" : ""}
                   >
                     {submitting ? (
                       <>
@@ -666,7 +966,7 @@ const TourPackageBookingRequest = () => {
                   
                   <button
                     type="button"
-                    onClick={() => navigate(`/tour-packages/${id}`)}
+                    onClick={() => navigate(`/tour-packages/${id}?currency=${currencyHelpers.currency}`)}
                     className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium text-sm sm:text-base transition-colors"
                   >
                     <i className="fas fa-arrow-left mr-2"></i>
@@ -698,7 +998,7 @@ const TourPackageBookingRequest = () => {
         guests={formData.guests}
         totalPrice={grandTotal}
         bookingId={bookingId}
-        currency={currencyHelpers.simpleCurrency === 'euro' ? '€' : 'Rs'}
+        currency={currencyHelpers.currencySymbol}
         tourImage={tour.image}
       />
     </div>

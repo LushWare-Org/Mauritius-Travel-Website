@@ -302,41 +302,7 @@ const TourPackageDetail = () => {
                 </div>
               </div>
 
-              {/* Price Selection on the right */}
-              <div className="lg:w-1/3">
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-700 font-medium">
-                        Currency Selection:
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleCurrencyChange('rs')}
-                          className={`px-2 py-1 text-xs rounded-md font-medium transition-colors duration-200 flex items-center gap-1 ${
-                            userCurrency === 'rs'
-                              ? 'bg-green-600 text-white'
-                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          }`}
-                        >
-                          <FaRupeeSign size={10} />
-                          Rs
-                        </button>
-                        <button
-                          onClick={() => handleCurrencyChange('euro')}
-                          className={`px-2 py-1 text-xs rounded-md font-medium transition-colors duration-200 flex items-center gap-1 ${
-                            userCurrency === 'euro'
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          }`}
-                        >
-                          <FaEuroSign size={10} />€
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              
             </div>
           </div>
         </div>

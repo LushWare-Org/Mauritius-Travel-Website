@@ -1,7 +1,12 @@
 import React from 'react';
 import TourPackageListItem from './TourPackageListItem';
 
-const TourPackageList = ({ packages, getDisplayPrice, userCurrency }) => {
+const TourPackageList = ({ 
+  packages, 
+  getDisplayPrice, 
+  userCurrency,
+  currentCurrency 
+}) => {
     if (!packages || packages.length === 0) {
         return (
             <div className="bg-white p-8 rounded-lg shadow text-center">
@@ -18,7 +23,8 @@ const TourPackageList = ({ packages, getDisplayPrice, userCurrency }) => {
                     key={pkg._id || pkg.id} 
                     pkg={pkg} 
                     getDisplayPrice={getDisplayPrice}
-                    userCurrency={userCurrency}
+                    userCurrency={userCurrency || currentCurrency} // Use currentCurrency if userCurrency not provided
+                    currentCurrency={currentCurrency || userCurrency} // Pass currentCurrency
                 />
             ))}
         </div>

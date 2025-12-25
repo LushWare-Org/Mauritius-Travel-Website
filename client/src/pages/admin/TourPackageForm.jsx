@@ -118,12 +118,12 @@ const TourPackageForm = () => {
       .required('Price in RS is required')
       .positive('Must be positive')
       .min(0, 'Cannot be negative'),
-    priceEuro: Yup.number()
+    priceEur: Yup.number()  // CHANGED: priceEuro → priceEur
       .required('Price in Euros is required')
       .positive('Must be positive')
       .min(0, 'Cannot be negative'),
     currencyType: Yup.string()
-      .oneOf(['both', 'rs-only', 'euro-only'])
+      .oneOf(['both', 'rs-only', 'eur-only']) // CHANGED: euro-only → eur-only
       .required('Currency display type is required'),
     itinerary: Yup.array().of(Yup.string()),
     included: Yup.array().of(Yup.string()),
@@ -280,37 +280,34 @@ const TourPackageForm = () => {
     // Prepare price object based on currency type
     let priceObject = {};
     
+    // Use the correct field names for backend
     switch(values.currencyType) {
       case 'both':
         priceObject = {
-          priceRs: values.priceRs,
-          priceEuro: values.priceEuro,
-          currencyType: 'both',
-          price: values.priceRs // Keep original price field for backward compatibility
+          price: values.priceRs, // Main price field (backward compatibility)
+          priceEur: values.priceEur, // CHANGED: priceEuro → priceEur
+          supportsCurrency: 'both' // CHANGED: currencyType → supportsCurrency
         };
         break;
       case 'rs-only':
         priceObject = {
-          priceRs: values.priceRs,
-          priceEuro: null,
-          currencyType: 'rs-only',
-          price: values.priceRs
+          price: values.priceRs,
+          priceEur: null,
+          supportsCurrency: 'rs-only'
         };
         break;
-      case 'euro-only':
+      case 'eur-only':
         priceObject = {
-          priceRs: null,
-          priceEuro: values.priceEuro,
-          currencyType: 'euro-only',
-          price: values.priceEuro
+          price: values.priceEur, // For euro-only, set price to EUR value
+          priceEur: values.priceEur,
+          supportsCurrency: 'eur-only'
         };
         break;
       default:
         priceObject = {
-          priceRs: values.priceRs,
-          priceEuro: values.priceEuro,
-          currencyType: 'both',
-          price: values.priceRs
+          price: values.priceRs,
+          priceEur: values.priceEur,
+          supportsCurrency: 'both'
         };
     }
 
@@ -396,9 +393,9 @@ const TourPackageForm = () => {
             title: packageData?.title || '',
             shortDescription: packageData?.shortDescription || '',
             description: packageData?.description || '',
-            priceRs: packageData?.priceRs || packageData?.price || '',
-            priceEuro: packageData?.priceEuro || '',
-            currencyType: packageData?.currencyType || 'both',
+            priceRs: packageData?.price || packageData?.priceRs || '',
+            priceEur: packageData?.priceEur || '', // CHANGED: priceEuro → priceEur
+            currencyType: packageData?.supportsCurrency || 'both', // CHANGED: currencyType → supportsCurrency
             itinerary: packageData?.itinerary || [],
             included: packageData?.included || [],
             notIncluded: packageData?.notIncluded || ['Entrance fees'],
@@ -465,7 +462,7 @@ const TourPackageForm = () => {
                         <Field 
                           type="radio" 
                           name="currencyType" 
-                          value="euro-only" 
+                          value="eur-only" 
                           className="w-4 h-4 text-blue-600 focus:ring-blue-500"
                         />
                         <div className="ml-3">
@@ -480,7 +477,7 @@ const TourPackageForm = () => {
                   {(values.currencyType === 'both' || values.currencyType === 'rs-only') && (
                     <div>
                       <label className="block text-gray-700 font-medium mb-2">
-                        Price (Rs) <span className="text-red-500">*</span>
+                        Price (MUR) <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">Rs</span>
@@ -497,7 +494,7 @@ const TourPackageForm = () => {
                     </div>
                   )}
 
-                  {(values.currencyType === 'both' || values.currencyType === 'euro-only') && (
+                  {(values.currencyType === 'both' || values.currencyType === 'eur-only') && (
                     <div>
                       <label className="block text-gray-700 font-medium mb-2">
                         Price (EUR) <span className="text-red-500">*</span>
@@ -506,14 +503,14 @@ const TourPackageForm = () => {
                         <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">€</span>
                         <Field 
                           type="number" 
-                          name="priceEuro" 
+                          name="priceEur"  // CHANGED: priceEuro → priceEur
                           className="w-full pl-12 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                           placeholder="Enter price in Euros"
                           min="0"
                           step="0.01"
                         />
                       </div>
-                      <ErrorMessage name="priceEuro" component="div" className="text-red-600 text-sm mt-1" />
+                      <ErrorMessage name="priceEur" component="div" className="text-red-600 text-sm mt-1" />
                     </div>
                   )}
 

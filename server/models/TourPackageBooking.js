@@ -36,11 +36,30 @@ const tourPackageBookingSchema = new mongoose.Schema({
     type: Date,
     required: [true, 'Start date is required']
   },
+  // KEEP existing fields
   totalPrice: {
     type: Number,
     required: [true, 'Total price is required'],
     min: [0, 'Price cannot be negative']
   },
+  // ADD new fields for dual currency
+  currency: {
+    type: String,
+    enum: ['MUR', 'EUR'],
+    default: 'MUR'
+  },
+  // Store prices in both currencies for record
+  totalPriceEur: {
+    type: Number,
+    default: 0
+  },
+  totalPriceMur: {
+    type: Number,
+    default: function() {
+      return this.totalPrice;
+    }
+  },
+  
   selectedActivities: [{
     activity: {
       type: mongoose.Schema.Types.ObjectId,
@@ -50,6 +69,10 @@ const tourPackageBookingSchema = new mongoose.Schema({
       type: Number,
       required: true
     },
+    priceEur: {  // NEW: Add EUR price
+      type: Number,
+      default: 0
+    },
     title: {
       type: String,
       required: true
@@ -57,16 +80,32 @@ const tourPackageBookingSchema = new mongoose.Schema({
     quantity: {
       type: Number,
       default: 1
+    },
+    currency: {  // NEW: Store activity currency
+      type: String,
+      enum: ['MUR', 'EUR'],
+      default: 'MUR'
     }
   }],
+  
   activitiesTotal: {
     type: Number,
     default: 0
   },
+  activitiesTotalEur: {  // NEW: EUR version
+    type: Number,
+    default: 0
+  },
+  
   packagePrice: {
     type: Number,
     default: 0
   },
+  packagePriceEur: {  // NEW: EUR version
+    type: Number,
+    default: 0
+  },
+  
   specialRequests: {
     type: String,
     trim: true
@@ -80,10 +119,10 @@ const tourPackageBookingSchema = new mongoose.Schema({
     type: String,
     unique: true,
     default: function() {
-    const prefix = 'TP';
-    const randomNum = Math.floor(100000 + Math.random() * 900000);
-    return `${prefix}${randomNum}`;
-  }
+      const prefix = 'TP';
+      const randomNum = Math.floor(100000 + Math.random() * 900000);
+      return `${prefix}${randomNum}`;
+    }
   },
   paymentStatus: {
     type: String,
@@ -102,6 +141,10 @@ const tourPackageBookingSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  transferTotalEur: {  // NEW: EUR version
+    type: Number,
+    default: 0
+  }
 }, {
   timestamps: true
 });

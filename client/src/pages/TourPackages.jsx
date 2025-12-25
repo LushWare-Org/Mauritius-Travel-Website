@@ -1,56 +1,187 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import TourList from '../components/tourPackages/TourPackageList';
 import ErrorBoundary from '../components/common/ErrorBoundary';
-import { tourPackagesAPI } from '../utils/api';
+import { tourPackagesAPI, airportTransferAPI } from '../utils/api';
 
 const TourPackages = () => {
   const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  
+  // ============ SIMPLIFIED CURRENCY LOGIC ============
+  const queryParams = new URLSearchParams(location.search);
+  const urlCurrency = queryParams.get('currency');
+  
+  // Initialize currency with priority: URL > localStorage > default
+  // Always use uppercase ISO codes: 'MUR' or 'EUR'
+  const [currency, setCurrency] = useState(() => {
+    const storedCurrency = localStorage.getItem('currentCurrency') || 
+                         localStorage.getItem('preferredCurrency');
+    let initialCurrency = (urlCurrency || storedCurrency || 'MUR').toUpperCase();
+    
+    // Normalize to valid currency codes
+    if (initialCurrency === 'RS' || initialCurrency === 'RUPEE' || initialCurrency === 'RUPEEs') {
+      return 'MUR';
+    }
+    if (initialCurrency === 'EURO' || initialCurrency === '€') {
+      return 'EUR';
+    }
+    return initialCurrency;
+  });
+  
+  const [tourPrices, setTourPrices] = useState({});
+  const [availableTransfers, setAvailableTransfers] = useState([]);
+  
+  // Fetch airport transfers
+  useEffect(() => {
+    const fetchTransfers = async () => {
+      try {
+        const response = await airportTransferAPI.getActive();
+        if (response.data.success) {
+          setAvailableTransfers(response.data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching airport transfers:', error);
+        setAvailableTransfers([]);
+      }
+    };
+    
+    fetchTransfers();
+  }, []);
+  
+  // Helper function to calculate transfer price
+  const calculateTransferPrice = (transfer, tripType, currency) => {
+    if (!transfer) return 0;
+    
+    if (currency === 'EUR') {
+      if (tripType === 'one-way') {
+        return transfer.oneWayPriceEUR || transfer.priceEUR || 0;
+      } else {
+        // Round trip price
+        return transfer.roundTripPriceEUR || 
+               (transfer.priceEUR ? transfer.priceEUR * 2 : 0) || 
+               0;
+      }
+    } else {
+      if (tripType === 'one-way') {
+        return transfer.oneWayPriceMUR || 
+               transfer.priceMUR || 
+               transfer.price || 
+               0;
+      } else {
+        // Round trip price
+        return transfer.roundTripPriceMUR || 
+               (transfer.priceMUR ? transfer.priceMUR * 2 : 0) || 
+               (transfer.price ? transfer.price * 2 : 0) || 
+               0;
+      }
+    }
+  };
+  
+  // Handle currency change - ALWAYS use uppercase ISO codes
+  const handleCurrencyChange = (newCurrency) => {
+    let normalizedCurrency = newCurrency.toUpperCase();
+    
+    // Normalize common variations
+    if (normalizedCurrency === 'RS' || normalizedCurrency === 'RUPEE') {
+      normalizedCurrency = 'MUR';
+    }
+    if (normalizedCurrency === 'EURO' || normalizedCurrency === '€') {
+      normalizedCurrency = 'EUR';
+    }
+    
+    if (normalizedCurrency !== currency) {
+      setCurrency(normalizedCurrency);
+      
+      // Update URL with uppercase ISO code
+      const newSearchParams = new URLSearchParams(location.search);
+      newSearchParams.set('currency', normalizedCurrency);
+      navigate({ search: newSearchParams.toString() }, { replace: true });
+      
+      // Save to localStorage
+      localStorage.setItem('currentCurrency', normalizedCurrency);
+      localStorage.setItem('preferredCurrency', normalizedCurrency);
+    }
+  };
+  // ============ END SIMPLIFIED CURRENCY LOGIC ============
+
   const [tours, setTours] = useState([]);
   const [filteredTours, setFilteredTours] = useState([]);
   const [filters, setFilters] = useState({ priceRange: [0, 100000] });
   const [sortOption, setSortOption] = useState('popularity');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currencyFilter, setCurrencyFilter] = useState('all'); // 'all', 'rs', 'euro'
-  const [userCurrency, setUserCurrency] = useState(() => {
-    // Get currency from URL params, localStorage, or default to rs
-    return (
-      searchParams.get('currency') ||
-      localStorage.getItem('preferredCurrency') ||
-      'rs'
-    );
-  });
+  const [currencyFilter, setCurrencyFilter] = useState('all'); // 'all', 'MUR', 'EUR'
 
-  const queryParams = new URLSearchParams(location.search);
   const searchQuery = queryParams.get('search');
   const locationParam = queryParams.get('location');
   const typeParam = queryParams.get('type');
 
-  // Load user's currency preference from localStorage
-  useEffect(() => {
-    const savedCurrency = localStorage.getItem('preferredCurrency');
-    if (savedCurrency && (savedCurrency === 'rs' || savedCurrency === 'euro')) {
-      setUserCurrency(savedCurrency);
-    }
-  }, []);
-
-  // Handle currency changes
-  const handleCurrencyChange = (newCurrency) => {
-    if (newCurrency === 'rs' || newCurrency === 'euro') {
-      setUserCurrency(newCurrency);
-      localStorage.setItem('preferredCurrency', newCurrency);
-      // Update URL with currency parameter
-      const newSearchParams = new URLSearchParams(location.search);
-      newSearchParams.set('currency', newCurrency);
-      setSearchParams(newSearchParams);
-      // Reset currency filter when changing user currency
-      setCurrencyFilter('all');
+  // Helper function to check if a tour is available in a specific currency
+  const isTourAvailableInCurrency = (tour, checkCurrency = null) => {
+    const check = checkCurrency || currency;
+    const supportsCurrency = tour.supportsCurrency || tour.currencyType || 'both';
+    
+    // Check for Euro availability
+    if (check === 'EUR') {
+      // Check if tour has Euro price greater than 0
+      const hasEuroPrice = (
+        tour.priceEUR || 
+        tour.priceEur || 
+        tour.priceEuro || 
+        (tour.prices && tour.prices.EUR) || 
+        0
+      ) > 0;
+      
+      // Check if tour supports Euro currency
+      const supportsEuroCurrency = (
+        supportsCurrency === 'both' || 
+        supportsCurrency === 'eur-only' || 
+        supportsCurrency === 'euro-only'
+      );
+      
+      // Check if there are airport transfers available in Euro
+      const hasEuroTransfers = availableTransfers.length > 0 && 
+        availableTransfers.some(transfer => {
+          const euroPrice = calculateTransferPrice(transfer, 'one-way', 'EUR');
+          return euroPrice > 0;
+        });
+      
+      // Return true if tour supports Euro, has Euro price, or has Euro transfers
+      return supportsEuroCurrency || hasEuroPrice || hasEuroTransfers;
+    } 
+    // Check for MUR/Rupees availability
+    else {
+      // Check if tour has MUR price greater than 0
+      const hasMurPrice = (
+        tour.priceMUR || 
+        tour.priceRs || 
+        tour.price || 
+        (tour.prices && tour.prices.MUR) || 
+        tour.priceRs || 
+        0
+      ) > 0;
+      
+      // Check if tour supports MUR currency
+      const supportsMurCurrency = (
+        supportsCurrency === 'both' || 
+        supportsCurrency === 'rs-only' || 
+        supportsCurrency === 'mur-only'
+      );
+      
+      // Check if there are airport transfers available in MUR
+      const hasMurTransfers = availableTransfers.length > 0 && 
+        availableTransfers.some(transfer => {
+          const murPrice = calculateTransferPrice(transfer, 'one-way', 'MUR');
+          return murPrice > 0;
+        });
+      
+      // Return true if tour supports MUR, has MUR price, or has MUR transfers
+      return supportsMurCurrency || hasMurPrice || hasMurTransfers;
     }
   };
 
-  // Fetch tours
+  // Fetch tours with proper currency handling
   useEffect(() => {
     const fetchTours = async () => {
       try {
@@ -61,20 +192,51 @@ const TourPackages = () => {
         if (locationParam) params.location = locationParam;
         if (typeParam) params.type = typeParam;
 
-        // Add currency parameter to API call if needed
-        params.currency = userCurrency;
-
         const response = await tourPackagesAPI.getAll(params);
         const toursData = response?.data?.data || [];
 
-        // Ensure all tours have required price fields
-        const validatedTours = toursData.map((tour) => ({
-          ...tour,
-          priceRs: tour.priceRs || tour.price || 0,
-          priceEuro: tour.priceEuro || tour.price || 0,
-          currencyType: tour.currencyType || 'rs-only',
-          price: tour.price || tour.priceRs || tour.priceEuro || 0,
-        }));
+        // IMPORTANT: Map database fields to frontend expected fields
+        const validatedTours = toursData.map((tour) => {
+          // Use correct field names from TourPackageBookingForm
+          const priceMUR = tour.price || 0;
+          const priceEUR = tour.priceEur || 0;
+          const supportsCurrency = tour.supportsCurrency || 'both';
+          
+          // Map supportsCurrency to currencyType (using correct values)
+          let currencyType = 'rs-only';
+          if (supportsCurrency === 'both') {
+            currencyType = 'both';
+          } else if (supportsCurrency === 'eur-only') {
+            currencyType = 'euro-only';
+          } else if (supportsCurrency === 'rs-only') {
+            currencyType = 'rs-only';
+          }
+
+          // Store prices for both currencies like TourPackageBookingForm
+          const tourPriceData = {
+            MUR: priceMUR,
+            EUR: priceEUR
+          };
+          
+          setTourPrices(prev => ({
+            ...prev,
+            [tour._id]: tourPriceData
+          }));
+
+          return {
+            ...tour,
+            // Map fields for frontend compatibility
+            priceRs: priceMUR, // Use priceMUR for priceRs
+            priceEuro: priceEUR,
+            currencyType: currencyType,
+            price: currency === 'EUR' ? priceEUR : priceMUR, // Current price based on selected currency
+            // Ensure supportsCurrency is available for display
+            supportsCurrency: supportsCurrency,
+            // Store both prices like TourPackageBookingForm
+            priceMUR: priceMUR,
+            priceEUR: priceEUR
+          };
+        });
 
         setTours(validatedTours);
         setFilteredTours(validatedTours);
@@ -87,66 +249,77 @@ const TourPackages = () => {
     };
 
     fetchTours();
-  }, [location.search, userCurrency]);
+  }, [location.search, currency]);
 
   // Helper function to safely get price value with fallbacks
-  const getSafePrice = (tour, currency) => {
-    if (currency === 'euro') {
-      return tour.priceEuro || tour.price || 0;
+  const getSafePrice = (tour) => {
+    if (currency === 'EUR') {
+      return tour.priceEUR || tour.priceEur || tour.priceEuro || tour.price || 0;
     } else {
-      return tour.priceRs || tour.price || 0;
+      return tour.priceMUR || tour.priceRs || tour.price || 0;
     }
   };
 
   // Helper function to format price with 2 decimal places for euro, no decimals for rs
-  const formatPrice = (price, currency) => {
-    if (currency === 'euro') {
-      return parseFloat(price).toFixed(2);
+  const formatPrice = (price) => {
+    const numericPrice = parseFloat(price);
+    if (isNaN(numericPrice)) return '0';
+    
+    if (currency === 'EUR') {
+      return numericPrice.toFixed(2);
     } else {
-      return Math.round(price).toLocaleString();
+      return Math.round(numericPrice).toLocaleString();
     }
   };
 
   // Helper function to get display price based on user's preferred currency
-const getDisplayPrice = (tour) => {
-  if (!tour)
+  const getDisplayPrice = (tour) => {
+    if (!tour) {
+      return {
+        display: '',
+        price: 0,
+        currency: currency,
+        hasAlternative: false,
+        currencyType: 'rs-only',
+      };
+    }
+
+    const currencyType = tour.currencyType || tour.supportsCurrency || 'both';
+    const primaryPrice = getSafePrice(tour);
+    
+    // Determine if alternative price exists
+    let hasAlternative = false;
+    if (currencyType === 'both') {
+      if (currency === 'EUR') {
+        hasAlternative = (tour.priceMUR || tour.priceRs || tour.price || 0) > 0;
+      } else {
+        hasAlternative = (tour.priceEUR || tour.priceEur || tour.priceEuro || 0) > 0;
+      }
+    }
+
+    // Build display string like TourPackageBookingForm
+    let display = '';
+    if (currency === 'EUR') {
+      display = `€ ${formatPrice(primaryPrice)}`;
+    } else {
+      display = `Rs ${formatPrice(primaryPrice)}`;
+    }
+
     return {
-      display: '',
-      price: 0,
-      currency: userCurrency === 'euro' ? 'EUR' : 'MUR',
-      hasAlternative: false,
-      currencyType: tour?.currencyType || 'rs-only',
+      display,
+      price: primaryPrice,
+      currency: currency,
+      hasAlternative,
+      currencyType,
+      primaryDisplay: display,
+      secondaryDisplay: null,
     };
-
-  const currencyType = tour.currencyType || 'rs-only';
-  const primaryPrice = getSafePrice(tour, userCurrency);
-  
-  // Determine if alternative price exists (for badge/indicator only)
-  let hasAlternative = currencyType === 'both';
-
-  // Build display string - ONLY show the selected currency
-  let display = '';
-  if (userCurrency === 'euro') {
-    display = `€ ${formatPrice(primaryPrice, 'euro')}`;
-    // REMOVED: Don't show Rs price here
-  } else {
-    display = `Rs ${formatPrice(primaryPrice, 'rs')}`;
-    // REMOVED: Don't show Euro price here
-  }
-
-  return {
-    display, // This will now only show one currency
-    price: primaryPrice,
-    currency: userCurrency === 'euro' ? 'EUR' : 'MUR',
-    hasAlternative, // Keep this for badges/indicators if needed
-    currencyType,
-    primaryDisplay: display, // This is now the same as display
-    secondaryDisplay: null, // Don't show alternative price in display
   };
-};
 
-  // Get currency badge color
-  const getCurrencyBadgeColor = (currencyType) => {
+  // Get currency badge color - updated to handle supportsCurrency field
+  const getCurrencyBadgeColor = (tour) => {
+    const currencyType = tour.currencyType || tour.supportsCurrency || 'both';
+    
     switch (currencyType) {
       case 'both':
         return {
@@ -160,6 +333,7 @@ const getDisplayPrice = (tour) => {
           text: 'text-blue-300',
           label: 'Rs Only',
         };
+      case 'eur-only':
       case 'euro-only':
         return {
           bg: 'bg-yellow-500/20',
@@ -173,6 +347,76 @@ const getDisplayPrice = (tour) => {
           label: 'Rs Only',
         };
     }
+  };
+
+  // Get counts for currency filters
+  const getCurrencyCounts = () => {
+    const allTours = tours.filter(t => 
+      isTourAvailableInCurrency(t, 'MUR') || 
+      isTourAvailableInCurrency(t, 'EUR')
+    ).length;
+    
+    const rsTours = tours.filter(t => {
+      // Check tour price in MUR
+      const hasMurPrice = (
+        t.priceMUR || 
+        t.priceRs || 
+        t.price || 
+        (t.prices && t.prices.MUR) || 
+        0
+      ) > 0;
+      
+      // Check currency support
+      const supportsCurrency = t.supportsCurrency || t.currencyType || 'both';
+      const supportsRs = (
+        supportsCurrency === 'both' || 
+        supportsCurrency === 'rs-only' || 
+        supportsCurrency === 'mur-only'
+      );
+      
+      // Check for MUR transfers
+      const hasMurTransfers = availableTransfers.length > 0 && 
+        availableTransfers.some(transfer => {
+          const murPrice = calculateTransferPrice(transfer, 'one-way', 'MUR');
+          return murPrice > 0;
+        });
+      
+      return hasMurPrice || supportsRs || hasMurTransfers;
+    }).length;
+    
+    const euroTours = tours.filter(t => {
+      // Check tour price in EUR
+      const hasEuroPrice = (
+        t.priceEUR || 
+        t.priceEur || 
+        t.priceEuro || 
+        (t.prices && t.prices.EUR) || 
+        0
+      ) > 0;
+      
+      // Check currency support
+      const supportsCurrency = t.supportsCurrency || t.currencyType || 'both';
+      const supportsEuro = (
+        supportsCurrency === 'both' || 
+        supportsCurrency === 'eur-only' || 
+        supportsCurrency === 'euro-only'
+      );
+      
+      // Check for EUR transfers
+      const hasEuroTransfers = availableTransfers.length > 0 && 
+        availableTransfers.some(transfer => {
+          const euroPrice = calculateTransferPrice(transfer, 'one-way', 'EUR');
+          return euroPrice > 0;
+        });
+      
+      return hasEuroPrice || supportsEuro || hasEuroTransfers;
+    }).length;
+
+    return {
+      all: allTours,
+      rs: rsTours,
+      euro: euroTours,
+    };
   };
 
   // Filtering & Sorting
@@ -193,6 +437,10 @@ const getDisplayPrice = (tour) => {
     if (filters.priceRange) {
       const [minPrice, maxPrice] = filters.priceRange;
       result = result.filter((t) => {
+        // First check if tour is available in the current display currency
+        if (!isTourAvailableInCurrency(t)) {
+          return false;
+        }
         const priceInfo = getDisplayPrice(t);
         const price = priceInfo.price || 0;
         return price >= minPrice && price <= maxPrice;
@@ -202,13 +450,12 @@ const getDisplayPrice = (tour) => {
     // Currency filter - only show tours available in selected currency
     if (currencyFilter !== 'all') {
       result = result.filter((t) => {
-        const currencyType = t.currencyType || 'rs-only';
-        if (currencyFilter === 'rs') {
-          return currencyType === 'both' || currencyType === 'rs-only';
-        } else if (currencyFilter === 'euro') {
-          return currencyType === 'both' || currencyType === 'euro-only';
-        }
-        return true;
+        return isTourAvailableInCurrency(t, currencyFilter);
+      });
+    } else {
+      // If no currency filter, still show tours available in current display currency
+      result = result.filter((t) => {
+        return isTourAvailableInCurrency(t);
       });
     }
 
@@ -231,36 +478,42 @@ const getDisplayPrice = (tour) => {
     });
 
     setFilteredTours(result);
-  }, [tours, filters, sortOption, searchQuery, currencyFilter, userCurrency]);
+  }, [tours, filters, sortOption, searchQuery, currencyFilter, currency, availableTransfers]);
 
   const handleFilterChange = (newFilters) =>
     setFilters((prev) => ({ ...prev, ...newFilters }));
   const handleSortChange = (option) => setSortOption(option);
-  const handleCurrencyFilterChange = (currency) => setCurrencyFilter(currency);
+  const handleCurrencyFilterChange = (filterCurrency) => {
+    setCurrencyFilter(filterCurrency);
+  };
 
   // Clear search filters
   const handleShowAll = () => {
-    const sorted = [...tours].sort((a, b) => {
-      const priceInfoA = getDisplayPrice(a);
-      const priceInfoB = getDisplayPrice(b);
-      const priceA = priceInfoA.price || 0;
-      const priceB = priceInfoB.price || 0;
+    // Reset all filters except user currency
+    const result = [...tours]
+      .filter((t) => isTourAvailableInCurrency(t))
+      .sort((a, b) => {
+        const priceInfoA = getDisplayPrice(a);
+        const priceInfoB = getDisplayPrice(b);
+        const priceA = priceInfoA.price || 0;
+        const priceB = priceInfoB.price || 0;
 
-      switch (sortOption) {
-        case 'price-asc':
-          return priceA - priceB;
-        case 'price-desc':
-          return priceB - priceA;
-        case 'popularity':
-        default:
-          return (b?.averageRating || 0) - (a?.averageRating || 0);
-      }
-    });
-    setFilteredTours(sorted);
+        switch (sortOption) {
+          case 'price-asc':
+            return priceA - priceB;
+          case 'price-desc':
+            return priceB - priceA;
+          case 'popularity':
+          default:
+            return (b?.averageRating || 0) - (a?.averageRating || 0);
+        }
+      });
+    
+    setFilteredTours(result);
     setCurrencyFilter('all');
+    setFilters({ priceRange: [0, 100000] });
   };
 
-  
   // Get min and max prices
   const getMinPrice = () => {
     if (filteredTours.length === 0) return 0;
@@ -284,21 +537,31 @@ const getDisplayPrice = (tour) => {
 
   // Get currency symbol
   const getCurrencySymbol = () => {
-    return userCurrency === 'euro' ? '€' : 'Rs';
+    return currency === 'EUR' ? '€' : 'Rs';
   };
 
   // Format price for display
   const formatPriceDisplay = (price) => {
-    if (userCurrency === 'euro') {
-      return parseFloat(price).toFixed(2);
+    const numericPrice = parseFloat(price);
+    if (isNaN(numericPrice)) return '0';
+    
+    if (currency === 'EUR') {
+      return numericPrice.toFixed(2);
     } else {
-      return Math.round(price).toLocaleString();
+      return Math.round(numericPrice).toLocaleString();
     }
   };
 
   // Get currency display name
   const getCurrencyDisplayName = () => {
-    return userCurrency === 'euro' ? 'EUR (€)' : 'MUR (Rs)';
+    return currency === 'EUR' ? 'EUR (€)' : 'MUR (Rs)';
+  };
+
+  const currencyCounts = getCurrencyCounts();
+
+  // Handle currency change for select
+  const handleCurrencySelectChange = (selectedCurrency) => {
+    handleCurrencyChange(selectedCurrency);
   };
 
   return (
@@ -341,6 +604,73 @@ const getDisplayPrice = (tour) => {
               </div>
             )}
 
+            {/* Currency Filter Section */}
+            <div className="bg-white p-4 rounded-lg shadow mb-6">
+              <h3 className="font-medium text-gray-700 mb-3">
+                Filter by Currency
+              </h3>
+              <div className="space-y-2">
+                <button
+                  onClick={() => handleCurrencyFilterChange('all')}
+                  className={`w-full text-left px-3 py-2 rounded ${
+                    currencyFilter === 'all'
+                      ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                      : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span>All Currencies</span>
+                    <span className="text-sm text-gray-500">
+                      {currencyCounts.all}
+                    </span>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={() => handleCurrencyFilterChange('MUR')}
+                  className={`w-full text-left px-3 py-2 rounded ${
+                    currencyFilter === 'MUR'
+                      ? 'bg-green-100 text-green-700 border border-green-300'
+                      : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span>Rupees (Rs) Only</span>
+                    <span className="text-sm text-gray-500">
+                      {currencyCounts.rs}
+                    </span>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={() => handleCurrencyFilterChange('EUR')}
+                  className={`w-full text-left px-3 py-2 rounded ${
+                    currencyFilter === 'EUR'
+                      ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                      : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span>Euros (€) Only</span>
+                    <span className="text-sm text-gray-500">
+                      {currencyCounts.euro}
+                    </span>
+                  </div>
+                </button>
+              </div>
+              
+              {/* Current Display Currency */}
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <p className="text-sm text-gray-600 mb-2">
+                  Displaying in: <span className="font-medium">{getCurrencyDisplayName()}</span>
+                </p>
+                <div className="text-xs text-gray-500">
+                  <i className="fas fa-info-circle mr-1"></i>
+                  Prices shown in selected currency
+                </div>
+              </div>
+            </div>
+
             {/* Tour Packages Info */}
             <div className="bg-white p-4 rounded-lg shadow">
               <h3 className="font-medium text-gray-700 mb-3">
@@ -378,11 +708,11 @@ const getDisplayPrice = (tour) => {
                 <div className="pt-2 border-t border-gray-100">
                   <div className="flex justify-between items-center">
                     <span className="text-xs text-gray-500">
-                      Your Currency:
+                      Display Currency:
                     </span>
                     <span
                       className={`text-sm font-medium px-2 py-1 rounded ${
-                        userCurrency === 'rs'
+                        currency === 'MUR'
                           ? 'bg-green-100 text-green-800'
                           : 'bg-blue-100 text-blue-800'
                       }`}
@@ -430,24 +760,24 @@ const getDisplayPrice = (tour) => {
                     {currencyFilter !== 'all' && (
                       <span
                         className={`text-sm px-3 py-1 rounded-full ${
-                          currencyFilter === 'rs'
+                          currencyFilter === 'MUR'
                             ? 'text-green-600 bg-green-50'
                             : 'text-yellow-600 bg-yellow-50'
                         }`}
                       >
                         <i className="fas fa-money-bill-wave mr-1"></i>
-                        {currencyFilter === 'rs' ? 'Rs Only' : '€ Only'}
+                        {currencyFilter === 'MUR' ? 'Rs Only' : '€ Only'}
                       </span>
                     )}
                     <span
                       className={`text-sm px-3 py-1 rounded-full ${
-                        userCurrency === 'rs'
+                        currency === 'MUR'
                           ? 'text-green-600 bg-green-50'
                           : 'text-blue-600 bg-blue-50'
                       }`}
                     >
                       <i className="fas fa-money-bill-wave mr-1"></i>
-                      Viewing in {userCurrency === 'rs' ? 'Rs' : '€'}
+                      Viewing in {currency === 'MUR' ? 'Rs' : '€'}
                     </span>
                   </div>
                 )}
@@ -472,7 +802,7 @@ const getDisplayPrice = (tour) => {
                   All prices shown in:{' '}
                   <span
                     className={`font-medium ${
-                      userCurrency === 'rs' ? 'text-green-600' : 'text-blue-600'
+                      currency === 'MUR' ? 'text-green-600' : 'text-blue-600'
                     }`}
                   >
                     {getCurrencyDisplayName()}
@@ -488,12 +818,12 @@ const getDisplayPrice = (tour) => {
                   </div>
                   <div className="relative">
                     <select
-                      value={userCurrency}
-                      onChange={(e) => handleCurrencyChange(e.target.value)}
+                      value={currency}  // Use the actual currency state
+                      onChange={(e) => handleCurrencySelectChange(e.target.value)}
                       className="border border-gray-300 rounded-lg px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white text-sm"
                     >
-                      <option value="rs">MUR (Rs)</option>
-                      <option value="euro">EUR (€)</option>
+                      <option value="MUR">MUR (Rs)</option>
+                      <option value="EUR">EUR (€)</option>
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-700">
                       <i className="fas fa-money-bill-wave text-gray-400"></i>
@@ -535,13 +865,15 @@ const getDisplayPrice = (tour) => {
                     ? `No results found for "${searchQuery}". Try a different search term.`
                     : currencyFilter !== 'all'
                     ? `No tours available in ${
-                        currencyFilter === 'rs' ? 'Rupees' : 'Euros'
+                        currencyFilter === 'MUR' ? 'Rupees' : 'Euros'
                       }. Try clearing the currency filter.`
+                    : currency === 'EUR'
+                    ? 'No tours available in Euros. Try switching to Rupees or clearing the currency filter.'
                     : 'No tour packages available at the moment.'}
                 </p>
                 <p className="text-sm text-gray-500 mb-4">
                   <i className="fas fa-money-bill-wave mr-1"></i>
-                  Current currency: {getCurrencyDisplayName()}
+                  Current display currency: {getCurrencyDisplayName()}
                 </p>
                 <div className="space-x-2">
                   <button
@@ -556,6 +888,14 @@ const getDisplayPrice = (tour) => {
                   >
                     Clear Currency Filter
                   </button>
+                  {currency === 'EUR' && (
+                    <button
+                      onClick={() => handleCurrencyChange('MUR')}
+                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors duration-300"
+                    >
+                      Switch to Rupees
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -563,7 +903,7 @@ const getDisplayPrice = (tour) => {
                 <TourList
                   packages={filteredTours}
                   getDisplayPrice={getDisplayPrice}
-                  userCurrency={userCurrency}
+                  userCurrency={currency}  // Pass uppercase currency
                   getCurrencyBadgeColor={getCurrencyBadgeColor}
                 />
               </ErrorBoundary>

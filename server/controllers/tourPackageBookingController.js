@@ -3,7 +3,6 @@ const TourPackage = require('../models/TourPackage');
 const AirportTransferBooking = require('../models/AirportTransferBooking');
 const User = require('../models/User');
 
-
 // @desc    Create tour package booking with airport transfer
 // @route   POST /api/v1/tour-package-bookings/with-transfer
 // @access  Public
@@ -178,24 +177,44 @@ exports.getBooking = async (req, res, next) => {
   }
 };
 
-
 // Get all bookings (admin only)
 exports.getAllBookings = async (req, res) => {
   try {
-    const bookings = await TourPackageBooking.find()
-      .populate('tourPackage', 'title price duration location image')
+    const { currency } = req.query; // NEW: Filter by currency
+    
+    let query = {};
+    if (currency && (currency === 'MUR' || currency === 'EUR')) {
+      query.currency = currency;
+    }
+    
+    const bookings = await TourPackageBooking.find(query)
+      .populate('tourPackage', 'title price priceEur supportsCurrency duration location image')
       .populate('user', 'name email')
       .sort({ createdAt: -1 })
       .lean();
 
+    // Format response with currency info
+    const formattedBookings = bookings.map(booking => ({
+      ...booking,
+      displayCurrency: booking.currency || 'MUR',
+      displayPrice: booking.currency === 'EUR' ? 
+        (booking.totalPriceEur || booking.totalPrice) : 
+        (booking.totalPriceMur || booking.totalPrice)
+    }));
+
     res.status(200).json({
       success: true,
       count: bookings.length,
-      data: bookings
+      data: formattedBookings,
+      currencyFilter: currency || 'all'
     });
   } catch (error) {
     console.error('Error fetching all bookings:', error);
-    res.status(500).json({ success: false, message: 'Error fetching bookings', error: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching bookings', 
+      error: error.message 
+    });
   }
 };
 
@@ -291,12 +310,12 @@ exports.getBookingHistory = async (req, res) => {
   }
 };
 
-// @desc    Get booking by ID
+// @desc    Get booking by ID with dual currency support
 // @route   GET /api/v1/tour-package-bookings/:id
 // @access  Private
 exports.getBookingById = async (req, res) => {
   try {
-    console.log('📥 GET /tour-package-bookings/:id called');
+    console.log('📥 GET /tour-package-bookings/:id called with dual currency');
     console.log('📌 Request ID:', req.params.id);
     console.log('👤 User ID from token:', req.user?.id);
     console.log('👤 User Role:', req.user?.role);
@@ -314,14 +333,13 @@ exports.getBookingById = async (req, res) => {
 
     console.log('✅ Booking found:', {
       id: booking._id,
+      currency: booking.currency || 'MUR',
       status: booking.status,
       userId: booking.user,
-      tourPackageId: booking.tourPackage,
-      hasSelectedActivities: !!booking.selectedActivities,
-      selectedActivitiesCount: booking.selectedActivities?.length || 0,
-      selectedActivities: booking.selectedActivities,
-      activitiesTotal: booking.activitiesTotal,
-      totalPrice: booking.totalPrice
+      totalPrice: booking.totalPrice,
+      totalPriceEur: booking.totalPriceEur || 0,
+      packagePrice: booking.packagePrice,
+      packagePriceEur: booking.packagePriceEur || 0
     });
 
     // Check authorization
@@ -345,7 +363,7 @@ exports.getBookingById = async (req, res) => {
 
     // Now populate with safe queries
     const populatedBooking = await TourPackageBooking.findById(req.params.id)
-      .populate('tourPackage', 'title price duration location images description itinerary')
+      .populate('tourPackage', 'title price priceEur supportsCurrency duration location images description itinerary')
       .populate('user', 'name email phone')
       .lean();
 
@@ -356,6 +374,8 @@ exports.getBookingById = async (req, res) => {
       tourPackage: populatedBooking.tourPackage || {
         title: 'Unknown Package',
         price: 0,
+        priceEur: 0,
+        supportsCurrency: 'rs-only',
         duration: 'N/A',
         location: 'Unknown',
         images: []
@@ -364,6 +384,8 @@ exports.getBookingById = async (req, res) => {
         name: 'Unknown User',
         email: 'unknown@example.com'
       },
+      // Ensure currency fields
+      currency: populatedBooking.currency || 'MUR',
       // Ensure nested fields exist
       fullName: populatedBooking.fullName || populatedBooking.user?.name || 'Unknown',
       email: populatedBooking.email || populatedBooking.user?.email || 'unknown@example.com',
@@ -372,24 +394,22 @@ exports.getBookingById = async (req, res) => {
       // Ensure activities fields exist
       selectedActivities: populatedBooking.selectedActivities || [],
       activitiesTotal: populatedBooking.activitiesTotal || 0,
-      packagePrice: populatedBooking.packagePrice || populatedBooking.tourPackage?.price || 0
+      activitiesTotalEur: populatedBooking.activitiesTotalEur || 0,
+      packagePrice: populatedBooking.packagePrice || populatedBooking.tourPackage?.price || 0,
+      packagePriceEur: populatedBooking.packagePriceEur || populatedBooking.tourPackage?.priceEur || 0
     };
 
-    console.log('✅ Sending booking data with activities:', {
-      selectedActivitiesCount: safeBooking.selectedActivities.length,
-      activitiesTotal: safeBooking.activitiesTotal,
-      packagePrice: safeBooking.packagePrice
-    });
+    console.log('✅ Sending booking data with currency:', safeBooking.currency);
     
     res.status(200).json({
       success: true,
-      data: safeBooking
+      data: safeBooking,
+      currency: safeBooking.currency
     });
   } catch (error) {
     console.error('💥 Error in getBookingById:', error);
     console.error('Error stack:', error.stack);
     
-    // Check for specific Mongoose errors
     if (error.name === 'CastError') {
       return res.status(400).json({
         success: false,
@@ -405,22 +425,49 @@ exports.getBookingById = async (req, res) => {
   }
 };
 
-// @desc    Create a new tour package booking
+// @desc    Create a new tour package booking with dual currency
 // @route   POST /api/v1/tour-package-bookings
 // @access  Private
 exports.createBooking = async (req, res) => {
   try {
-    const { tourPackageId, fullName, email, phone, guests, startDate, specialRequests } = req.body;
+    const { 
+      tourPackageId, 
+      fullName, 
+      email, 
+      phone, 
+      guests, 
+      startDate, 
+      specialRequests,
+      currency = 'MUR'
+    } = req.body;
 
     if (!tourPackageId || !fullName || !email || !phone || !guests || !startDate) {
-      return res.status(400).json({ success: false, message: 'Please provide all required fields' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please provide all required fields' 
+      });
     }
 
     const tourPackage = await TourPackage.findById(tourPackageId);
-    if (!tourPackage) return res.status(404).json({ success: false, message: 'Tour package not found' });
-    if (tourPackage.status !== 'active') return res.status(400).json({ success: false, message: 'This tour package is not available for booking' });
+    if (!tourPackage) return res.status(404).json({ 
+      success: false, 
+      message: 'Tour package not found' 
+    });
+    
+    if (tourPackage.status !== 'active') return res.status(400).json({ 
+      success: false, 
+      message: 'This tour package is not available for booking' 
+    });
 
-    const totalPrice = tourPackage.price * guests;
+    // Get price based on currency
+    let packagePrice, totalPrice;
+    if (currency === 'EUR' && tourPackage.priceEur) {
+      packagePrice = tourPackage.priceEur;
+    } else {
+      packagePrice = tourPackage.price;
+    }
+    
+    totalPrice = packagePrice * guests;
 
     const booking = new TourPackageBooking({
       tourPackage: tourPackageId,
@@ -430,8 +477,12 @@ exports.createBooking = async (req, res) => {
       phone,
       guests,
       startDate,
-      totalPrice,
-      packagePrice: tourPackage.price,
+      currency: currency,
+      totalPrice: totalPrice,
+      totalPriceEur: currency === 'EUR' ? totalPrice : 0,
+      totalPriceMur: currency === 'MUR' ? totalPrice : 0,
+      packagePrice: packagePrice,
+      packagePriceEur: currency === 'EUR' ? packagePrice : 0,
       specialRequests: specialRequests || '',
       status: 'pending'
     });
@@ -439,20 +490,28 @@ exports.createBooking = async (req, res) => {
     await booking.save();
 
     const populatedBooking = await TourPackageBooking.findById(booking._id)
-      .populate('tourPackage', 'title price duration location image');
+      .populate('tourPackage', 'title price priceEur supportsCurrency duration location image');
 
     res.status(201).json({
       success: true,
       message: 'Booking created successfully',
-      data: populatedBooking
+      data: populatedBooking,
+      currency: currency
     });
 
   } catch (error) {
     console.error('Error creating booking:', error);
     if (error.code === 11000) {
-      return res.status(400).json({ success: false, message: 'Booking reference already exists' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Booking reference already exists' 
+      });
     }
-    res.status(500).json({ success: false, message: 'Error creating booking', error: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error creating booking', 
+      error: error.message 
+    });
   }
 };
 
@@ -510,7 +569,7 @@ exports.cancelBooking = async (req, res) => {
     await booking.save();
 
     const populatedBooking = await TourPackageBooking.findById(booking._id)
-      .populate('tourPackage', 'title price duration location image')
+      .populate('tourPackage', 'title price priceEur supportsCurrency duration location image')
       .populate('user', 'name email');
 
     console.log('✅ Booking cancelled successfully');
@@ -569,7 +628,7 @@ exports.updateBookingStatus = async (req, res) => {
     }
     
     const populatedBooking = await TourPackageBooking.findById(booking._id)
-      .populate('tourPackage', 'title price duration location image')
+      .populate('tourPackage', 'title price priceEur supportsCurrency duration location image')
       .populate('user', 'name email');
     
     console.log('Booking status updated successfully');
@@ -631,17 +690,17 @@ exports.getBookingStats = async (req, res) => {
   }
 };
 
-// @desc    Create a new tour package booking with activities
+// @desc    Create a new tour package booking with activities (FIXED VERSION)
 // @route   POST /api/v1/tour-package-bookings/with-activities
 // @access  Private
-const createBookingWithActivities = async (req, res) => {
+exports.createBookingWithActivities = async (req, res) => {
   try {
-    console.log('🎯 CREATE BOOKING WITH ACTIVITIES - START');
+    console.log('🎯 CREATE BOOKING WITH ACTIVITIES - FIXED VERSION');
     console.log('📝 Request body:', JSON.stringify(req.body, null, 2));
     
     const {
-      tourPackage,
-      guests,
+      tourPackageId,
+      guests = 1,
       startDate,
       selectedActivities = [],
       specialRequests = '',
@@ -652,19 +711,20 @@ const createBookingWithActivities = async (req, res) => {
       fullName,
       email,
       phone,
-      airportTransfer
+      airportTransferBooking,
+      currency = 'MUR'
     } = req.body;
 
-    console.log('📊 Booking data received in Rs:', {
-      tourPackage,
+    console.log('📊 Booking data received:', {
+      tourPackageId,
       guests,
       startDate,
-      selectedActivitiesCount: selectedActivities.length,
-      totalPrice: `Rs ${totalPrice}`,
-      packagePrice: `Rs ${packagePrice}`,
-      activitiesTotal: `Rs ${activitiesTotal}`,
-      transferTotal: `Rs ${transferTotal}`,
-      user: req.user?.id
+      currency,
+      totalPrice,
+      packagePrice,
+      activitiesTotal,
+      transferTotal,
+      selectedActivitiesCount: selectedActivities.length
     });
 
     // Get user info
@@ -674,101 +734,52 @@ const createBookingWithActivities = async (req, res) => {
     const userPhone = phone || req.user.phone || '';
 
     // Validate required fields
-    if (!tourPackage || !guests || !startDate || !totalPrice) {
-      console.log('❌ Missing required fields');
+    if (!tourPackageId || !startDate || !totalPrice) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required booking fields: tourPackage, guests, startDate, totalPrice'
+        message: 'Missing required booking fields: tourPackageId, startDate, totalPrice'
       });
     }
 
     // Check if tour package exists
-    const tourPackageDoc = await TourPackage.findById(tourPackage);
+    const tourPackageDoc = await TourPackage.findById(tourPackageId);
     if (!tourPackageDoc) {
-      console.log('❌ Tour package not found:', tourPackage);
       return res.status(404).json({
         success: false,
         message: 'Tour package not found'
       });
     }
 
-    // Prepare activities data (keep prices in Rs)
-    const activitiesData = selectedActivities.map((activity, index) => {
-      console.log(`Processing activity ${index}:`, activity);
-      
-      const activityId = activity.activity || activity._id || activity.id;
-      const activityTitle = activity.title || 'Unknown Activity';
+    // Prepare activities data
+    const activitiesData = selectedActivities.map((activity) => {
+      // Use the price that's already calculated from frontend
       const activityPrice = Number(activity.price) || 0;
-      const activityQuantity = Number(activity.quantity) || Number(guests);
+      const activityPriceEur = Number(activity.priceEur) || 0;
       
       return {
-        activity: activityId,
-        title: activityTitle,
-        price: activityPrice, // Keep in Rs
-        quantity: activityQuantity
+        activity: activity.activityId || activity._id || activity.id,
+        title: activity.title || 'Unknown Activity',
+        price: currency === 'MUR' ? activityPrice : 0,
+        priceEur: currency === 'EUR' ? activityPriceEur : 0,
+        quantity: Number(activity.quantity) || Number(guests) || 1,
+        currency: currency,
+        duration: activity.duration || null,
+        durationType: activity.durationType || null
       };
     });
 
-    console.log('✅ Prepared activities data (Rs):', activitiesData);
-
-    // IMPORTANT: Use Rs values directly, no USD conversion
-    const actualPackagePrice = Number(packagePrice) || Number(tourPackageDoc.price);
-    
-    // Calculate expected totals in Rs
-    const expectedPackageTotal = actualPackagePrice * guests;
-    const expectedActivitiesTotal = activitiesData.reduce(
-      (sum, activity) => sum + (activity.price * activity.quantity),
-      0
-    );
-    const expectedTransferTotal = Number(transferTotal) || 0;
-    const expectedTotal = expectedPackageTotal + expectedActivitiesTotal + expectedTransferTotal;
-
-    console.log('💰 Price validation (in Rs):', {
-      actualPackagePrice: `Rs ${actualPackagePrice}`,
-      expectedPackageTotal: `Rs ${expectedPackageTotal}`,
-      expectedActivitiesTotal: `Rs ${expectedActivitiesTotal}`,
-      expectedTransferTotal: `Rs ${expectedTransferTotal}`,
-      expectedTotal: `Rs ${expectedTotal}`,
-      receivedTotal: `Rs ${totalPrice}`,
-      guests,
-      activitiesCount: activitiesData.length
+    console.log('✅ Prepared activities data (count:', activitiesData.length, ')');
+    console.log('💰 Prices breakdown:', {
+      totalPrice,
+      packagePrice,
+      activitiesTotal,
+      transferTotal,
+      currency
     });
 
-    // Validate with tolerance for rounding
-    const tolerance = 0.01;
-    
-    if (Math.abs(expectedTotal - totalPrice) > tolerance) {
-      console.log('❌ Price mismatch detected');
-      return res.status(400).json({
-        success: false,
-        message: `Price mismatch. Expected: Rs ${expectedTotal.toFixed(2)}, Received: Rs ${totalPrice.toFixed(2)}`,
-        details: {
-          expectedPackageTotal: expectedPackageTotal,
-          expectedActivitiesTotal: expectedActivitiesTotal,
-          expectedTransferTotal: expectedTransferTotal,
-          expectedTotal: expectedTotal,
-          receivedTotal: totalPrice,
-          calculationBreakdown: {
-            packagePrice: actualPackagePrice,
-            guests,
-            packageTotal: expectedPackageTotal,
-            activities: activitiesData.map(a => ({
-              title: a.title,
-              price: `Rs ${a.price}`,
-              quantity: a.quantity,
-              subtotal: `Rs ${a.price * a.quantity}`
-            })),
-            activitiesTotal: expectedActivitiesTotal,
-            transferTotal: expectedTransferTotal,
-            grandTotal: expectedTotal
-          }
-        }
-      });
-    }
-
-    // Create booking with Rs values
+    // Create booking - FIXED: Store prices correctly based on currency
     const bookingData = {
-      tourPackage,
+      tourPackage: tourPackageId,
       user: userId,
       fullName: userName,
       email: userEmail,
@@ -776,44 +787,57 @@ const createBookingWithActivities = async (req, res) => {
       guests: Number(guests),
       startDate: new Date(startDate),
       selectedActivities: activitiesData,
+      currency: currency,
       totalPrice: Number(totalPrice),
-      packagePrice: actualPackagePrice,
-      activitiesTotal: Number(activitiesTotal) || expectedActivitiesTotal,
-      transferTotal: Number(transferTotal) || 0,
+      // Store in both currencies
+      totalPriceEur: currency === 'EUR' ? Number(totalPrice) : 0,
+      totalPriceMur: currency === 'MUR' ? Number(totalPrice) : 0,
+      // Package price
+      packagePrice: currency === 'MUR' ? Number(packagePrice) : 0,
+      packagePriceEur: currency === 'EUR' ? Number(packagePrice) : 0,
+      // Activities total - FIXED: Use the values from frontend
+      activitiesTotal: currency === 'MUR' ? Number(activitiesTotal) : 0,
+      activitiesTotalEur: currency === 'EUR' ? Number(activitiesTotal) : 0,
+      // Transfer total - FIXED: Use the values from frontend
+      transferTotal: currency === 'MUR' ? Number(transferTotal) : 0,
+      transferTotalEur: currency === 'EUR' ? Number(transferTotal) : 0,
       specialRequests: specialRequests || '',
       status: 'pending',
-      currency: 'MUR' // Explicitly set currency to Mauritian Rupees
+      paymentStatus: 'pending'
     };
 
-    // Include transfer data if present
-    if (airportTransfer) {
-      bookingData.airportTransfer = {
-        ...airportTransfer,
-        transferPrice: Number(airportTransfer.transferPrice) || 0
-      };
+    // Link airport transfer booking if provided
+    if (airportTransferBooking && airportTransferBooking._id) {
+      bookingData.airportTransferBooking = airportTransferBooking._id;
     }
 
-    console.log('💾 Creating booking with data (in Rs):', {
+    console.log('💾 Creating booking with data:', {
       ...bookingData,
-      totalPrice: `Rs ${bookingData.totalPrice}`,
-      packagePrice: `Rs ${bookingData.packagePrice}`,
-      activitiesTotal: `Rs ${bookingData.activitiesTotal}`,
-      transferTotal: `Rs ${bookingData.transferTotal}`
+      selectedActivitiesCount: bookingData.selectedActivities.length
     });
 
     const booking = new TourPackageBooking(bookingData);
     await booking.save();
 
-    console.log('✅ Booking created successfully with reference:', booking.bookingReference);
+    console.log('✅ Booking created successfully! Reference:', booking.bookingReference);
+    console.log('📊 Stored prices:', {
+      activitiesTotal: booking.activitiesTotal,
+      activitiesTotalEur: booking.activitiesTotalEur,
+      transferTotal: booking.transferTotal,
+      transferTotalEur: booking.transferTotalEur,
+      totalPrice: booking.totalPrice,
+      currency: booking.currency
+    });
 
     // Populate and return
     const populatedBooking = await TourPackageBooking.findById(booking._id)
-      .populate('tourPackage', 'title price duration location image')
+      .populate('tourPackage', 'title price priceEur supportsCurrency duration location image')
       .populate('user', 'name email');
 
     res.status(201).json({
       success: true,
       data: populatedBooking,
+      currency: currency,
       message: 'Tour package booking created successfully'
     });
 
@@ -839,7 +863,8 @@ const createBookingWithActivities = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to create booking',
-      error: error.message
+      error: error.message,
+      stack: error.stack
     });
   }
 };
@@ -922,5 +947,50 @@ exports.testPreSaveHook = async (req, res) => {
   }
 };
 
-// Export the createBookingWithActivities function
-exports.createBookingWithActivities = createBookingWithActivities;
+// @desc    Get tour package price in specific currency
+// @route   GET /api/v1/tour-packages/:id/price/:currency
+// @access  Public
+exports.getPackagePriceInCurrency = async (req, res) => {
+  try {
+    const { id, currency } = req.params;
+    
+    const tourPackage = await TourPackage.findById(id);
+    if (!tourPackage) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tour package not found'
+      });
+    }
+    
+    let price;
+    if (currency === 'EUR' && tourPackage.priceEur) {
+      price = tourPackage.priceEur;
+    } else if (currency === 'MUR') {
+      price = tourPackage.price;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Currency not supported for this tour package'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        tourPackageId: id,
+        currency: currency,
+        price: price,
+        supportsCurrency: tourPackage.supportsCurrency || 'rs-only',
+        originalPrice: tourPackage.price,
+        priceEur: tourPackage.priceEur || 0
+      }
+    });
+  } catch (error) {
+    console.error('Error getting package price:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching package price',
+      error: error.message
+    });
+  }
+};

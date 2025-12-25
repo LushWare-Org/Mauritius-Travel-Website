@@ -4,7 +4,7 @@ import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { useAuth } from '../../contexts/AuthContext';
 import BookingStatusBadge from '../../components/dashboard/BookingStatusBadge';
 import DashboardDebugger from '../../components/dashboard/DashboardDebugger';
-import { tourPackageBookingsAPI, tourPackagesAPI } from '../../utils/api';
+import { tourPackageBookingsAPI } from '../../utils/api';
 
 const MyTourPackageBookings = () => {
   const { currentUser } = useAuth();
@@ -27,56 +27,42 @@ const MyTourPackageBookings = () => {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      console.log('🔑 Token exists:', !!token);
-
+      
       if (!token) {
-        console.warn('No authentication token found');
         setError('Please log in to view your bookings');
         return;
       }
       
-      console.log('📡 Calling API: tourPackageBookingsAPI.getAll()');
-      
       const response = await tourPackageBookingsAPI.getAll();
-
-      console.log('✅ API Response received');
 
       if (response.data.success) {
         console.log(`📊 Found ${response.data.data?.length || 0} bookings`);
         
-        // CRITICAL: Log full booking structure to understand data
-        const firstBooking = response.data.data?.[0];
-        if (firstBooking) {
-          console.log('🕵️‍♂️ FIRST BOOKING FULL STRUCTURE:');
-          console.log('Booking ID:', firstBooking._id);
-          console.log('Full booking:', firstBooking);
-          console.log('tourPackage:', firstBooking.tourPackage);
-          console.log('Has tourPackage?', !!firstBooking.tourPackage);
-          console.log('Type of tourPackage:', typeof firstBooking.tourPackage);
-          
-          if (firstBooking.tourPackage) {
-            console.log('tourPackage keys:', Object.keys(firstBooking.tourPackage));
-            console.log('tourPackage.image exists?', 'image' in firstBooking.tourPackage);
-            console.log('tourPackage.image value:', firstBooking.tourPackage.image);
-            console.log('tourPackage.images exists?', 'images' in firstBooking.tourPackage);
-            console.log('tourPackage.images value:', firstBooking.tourPackage.images);
-          }
-          
-          console.log('packageId:', firstBooking.packageId);
-          console.log('Has packageId?', !!firstBooking.packageId);
-          console.log('Type of packageId:', typeof firstBooking.packageId);
-          
-          if (firstBooking.packageId && typeof firstBooking.packageId === 'object') {
-            console.log('packageId keys:', Object.keys(firstBooking.packageId));
-            console.log('packageId.image exists?', 'image' in firstBooking.packageId);
-            console.log('packageId.image value:', firstBooking.packageId?.image);
-          }
-        }
-        
+        // Debug logging for price calculations
         const bookingsData = response.data.data || [];
-        setBookings(bookingsData);
+        bookingsData.forEach((booking, index) => {
+          console.log(`📋 Booking ${index + 1}:`, {
+            id: booking._id,
+            bookingReference: booking.bookingReference,
+            currency: booking.currency,
+            // Total prices
+            totalPrice: booking.totalPrice,
+            totalPriceEur: booking.totalPriceEur,
+            totalPriceMur: booking.totalPriceMur,
+            // Component prices
+            packagePrice: booking.packagePrice,
+            packagePriceEur: booking.packagePriceEur,
+            activitiesTotal: booking.activitiesTotal,
+            activitiesTotalEur: booking.activitiesTotalEur,
+            transferTotal: booking.transferTotal,
+            transferTotalEur: booking.transferTotalEur,
+            // Tour package data
+            tourPackageTitle: booking.tourPackage?.title,
+            guests: booking.guests
+          });
+        });
         
-        // Try to extract images from the data we have
+        setBookings(bookingsData);
         extractImagesFromBookings(bookingsData);
       } else {
         setError('Failed to fetch tour package bookings: ' + (response.data.message || ''));
@@ -95,36 +81,101 @@ const MyTourPackageBookings = () => {
     bookingsData.forEach(booking => {
       let foundImage = null;
       
-      // Option 1: Check if tourPackage has image directly
       if (booking.tourPackage?.image) {
         foundImage = booking.tourPackage.image;
-        console.log(`✅ Found image in tourPackage.image for booking ${booking._id}:`, 
-          foundImage?.substring?.(0, 50) || foundImage);
       }
-      // Option 2: Check if tourPackage has images array
       else if (booking.tourPackage?.images?.[0]) {
         foundImage = booking.tourPackage.images[0];
-        console.log(`✅ Found image in tourPackage.images[0] for booking ${booking._id}`);
       }
-      // Option 3: Check if packageId object has image
       else if (booking.packageId?.image && typeof booking.packageId === 'object') {
         foundImage = booking.packageId.image;
-        console.log(`✅ Found image in packageId.image for booking ${booking._id}`);
-      }
-      // Option 4: packageId might be a string ID - we'll need to fetch it
-      else if (booking.packageId && typeof booking.packageId === 'string') {
-        console.log(`📥 Need to fetch package ${booking.packageId} for image`);
-        // We'll fetch this separately if needed
       }
       
       if (foundImage) {
         imageMap[booking._id] = foundImage;
-      } else {
-        console.log(`❌ No image found in booking data for ${booking._id}`);
       }
     });
     
     setPackageImages(imageMap);
+  };
+
+  // FIXED: Get display price based on booking currency with correct logic
+  const getDisplayPrice = (booking) => {
+    if (!booking) return 0;
+    
+    const bookingCurrency = booking.currency || 'MUR';
+    
+    // Get total price based on currency
+    if (bookingCurrency === 'EUR') {
+      // For EUR bookings, use EUR-specific fields
+      return booking.totalPriceEur || 
+             booking.totalPrice ||  // fallback to totalPrice if EUR specific not available
+             0;
+    } else {
+      // For MUR bookings, use MUR-specific fields
+      return booking.totalPriceMur || 
+             booking.totalPrice ||  // fallback to totalPrice if MUR specific not available
+             0;
+    }
+  };
+
+  // Get component price for display
+  const getComponentPrice = (booking, fieldName, eurFieldName) => {
+    const bookingCurrency = booking.currency || 'MUR';
+    
+    if (bookingCurrency === 'EUR') {
+      // For EUR, use EUR-specific field or fallback
+      return booking[eurFieldName] || booking[fieldName] || 0;
+    } else {
+      // For MUR, use MUR-specific field or fallback
+      return booking[fieldName] || 0;
+    }
+  };
+
+  // Format price with proper currency symbol
+  const formatPrice = (amount, currency) => {
+    const num = parseFloat(amount) || 0;
+    
+    if (currency === 'EUR') {
+      return `€ ${num.toFixed(2)}`;
+    } else {
+      return `Rs ${Math.round(num)}`;
+    }
+  };
+
+  // Format booking price (main total)
+  const formatBookingPrice = (booking) => {
+    const price = getDisplayPrice(booking);
+    const bookingCurrency = booking.currency || 'MUR';
+    return formatPrice(price, bookingCurrency);
+  };
+
+  // Format component price (package, activities, transfer)
+  const formatComponentPrice = (booking, fieldName, eurFieldName) => {
+    const price = getComponentPrice(booking, fieldName, eurFieldName);
+    const bookingCurrency = booking.currency || 'MUR';
+    return formatPrice(price, bookingCurrency);
+  };
+
+  // Currency badge component
+  const CurrencyBadge = ({ booking }) => {
+    const bookingCurrency = booking.currency || 'MUR';
+    const styles = {
+      MUR: 'bg-green-100 text-green-800 border border-green-200',
+      EUR: 'bg-blue-100 text-blue-800 border border-blue-200'
+    };
+    
+    const symbols = {
+      MUR: 'Rs',
+      EUR: '€'
+    };
+    
+    return (
+      <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${styles[bookingCurrency] || styles.MUR}`}>
+        <i className="fas fa-money-bill-wave mr-1"></i>
+        {symbols[bookingCurrency] || 'Rs'}
+      </span>
+    );
   };
 
   const handleRefresh = () => {
@@ -141,7 +192,6 @@ const MyTourPackageBookings = () => {
     pending: bookings.filter(b => b.status === 'pending').length,
     confirmed: bookings.filter(b => b.status === 'confirmed').length,
     cancelled: bookings.filter(b => b.status === 'cancelled').length,
-    //completed: bookings.filter(b => b.status === 'completed').length
   };
 
   const formatDate = (dateString) => {
@@ -159,9 +209,8 @@ const MyTourPackageBookings = () => {
     navigate(`/dashboard/tour-package-bookings/${bookingId}`);
   };
 
-  // Get image URL with debugging
+  // Get image URL
   const getImageUrl = (booking) => {
-    // Check all possible image sources
     const imageSources = [
       { source: 'tourPackage.image', value: booking.tourPackage?.image },
       { source: 'tourPackage.images[0]', value: booking.tourPackage?.images?.[0] },
@@ -171,17 +220,14 @@ const MyTourPackageBookings = () => {
     
     for (const { source, value } of imageSources) {
       if (value) {
-        console.log(`🖼️ Booking ${booking._id}: Using image from ${source}:`, 
-          value?.substring?.(0, 100) || value);
         return value;
       }
     }
     
-    console.log(`🖼️ Booking ${booking._id}: No image found from any source`);
     return null;
   };
 
-  // Image component with detailed error handling
+  // Image component
   const BookingImage = ({ booking }) => {
     const imageUrl = getImageUrl(booking);
     const [hasError, setHasError] = useState(false);
@@ -211,27 +257,7 @@ const MyTourPackageBookings = () => {
         src={imageUrl}
         alt={booking.tourPackage?.title || "Tour Package"}
         className="w-full h-full object-cover"
-        onLoad={() => console.log(`✅ Image loaded for booking ${booking._id}: ${imageUrl.substring(0, 50)}...`)}
-        onError={(e) => {
-          console.error(`❌ Image failed to load for booking ${booking._id}`);
-          console.error('Image URL:', imageUrl);
-          console.error('Image type:', typeof imageUrl);
-          console.error('Image length:', imageUrl?.length);
-          
-          // Try to fix common issues
-          const src = e.target.src;
-          
-          // If it's a relative path without leading slash
-          if (src && !src.startsWith('http') && !src.startsWith('data:') && !src.startsWith('/')) {
-            console.log('🔄 Trying to fix relative path by adding /');
-            e.target.src = `/${src}`;
-          } else if (src && src.startsWith('http')) {
-            console.log('🔄 Trying to add cache busting parameter');
-            e.target.src = `${src}${src.includes('?') ? '&' : '?'}t=${Date.now()}`;
-          } else {
-            setHasError(true);
-          }
-        }}
+        onError={() => setHasError(true)}
         loading="lazy"
       />
     );
@@ -258,7 +284,6 @@ const MyTourPackageBookings = () => {
                     ? tab === 'pending' ? 'border-yellow-500 text-yellow-600'
                       : tab === 'confirmed' ? 'border-green-500 text-green-600'
                       : tab === 'cancelled' ? 'border-red-500 text-red-600'
-                      //: tab === 'completed' ? 'border-blue-500 text-blue-600'
                       : 'border-purple-500 text-purple-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
@@ -294,84 +319,141 @@ const MyTourPackageBookings = () => {
           /* Booking List */
           filteredBookings.length > 0 ? (
             <div className="space-y-6">
-              {filteredBookings.map(booking => (
-                <div key={booking._id} className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition">
-                  <div className="flex flex-col md:flex-row">
-                    {/* Image Section */}
-                    <div className="md:w-1/4 h-48 md:h-64 relative">
-                      <BookingImage booking={booking} />
-                      
-                      <div className="absolute top-3 right-3">
-                        <BookingStatusBadge status={booking.status} />
-                      </div>
-                    </div>
-
-                    {/* Details */}
-                    <div className="p-6 flex-1 flex flex-col">
-                      <div className="mb-4">
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">{booking.tourPackage?.title || booking.packageId?.title || "Unknown Package"}</h3>
-                        <div className="flex items-center text-gray-600 mb-1">
-                          <svg className="w-4 h-4 mr-2 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                          </svg>
-                          {/*<span className="text-sm">{booking.tourPackage?.location || booking.packageId?.location || "Location not available"}</span>*/}
+              {filteredBookings.map(booking => {
+                const displayPrice = formatBookingPrice(booking);
+                const packagePrice = formatComponentPrice(booking, 'packagePrice', 'packagePriceEur');
+                const activitiesPrice = formatComponentPrice(booking, 'activitiesTotal', 'activitiesTotalEur');
+                const transferPrice = formatComponentPrice(booking, 'transferTotal', 'transferTotalEur');
+                
+                // Calculate if any activities or transfers were included
+                const hasActivities = getComponentPrice(booking, 'activitiesTotal', 'activitiesTotalEur') > 0;
+                const hasTransfer = getComponentPrice(booking, 'transferTotal', 'transferTotalEur') > 0;
+                
+                return (
+                  <div key={booking._id} className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition">
+                    <div className="flex flex-col md:flex-row">
+                      {/* Image Section */}
+                      <div className="md:w-1/4 h-48 md:h-64 relative">
+                        <BookingImage booking={booking} />
+                        
+                        <div className="absolute top-3 right-3 flex flex-col gap-2">
+                          <BookingStatusBadge status={booking.status} />
+                          <CurrencyBadge booking={booking} />
                         </div>
-                        {(booking.tourPackage?.duration || booking.packageId?.duration) && (
-                          <div className="flex items-center text-gray-600">
-                            <svg className="w-4 h-4 mr-2 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                            </svg>
-                            <span className="text-sm">{booking.tourPackage?.duration || booking.packageId?.duration}</span>
+                      </div>
+
+                      {/* Details */}
+                      <div className="p-6 flex-1 flex flex-col">
+                        <div className="mb-4">
+                          <h3 className="text-xl font-bold text-gray-800 mb-2">{booking.tourPackage?.title || booking.packageId?.title || "Unknown Package"}</h3>
+                          <div className="flex flex-wrap gap-4 mb-2">
+                            {(booking.tourPackage?.duration || booking.packageId?.duration) && (
+                              <div className="flex items-center text-gray-600">
+                                <svg className="w-4 h-4 mr-2 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                                </svg>
+                                <span className="text-sm">{booking.tourPackage?.duration || booking.packageId?.duration}</span>
+                              </div>
+                            )}
+                            {(booking.tourPackage?.location || booking.packageId?.location) && (
+                              <div className="flex items-center text-gray-600">
+                                <svg className="w-4 h-4 mr-2 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                                </svg>
+                                <span className="text-sm">{booking.tourPackage?.location || booking.packageId?.location}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Booking Details Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                          <div>
+                            <p className="text-sm text-gray-500 mb-1">Start Date</p>
+                            <p className="font-medium text-gray-800">{formatDate(booking.startDate)}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500 mb-1">Booking Reference</p>
+                            <p className="font-medium text-gray-800">{booking.bookingReference}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500 mb-1">Guests</p>
+                            <p className="font-medium text-gray-800">{booking.guests} {booking.guests === 1 ? 'person' : 'people'}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500 mb-1">Currency</p>
+                            <p className="font-medium text-gray-800">
+                              {booking.currency === 'EUR' ? 'Euro (€)' : 'Rupee (Rs)'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500 mb-1">Package Price</p>
+                            <p className="font-medium text-gray-800">
+                              {packagePrice}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500 mb-1">Activities Total</p>
+                            <p className="font-medium text-gray-800">
+                              {activitiesPrice}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Price Breakdown */}
+                        <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+                          <p className="text-sm text-gray-500 mb-2 font-medium">Price Breakdown:</p>
+                          <div className="space-y-2">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Tour Package:</span>
+                              <span className="font-medium">{packagePrice}</span>
+                            </div>
+                            {hasActivities && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Activities:</span>
+                                <span className="font-medium">{activitiesPrice}</span>
+                              </div>
+                            )}
+                            {hasTransfer && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Airport Transfer:</span>
+                                <span className="font-medium">{transferPrice}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between pt-2 border-t border-gray-200">
+                              <span className="text-gray-800 font-semibold">Total Amount:</span>
+                              <span className="text-lg font-bold text-blue-700">{displayPrice}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Special Requests */}
+                        {booking.specialRequests && (
+                          <div className="mb-6">
+                            <p className="text-sm text-gray-500 mb-1">Special Requests</p>
+                            <p className="text-gray-700 bg-gray-50 p-3 rounded border border-gray-100">{booking.specialRequests}</p>
                           </div>
                         )}
-                      </div>
 
-                      {/* Booking Details Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                        <div>
-                          <p className="text-sm text-gray-500 mb-1">Start Date</p>
-                          <p className="font-medium text-gray-800">{formatDate(booking.startDate)}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500 mb-1">Booking Reference</p>
-                          <p className="font-medium text-gray-800">{booking.bookingReference}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500 mb-1">Guests</p>
-                          <p className="font-medium text-gray-800">{booking.guests} {booking.guests === 1 ? 'person' : 'people'}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500 mb-1">Total Price</p>
-                          <p className="font-medium text-gray-800">Rs {booking.totalPrice?.toFixed(2) || '0.00'}</p>
-                        </div>
-                      </div>
-
-                      {/* Special Requests */}
-                      {booking.specialRequests && (
-                        <div className="mb-6">
-                          <p className="text-sm text-gray-500 mb-1">Special Requests</p>
-                          <p className="text-gray-700 bg-gray-50 p-3 rounded border border-gray-100">{booking.specialRequests}</p>
-                        </div>
-                      )}
-
-                      {/* Footer Actions */}
-                      <div className="mt-auto pt-4 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center">
-                        <div className="text-sm text-gray-500 mb-3 sm:mb-0">
-                          Booked on: <span className="font-medium">{new Date(booking.createdAt).toLocaleDateString()}</span>
-                        </div>
-                        <div className="flex space-x-3">
-                          <button
-                            onClick={() => handleViewDetails(booking._id)}
-                            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
-                          >
-                            View Details
-                          </button>
+                        {/* Footer Actions */}
+                        <div className="mt-auto pt-4 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center">
+                          <div className="text-sm text-gray-500 mb-3 sm:mb-0">
+                            Booked on: <span className="font-medium">{new Date(booking.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          <div className="flex space-x-3">
+                            <button
+                              onClick={() => handleViewDetails(booking._id)}
+                              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                            >
+                              View Details
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             /* Empty State */

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { tourPackageBookingsAPI } from '../../utils/api';
+import { getCurrencySymbol, formatPrice } from '../../utils/currency'; // Import currency utilities
 
 const TourPackageBookingsList = () => {
   const [bookings, setBookings] = useState([]);
@@ -10,6 +11,7 @@ const TourPackageBookingsList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedDateFilter, setSelectedDateFilter] = useState('all');
+  const [selectedCurrency, setSelectedCurrency] = useState('all'); // NEW: Currency filter
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
@@ -54,7 +56,28 @@ const TourPackageBookingsList = () => {
     }
   };
 
-  // Filter bookings based on search, status filter and date filter
+  // Get display price based on booking currency
+  const getDisplayPrice = (booking) => {
+    if (!booking) return 0;
+    
+    const bookingCurrency = booking.currency || 'MUR';
+    
+    if (bookingCurrency === 'EUR') {
+      return booking.totalPriceEur || booking.totalPrice || 0;
+    } else {
+      return booking.totalPriceMur || booking.totalPrice || 0;
+    }
+  };
+
+  // Format price with proper currency symbol
+  const formatBookingPrice = (booking) => {
+    const price = getDisplayPrice(booking);
+    const bookingCurrency = booking.currency || 'MUR';
+    
+    return formatPrice(price, bookingCurrency);
+  };
+
+  // Filter bookings based on search, status filter, date filter, and currency filter
   const filteredBookings = bookings.filter(booking => {
     // First filter by search term
     const matchesSearch = 
@@ -66,6 +89,11 @@ const TourPackageBookingsList = () => {
     // Then filter by status
     const matchesStatus = 
       selectedStatus === 'all' || (booking.status || '').toLowerCase() === selectedStatus.toLowerCase();
+    
+    // Then filter by currency
+    const matchesCurrency = 
+      selectedCurrency === 'all' || 
+      (booking.currency || 'MUR').toUpperCase() === selectedCurrency.toUpperCase();
     
     // Then filter by date
     let matchesDate = true;
@@ -113,7 +141,7 @@ const TourPackageBookingsList = () => {
       }
     }
     
-    return matchesSearch && matchesStatus && matchesDate;
+    return matchesSearch && matchesStatus && matchesCurrency && matchesDate;
   });
   
   // Calculate pagination data
@@ -201,6 +229,32 @@ const TourPackageBookingsList = () => {
     }
     navigateToBookingDetail(bookingId);
   };
+
+  // Get currency badge
+  const getCurrencyBadge = (booking) => {
+    const bookingCurrency = booking.currency || 'MUR';
+    const styles = {
+      MUR: 'bg-green-100 text-green-800 border border-green-200',
+      EUR: 'bg-blue-100 text-blue-800 border border-blue-200'
+    };
+    
+    return (
+      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ml-1 ${styles[bookingCurrency] || styles.MUR}`}>
+        {bookingCurrency === 'MUR' ? 'Rs' : '€'}
+      </span>
+    );
+  };
+
+  // Count bookings by currency
+  const getCurrencyCounts = () => {
+    return {
+      all: bookings.length,
+      MUR: bookings.filter(b => (b.currency || 'MUR') === 'MUR').length,
+      EUR: bookings.filter(b => (b.currency || 'MUR') === 'EUR').length
+    };
+  };
+
+  const currencyCounts = getCurrencyCounts();
 
   // Pagination component
   const Pagination = () => {
@@ -316,7 +370,7 @@ const TourPackageBookingsList = () => {
       {/* Filters and Search */}
       <div className="bg-white shadow rounded-lg mb-6">
         <div className="px-4 py-5 sm:p-6">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-7">
             <div className="col-span-1 md:col-span-4">
               <label htmlFor="search" className="sr-only">Search Bookings</label>
               <div className="relative rounded-md shadow-sm">
@@ -342,10 +396,24 @@ const TourPackageBookingsList = () => {
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
               >
-                <option value="all">All Bookings</option>
-                <option value="pending">Pending</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="all">All Status ({bookings.length})</option>
+                <option value="pending">Pending ({bookings.filter(b => b.status === 'pending').length})</option>
+                <option value="confirmed">Confirmed ({bookings.filter(b => b.status === 'confirmed').length})</option>
+                <option value="cancelled">Cancelled ({bookings.filter(b => b.status === 'cancelled').length})</option>
+              </select>
+            </div>
+            
+            <div>
+              <label htmlFor="currencyFilter" className="sr-only">Filter by Currency</label>
+              <select
+                id="currencyFilter"
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                value={selectedCurrency}
+                onChange={(e) => setSelectedCurrency(e.target.value)}
+              >
+                <option value="all">All Currencies ({currencyCounts.all})</option>
+                <option value="MUR">Rupees (Rs) ({currencyCounts.MUR})</option>
+                <option value="EUR">Euros (€) ({currencyCounts.EUR})</option>
               </select>
             </div>
             
@@ -364,6 +432,57 @@ const TourPackageBookingsList = () => {
                 <option value="nextWeek">Next Week</option>
                 <option value="thisMonth">This Month</option>
               </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Summary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0 bg-blue-100 p-3 rounded-lg">
+              <i className="fas fa-receipt text-blue-600 text-lg"></i>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Total Bookings</p>
+              <p className="text-2xl font-bold text-gray-900">{bookings.length}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0 bg-green-100 p-3 rounded-lg">
+              <i className="fas fa-rupee-sign text-green-600 text-lg"></i>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Rupee Bookings</p>
+              <p className="text-2xl font-bold text-gray-900">{currencyCounts.MUR}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0 bg-yellow-100 p-3 rounded-lg">
+              <i className="fas fa-euro-sign text-yellow-600 text-lg"></i>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Euro Bookings</p>
+              <p className="text-2xl font-bold text-gray-900">{currencyCounts.EUR}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0 bg-purple-100 p-3 rounded-lg">
+              <i className="fas fa-filter text-purple-600 text-lg"></i>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Showing</p>
+              <p className="text-2xl font-bold text-gray-900">{filteredBookings.length}</p>
             </div>
           </div>
         </div>
@@ -425,7 +544,7 @@ const TourPackageBookingsList = () => {
                     Guests
                   </th>
                   <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
+                    Amount & Currency
                   </th>
                   <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -437,70 +556,99 @@ const TourPackageBookingsList = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {getCurrentPageBookings().length > 0 ? (
-                  getCurrentPageBookings().map((booking, index) => (
-                    <tr 
-                      key={booking._id} 
-                      className={`hover:bg-blue-50 transition-colors duration-150 cursor-pointer ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
-                      onClick={(e) => handleRowClick(booking._id, e)}
-                    >
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
-                        <Link to={`/admin/tour-package-bookings/${booking._id}`} onClick={(e) => e.stopPropagation()} className="hover:underline">
-                          {booking.bookingReference || `TP${booking._id.substring(0, 8)}`}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {booking.tourPackage?.title || 'Unknown Package'}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{booking.fullName || booking.user?.name}</div>
-                        <div className="text-xs text-gray-500 truncate max-w-[200px]">{booking.email || booking.user?.email}</div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{formatDate(booking.startDate)}</div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900 text-center">{booking.guests || 1}</div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-gray-900">
-                          RS {booking.totalPrice || (booking.tourPackage?.price * (booking.guests || 1)).toFixed(2)}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${
-                          (booking.status || '').toLowerCase() === 'confirmed' 
-                            ? 'bg-green-100 text-green-800 border-green-200' 
-                            : (booking.status || '').toLowerCase() === 'pending'
-                              ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                              : (booking.status || '').toLowerCase() === 'cancelled'
-                                ? 'bg-red-100 text-red-800 border-red-200'
-                                : 'bg-gray-100 text-gray-800 border-gray-200'
-                        }`}>
-                          <span className={`h-1.5 w-1.5 rounded-full mr-1.5 ${
-                            (booking.status || '').toLowerCase() === 'confirmed' ? 'bg-green-600' : 
-                            (booking.status || '').toLowerCase() === 'pending' ? 'bg-yellow-600' : 
-                            (booking.status || '').toLowerCase() === 'cancelled' ? 'bg-red-600' : 'bg-gray-600'
-                          }`}></span>
-                          {(booking.status || 'Unknown').charAt(0).toUpperCase() + (booking.status || 'Unknown').slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        {(booking.status || '').toLowerCase() === 'pending' && (
-                          <div className="flex justify-end space-x-1">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleStatusChange(booking._id, 'confirmed');
-                              }}
-                              className="inline-flex items-center px-2 py-1 rounded text-xs text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
-                            >
-                              <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                              Confirm
-                            </button>
+                  getCurrentPageBookings().map((booking, index) => {
+                    const displayPrice = formatBookingPrice(booking);
+                    const bookingCurrency = booking.currency || 'MUR';
+                    
+                    return (
+                      <tr 
+                        key={booking._id} 
+                        className={`hover:bg-blue-50 transition-colors duration-150 cursor-pointer ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+                        onClick={(e) => handleRowClick(booking._id, e)}
+                      >
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
+                          <Link to={`/admin/tour-package-bookings/${booking._id}`} onClick={(e) => e.stopPropagation()} className="hover:underline">
+                            {booking.bookingReference || `TP${booking._id.substring(0, 8)}`}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {booking.tourPackage?.title || 'Unknown Package'}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{booking.fullName || booking.user?.name}</div>
+                          <div className="text-xs text-gray-500 truncate max-w-[200px]">{booking.email || booking.user?.email}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{formatDate(booking.startDate)}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900 text-center">{booking.guests || 1}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="text-sm font-semibold text-gray-900">
+                              {displayPrice}
+                            </div>
+                            {getCurrencyBadge(booking)}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${
+                              (booking.status || '').toLowerCase() === 'confirmed' 
+                                ? 'bg-green-100 text-green-800 border-green-200' 
+                                : (booking.status || '').toLowerCase() === 'pending'
+                                  ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                  : (booking.status || '').toLowerCase() === 'cancelled'
+                                    ? 'bg-red-100 text-red-800 border-red-200'
+                                    : 'bg-gray-100 text-gray-800 border-gray-200'
+                            }`}>
+                              <span className={`h-1.5 w-1.5 rounded-full mr-1.5 ${
+                                (booking.status || '').toLowerCase() === 'confirmed' ? 'bg-green-600' : 
+                                (booking.status || '').toLowerCase() === 'pending' ? 'bg-yellow-600' : 
+                                (booking.status || '').toLowerCase() === 'cancelled' ? 'bg-red-600' : 'bg-gray-600'
+                              }`}></span>
+                              {(booking.status || 'Unknown').charAt(0).toUpperCase() + (booking.status || 'Unknown').slice(1)}
+                            </span>
+                            {bookingCurrency === 'EUR' && (
+                              <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                <i className="fas fa-euro-sign mr-0.5"></i>
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          {(booking.status || '').toLowerCase() === 'pending' && (
+                            <div className="flex justify-end space-x-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusChange(booking._id, 'confirmed');
+                                }}
+                                className="inline-flex items-center px-2 py-1 rounded text-xs text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
+                              >
+                                <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Confirm
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusChange(booking._id, 'cancelled');
+                                }}
+                                className="inline-flex items-center px-2 py-1 rounded text-xs text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
+                              >
+                                <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Cancel
+                              </button>
+                            </div>
+                          )}
+                          {(booking.status || '').toLowerCase() === 'confirmed' && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -513,43 +661,39 @@ const TourPackageBookingsList = () => {
                               </svg>
                               Cancel
                             </button>
-                          </div>
-                        )}
-                        {(booking.status || '').toLowerCase() === 'confirmed' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusChange(booking._id, 'cancelled');
-                            }}
-                            className="inline-flex items-center px-2 py-1 rounded text-xs text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
-                          >
-                            <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            Cancel
-                          </button>
-                        )}
-                        {(booking.status || '').toLowerCase() === 'cancelled' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusChange(booking._id, 'confirmed');
-                            }}
-                            className="inline-flex items-center px-2 py-1 rounded text-xs text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
-                          >
-                            <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            Reactivate
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                          )}
+                          {(booking.status || '').toLowerCase() === 'cancelled' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStatusChange(booking._id, 'confirmed');
+                              }}
+                              className="inline-flex items-center px-2 py-1 rounded text-xs text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
+                            >
+                              <svg className="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                              Reactivate
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan="8" className="px-4 py-4 text-center text-sm text-gray-500">
-                      No tour package bookings found.
+                    <td colSpan="8" className="px-4 py-8 text-center">
+                      <div className="flex flex-col items-center">
+                        <svg className="h-12 w-12 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <p className="text-gray-500 mb-2">No tour package bookings found</p>
+                        <p className="text-sm text-gray-400">
+                          {searchTerm || selectedStatus !== 'all' || selectedCurrency !== 'all' || selectedDateFilter !== 'all' 
+                            ? 'Try adjusting your search or filters' 
+                            : 'No bookings have been made yet'}
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 )}

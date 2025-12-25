@@ -1,22 +1,60 @@
 // src/pages/TourPackageBookingConfirmation.jsx
 import React, { useState, useEffect, useMemo } from 'react';
-import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { tourPackageBookingsAPI, tourPackagesAPI } from '../../utils/api';
+
+// Extract currency logic into a separate hook for consistency
+const useBookingCurrency = () => {
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+
+  return useMemo(() => {
+    // Priority: location state > URL param > localStorage > default
+    let currency = location.state?.currency;
+
+    if (!currency) {
+      currency =
+        searchParams.get('currency') ||
+        localStorage.getItem('preferredCurrency') ||
+        'MUR';
+    }
+
+    // Normalize ALL cases to 'MUR' or 'EUR' (uppercase)
+    const normalized = currency.toString().toUpperCase().trim();
+
+    if (normalized === 'EUR' || normalized === 'EURO' || normalized === '€') {
+      console.log('useBookingCurrency - Normalized to EUR');
+      return 'EUR';
+    } else if (
+      normalized === 'RS' ||
+      normalized === 'MUR' ||
+      normalized === 'RUPEES' ||
+      normalized === '₹'
+    ) {
+      console.log('useBookingCurrency - Normalized to MUR');
+      return 'MUR';
+    } else {
+      console.log('useBookingCurrency - Defaulting to MUR');
+      return 'MUR';
+    }
+  }, [location.state, searchParams]);
+};
 
 const TourPackageBookingConfirmation = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { id: tourId } = useParams();
-  const [searchParams] = useSearchParams();
   const { currentUser } = useAuth();
 
-  // Get user currency preference
-  const userCurrency = useMemo(() => 
-    searchParams.get('currency') || 
-    localStorage.getItem('preferredCurrency') || 
-    'rs'
-  , [searchParams]);
+  // Use the custom hook for consistent currency handling
+  const bookingCurrency = useBookingCurrency();
+  const isEuro = bookingCurrency === 'EUR';
 
   // Extract state data
   const {
@@ -26,9 +64,14 @@ const TourPackageBookingConfirmation = () => {
     activitiesData = [],
     includeTransfer = false,
     transferDetails = null,
-    packageTotal = 0,
+    totalPrice = 0,
+    basePrice = 0,
     activitiesTotal = 0,
     transferTotal = 0,
+    packageTotal = 0,
+    currency: stateCurrency,
+    currencySymbol: stateCurrencySymbol,
+    tourPrices,
   } = location.state || {};
 
   const [tour, setTour] = useState(null);
@@ -50,7 +93,7 @@ const TourPackageBookingConfirmation = () => {
     if (selectedDate) {
       try {
         let dateObj;
-        
+
         if (typeof selectedDate === 'string') {
           if (selectedDate.includes(',')) {
             setFormattedDate(selectedDate);
@@ -73,15 +116,14 @@ const TourPackageBookingConfirmation = () => {
           return;
         }
 
-        const displayString = dateObj.toLocaleDateString('en-US', { 
-          weekday: 'short', 
-          month: 'short', 
+        const displayString = dateObj.toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
           day: 'numeric',
-          year: 'numeric'
+          year: 'numeric',
         });
-        
+
         setFormattedDate(displayString);
-        
       } catch (error) {
         setFormattedDate(String(selectedDate));
       }
@@ -91,10 +133,10 @@ const TourPackageBookingConfirmation = () => {
   // Get date for submission
   const getDateForSubmission = () => {
     if (!selectedDate) return '';
-    
+
     try {
       let dateObj;
-      
+
       if (typeof selectedDate === 'string') {
         if (selectedDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
           return selectedDate;
@@ -110,15 +152,15 @@ const TourPackageBookingConfirmation = () => {
       } else {
         return String(selectedDate);
       }
-      
+
       if (isNaN(dateObj.getTime())) {
         return String(selectedDate);
       }
-      
+
       const year = dateObj.getFullYear();
       const month = String(dateObj.getMonth() + 1).padStart(2, '0');
       const day = String(dateObj.getDate()).padStart(2, '0');
-      
+
       return `${year}-${month}-${day}`;
     } catch (error) {
       return String(selectedDate);
@@ -132,26 +174,48 @@ const TourPackageBookingConfirmation = () => {
     }
   }, [selectedDate, navigate]);
 
-  // Fetch tour details
+  // Fetch tour details with proper currency handling
   useEffect(() => {
     const fetchTourDetails = async () => {
       if (!tourId) return;
-      
+
       try {
         setFetchingTour(true);
-        const params = {};
-        if (userCurrency) params.currency = userCurrency;
-        
-        const response = await tourPackagesAPI.getById(tourId, params);
+
+        const response = await tourPackagesAPI.getById(tourId);
         const tourData = response?.data?.data;
-        
+
         if (tourData) {
-          setTour({
+          // Map database fields to consistent names
+          const mappedTour = {
             ...tourData,
-            priceRs: tourData.priceRs || tourData.price || 0,
-            priceEuro: tourData.priceEuro || tourData.price || 0,
-            currencyType: tourData.currencyType || 'rs-only',
+            priceMUR: parseFloat(
+              tourData.priceMUR || tourData.priceRs || tourData.price || 0
+            ),
+            priceEUR: parseFloat(
+              tourData.priceEUR || tourData.priceEur || tourData.priceEuro || 0
+            ),
+            currencyType:
+              tourData.currencyType ||
+              tourData.supportsCurrency ||
+              (tourData.priceEUR > 0 && tourData.priceMUR > 0
+                ? 'both'
+                : tourData.priceEUR > 0
+                ? 'eur-only'
+                : 'rs-only'),
+          };
+
+          console.log('Tour data loaded for confirmation:', {
+            id: mappedTour._id,
+            title: mappedTour.title,
+            priceMUR: mappedTour.priceMUR,
+            priceEUR: mappedTour.priceEUR,
+            currencyType: mappedTour.currencyType,
+            bookingCurrency,
+            hasEUR: mappedTour.priceEUR > 0,
           });
+
+          setTour(mappedTour);
         }
       } catch (err) {
         console.error('Error fetching tour:', err);
@@ -160,204 +224,375 @@ const TourPackageBookingConfirmation = () => {
         setFetchingTour(false);
       }
     };
-    
+
     fetchTourDetails();
-  }, [tourId, userCurrency]);
+  }, [tourId, bookingCurrency]);
 
-  // Helper functions
-  const getPriceInCurrency = useMemo(() => (priceRs, priceEuro, currencyType) => {
-    if (userCurrency === 'euro') {
-      return priceEuro || priceRs || 0;
-    } else {
-      return priceRs || 0;
-    }
-  }, [userCurrency]);
+  // Memoized currency helpers - consistent with TourPackageListItem
+  const currencyHelpers = useMemo(() => {
+    const normalizedCurrency = bookingCurrency;
+    const isEuroCurrency = normalizedCurrency === 'EUR';
 
-  const formatPrice = useMemo(() => (price) => {
-    const num = parseFloat(price) || 0;
-    if (userCurrency === 'euro') {
-      return `€ ${num.toFixed(2)}`;
-    } else {
-      return `Rs ${Math.round(num).toLocaleString()}`;
-    }
-  }, [userCurrency]);
+    // Get display price function similar to TourPackageListItem
+    const getDisplayPrice = (tourData) => {
+      if (!tourData)
+        return { display: '', price: 0, currency: normalizedCurrency };
 
-  const getCurrencyDisplayName = useMemo(() => () => {
-    return userCurrency === 'euro' ? 'EUR (€)' : 'MUR (Rs)';
-  }, [userCurrency]);
+      const priceMUR = parseFloat(
+        tourData.priceMUR || tourData.priceRs || tourData.price || 0
+      );
+      const priceEUR = parseFloat(
+        tourData.priceEUR || tourData.priceEur || tourData.priceEuro || 0
+      );
+      const currencyType =
+        tourData.currencyType || tourData.supportsCurrency || 'rs-only';
 
-  const getCurrencyBadgeInfo = useMemo(() => (currencyType) => {
-    switch (currencyType) {
-      case 'both':
-        return {
-          bg: 'bg-green-100',
-          text: 'text-green-800',
-          label: 'Both Rs & Euro',
-        };
-      case 'rs-only':
-        return {
-          bg: 'bg-blue-100',
-          text: 'text-blue-800',
-          label: 'Rs Only',
-        };
-      case 'euro-only':
-        return {
-          bg: 'bg-yellow-100',
-          text: 'text-yellow-800',
-          label: 'Euro Only',
-        };
-      default:
-        return {
-          bg: 'bg-blue-100',
-          text: 'text-blue-800',
-          label: 'Rs Only',
-        };
+      // Determine available currencies
+      const isMurAvailable =
+        currencyType === 'both' ||
+        currencyType === 'rs-only' ||
+        currencyType === 'mur-only';
+      const isEurAvailable =
+        currencyType === 'both' ||
+        currencyType === 'eur-only' ||
+        currencyType === 'euro-only';
+
+      let displayPrice, displayCurrency;
+
+      if (isEuroCurrency && isEurAvailable && priceEUR > 0) {
+        displayPrice = priceEUR;
+        displayCurrency = 'EUR';
+      } else if (isMurAvailable && priceMUR > 0) {
+        displayPrice = priceMUR;
+        displayCurrency = 'MUR';
+      } else if (isEurAvailable && priceEUR > 0) {
+        // Fallback to EUR if MUR not available
+        displayPrice = priceEUR;
+        displayCurrency = 'EUR';
+      } else {
+        displayPrice = 0;
+        displayCurrency = 'MUR';
+      }
+
+      // Format display string
+      let display = '';
+      if (displayCurrency === 'EUR') {
+        display = `€ ${displayPrice.toFixed(2)}`;
+      } else {
+        display = `Rs ${Math.round(displayPrice)}`;
+      }
+
+      return {
+        display,
+        price: displayPrice,
+        currency: displayCurrency,
+        hasAlternative:
+          isMurAvailable && isEurAvailable && priceMUR > 0 && priceEUR > 0,
+        alternativeCurrency: isEuroCurrency ? 'MUR' : 'EUR',
+        alternativePrice: isEuroCurrency ? priceMUR : priceEUR,
+      };
     };
-  }, []);
 
-  // Calculate prices
+    const formatCurrency = (amount, currencyCode = normalizedCurrency) => {
+      const num = parseFloat(amount) || 0;
+      if (currencyCode === 'EUR') {
+        return `€ ${num.toFixed(2)}`;
+      } else {
+        return `Rs ${Math.round(num)}`;
+      }
+    };
+
+    const getCurrencyDisplayName = () =>
+      normalizedCurrency === 'EUR' ? 'Euros (€)' : 'Mauritian Rupees (Rs)';
+
+    const getTourPrice = (tourData) => {
+      if (!tourData) return 0;
+      const priceInfo = getDisplayPrice(tourData);
+      return priceInfo.price;
+    };
+
+    const getActivityPrice = (activity) => {
+      if (!activity) return 0;
+      const duration =
+        activity.duration || activity.durationType?.toLowerCase() || 'halfDay';
+      const supportsDuration = activity.halfDayPrice || activity.fullDayPrice;
+
+      if (supportsDuration) {
+        // For EUR bookings
+        if (isEuroCurrency) {
+          if (duration.includes('half')) {
+            // Use EUR-specific price or fallback to generic price
+            return parseFloat(
+              activity.halfDayPriceEur ||
+                activity.halfDayPriceEUR ||
+                activity.halfDayPrice ||
+                0
+            );
+          }
+          return parseFloat(
+            activity.fullDayPriceEur ||
+              activity.fullDayPriceEUR ||
+              activity.fullDayPrice ||
+              0
+          );
+        }
+        // For MUR bookings
+        else {
+          if (duration.includes('half')) {
+            return parseFloat(
+              activity.halfDayPriceMUR ||
+                activity.halfDayPriceRs ||
+                activity.halfDayPrice ||
+                0
+            );
+          }
+          return parseFloat(
+            activity.fullDayPriceMUR ||
+              activity.fullDayPriceRs ||
+              activity.fullDayPrice ||
+              0
+          );
+        }
+      } else {
+        // No duration selection - use base price
+        return isEuroCurrency
+          ? parseFloat(
+              activity.priceEur || activity.priceEUR || activity.price || 0
+            )
+          : parseFloat(
+              activity.priceMUR || activity.priceRs || activity.price || 0
+            );
+      }
+    };
+
+    const getCurrencyBadgeInfo = (tourData) => {
+      if (!tourData)
+        return {
+          bg: 'bg-blue-100',
+          text: 'text-blue-800',
+          label: 'MUR Only',
+          icon: 'fas fa-rupee-sign',
+        };
+
+      const currencyType = tourData.currencyType || tourData.supportsCurrency;
+      const priceMUR = parseFloat(
+        tourData.priceMUR || tourData.priceRs || tourData.price || 0
+      );
+      const priceEUR = parseFloat(
+        tourData.priceEUR || tourData.priceEur || tourData.priceEuro || 0
+      );
+
+      // Similar logic to TourPackageListItem
+      if (currencyType === 'both' && priceMUR > 0 && priceEUR > 0) {
+        return {
+          bg: 'bg-gradient-to-r from-green-100 to-emerald-100',
+          text: 'text-green-800',
+          label: 'Dual Currency',
+          icon: 'fas fa-exchange-alt',
+        };
+      } else if (
+        (currencyType === 'eur-only' || currencyType === 'euro-only') &&
+        priceEUR > 0
+      ) {
+        return {
+          bg: 'bg-gradient-to-r from-yellow-100 to-amber-100',
+          text: 'text-yellow-800',
+          label: '€ Only',
+          icon: 'fas fa-euro-sign',
+        };
+      } else {
+        return {
+          bg: 'bg-gradient-to-r from-blue-100 to-blue-200',
+          text: 'text-blue-800',
+          label: 'Rs Only',
+          icon: 'fas fa-rupee-sign',
+        };
+      }
+    };
+
+    const getCurrencySymbol = () => (isEuroCurrency ? '€' : 'Rs');
+
+    return {
+      currency: normalizedCurrency,
+      isEuro: isEuroCurrency,
+      currencySymbol: getCurrencySymbol(),
+      formatCurrency,
+      getCurrencyDisplayName,
+      getDisplayPrice,
+      getTourPrice,
+      getActivityPrice,
+      getCurrencyBadgeInfo,
+    };
+  }, [bookingCurrency]);
+
+  // Calculate prices based on state or recalculate
   useEffect(() => {
     if (!tour) return;
 
-    // Use passed totals or calculate
-    let finalPackageTotal = packageTotal || 0;
-    let finalActivitiesTotal = activitiesTotal || 0;
-    let finalTransferTotal = transferTotal || 0;
+    let finalPackageTotal, finalActivitiesTotal, finalTransferTotal;
 
-    // Calculate if needed
-    if (!packageTotal || !activitiesTotal) {
-      const tourPriceInCurrency = getPriceInCurrency(
-        tour.priceRs,
-        tour.priceEuro,
-        tour.currencyType
-      );
-      finalPackageTotal = parseFloat(tourPriceInCurrency) || 0;
+    // Use state values if available, otherwise calculate
+    if (totalPrice > 0) {
+      // We have state values, use them
+      finalPackageTotal = packageTotal || basePrice * guests || 0;
+      finalActivitiesTotal = activitiesTotal || 0;
+      finalTransferTotal = transferTotal || 0;
 
+      console.log('Using state prices:', {
+        totalPrice,
+        packageTotal: finalPackageTotal,
+        activitiesTotal: finalActivitiesTotal,
+        transferTotal: finalTransferTotal,
+        currency: bookingCurrency,
+      });
+    } else {
+      // Calculate from scratch
+      const tourPrice = currencyHelpers.getTourPrice(tour);
+      finalPackageTotal = tourPrice * guests;
+
+      // Calculate activities total
       if (activitiesData && activitiesData.length > 0) {
         finalActivitiesTotal = activitiesData.reduce((sum, activity) => {
-          const activityPrice = parseFloat(activity.price) || 0;
-          return sum + activityPrice;
+          const activityPrice = currencyHelpers.getActivityPrice(activity);
+          const quantity = activity.quantity || guests;
+          return sum + activityPrice * quantity;
         }, 0);
       } else if (selectedActivities && selectedActivities.length > 0) {
         finalActivitiesTotal = selectedActivities.reduce((sum, activity) => {
-          const activityPrice = getPriceInCurrency(
-            activity.priceRs || activity.price,
-            activity.priceEuro,
-            activity.currencyType
-          );
-          return sum + activityPrice;
+          const activityPrice = currencyHelpers.getActivityPrice(activity);
+          const quantity = activity.quantity || guests;
+          return sum + activityPrice * quantity;
         }, 0);
+      } else {
+        finalActivitiesTotal = 0;
       }
 
+      // Calculate transfer total
       if (includeTransfer && transferDetails) {
-        const transferPrice = getPriceInCurrency(
-          transferDetails.transferPrice,
-          transferDetails.transferPriceEuro,
-          transferDetails.currencyType
-        );
-        finalTransferTotal = parseFloat(transferPrice) || 0;
+        finalTransferTotal = parseFloat(transferDetails.transferPrice) || 0;
+      } else {
+        finalTransferTotal = 0;
       }
+
+      console.log('Calculated prices:', {
+        tourPrice,
+        finalPackageTotal,
+        finalActivitiesTotal,
+        finalTransferTotal,
+        currency: bookingCurrency,
+      });
     }
 
-    const grandTotal = finalPackageTotal + finalActivitiesTotal + finalTransferTotal;
-    
+    const grandTotal =
+      finalPackageTotal + finalActivitiesTotal + finalTransferTotal;
+
     setCalculatedPrices({
       packageTotal: finalPackageTotal,
       activitiesTotal: finalActivitiesTotal,
       transferTotal: finalTransferTotal,
       grandTotal,
-      formattedGrandTotal: formatPrice(grandTotal),
+      formattedGrandTotal: currencyHelpers.formatCurrency(grandTotal),
       guests: parseInt(guests) || 1,
+      currency: bookingCurrency,
     });
-  }, [tour, selectedActivities, activitiesData, includeTransfer, transferDetails, userCurrency, packageTotal, activitiesTotal, transferTotal, getPriceInCurrency, formatPrice, guests]);
+  }, [
+    tour,
+    selectedActivities,
+    activitiesData,
+    includeTransfer,
+    transferDetails,
+    guests,
+    currencyHelpers,
+    totalPrice,
+    packageTotal,
+    activitiesTotal,
+    transferTotal,
+    basePrice,
+    bookingCurrency,
+  ]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError('');
 
-    try {
-      const submissionDate = getDateForSubmission();
+  try {
+    const submissionDate = getDateForSubmission();
+    
+    // Prepare booking data
+    const bookingData = {
+      tourPackageId: tourId,  // Make sure this is tourPackageId (not tourPackage)
+      startDate: submissionDate,
+      guests: parseInt(guests) || 1,
+      fullName: formData.fullName || currentUser?.name || '',
+      email: formData.email || currentUser?.email || '',
+      phone: `${formData.countryCode}${formData.phone}`,
+      specialRequests: formData.specialRequests || '',
+      // Use calculatedPrices from state
+      totalPrice: calculatedPrices?.grandTotal || 0,
+      packagePrice: calculatedPrices?.packageTotal || 0,
+      activitiesTotal: calculatedPrices?.activitiesTotal || 0,
+      transferTotal: calculatedPrices?.transferTotal || 0,
+      currency: bookingCurrency,
       
-      const bookingData = {
-        tourPackage: tourId,
-        user: currentUser._id,
-        guests: parseInt(guests) || 1,
-        startDate: submissionDate,
-        fullName: formData.fullName || currentUser.name,
-        email: formData.email || currentUser.email,
-        phone: `${formData.countryCode}${formData.phone}`,
-        specialRequests: formData.specialRequests || '',
-        status: 'pending',
-        bookingDate: new Date().toISOString().split('T')[0],
-        currency: userCurrency === 'euro' ? 'EUR' : 'MUR',
-        currencyType: tour?.currencyType || 'rs-only',
-        totalPrice: calculatedPrices?.grandTotal || 0,
-        packagePrice: calculatedPrices?.packageTotal || 0,
-        activitiesTotal: calculatedPrices?.activitiesTotal || 0,
-        transferTotal: calculatedPrices?.transferTotal || 0,
-      };
-
-      // Activities data
-      if (activitiesData && activitiesData.length > 0) {
-        bookingData.selectedActivities = activitiesData.map((activity) => ({
-          activity: activity.activity || activity._id,
-          title: activity.title,
-          price: activity.price || 0,
-          quantity: activity.quantity || 1,
-          duration: activity.duration || null,
-          durationType: activity.durationType || null,
-          currency: bookingData.currency,
-        }));
-      } else if (selectedActivities && selectedActivities.length > 0) {
-        bookingData.selectedActivities = selectedActivities.map((activity) => ({
-          activity: activity._id || activity.activity,
-          title: activity.title,
-          price: getPriceInCurrency(activity.priceRs || activity.price, activity.priceEuro, activity.currencyType) || 0,
-          quantity: guests,
-          currency: bookingData.currency,
-        }));
-      }
-
-      // Transfer data
-      if (includeTransfer && transferDetails) {
-        bookingData.airportTransfer = {
+      // Activities data - include price information
+      selectedActivities: (activitiesData.length > 0 ? activitiesData : selectedActivities).map(activity => ({
+        activityId: activity._id || activity.activityId,
+        title: activity.title,
+        price: isEuro ? 
+          (activity.priceEur || activity.priceEUR || activity.price || 0) : 
+          (activity.priceMUR || activity.priceRs || activity.price || 0),
+        priceEur: isEuro ? 
+          (activity.priceEur || activity.priceEUR || activity.price || 0) : 0,
+        quantity: activity.quantity || guests,
+        duration: activity.duration || null,
+        durationType: activity.durationType || null
+      })),
+      
+      // Transfer data if included
+      ...(includeTransfer && transferDetails && {
+        airportTransferBooking: {
           transferId: transferDetails.transferId || transferDetails._id,
           transferName: transferDetails.transferName,
-          transferCode: transferDetails.transferCode,
-          vehicleType: transferDetails.vehicleType,
-          tripType: transferDetails.tripType,
-          transferType: transferDetails.transferType,
-          arrivalDate: transferDetails.arrivalDate,
-          arrivalTime: transferDetails.arrivalTime,
-          departureDate: transferDetails.departureDate || '',
-          departureTime: transferDetails.departureTime || '',
           transferPrice: calculatedPrices?.transferTotal || 0,
-          currency: bookingData.currency,
-        };
-      }
+          currency: bookingCurrency,
+          ...transferDetails
+        }
+      })
+    };
 
-      const response = await tourPackageBookingsAPI.createWithActivities(bookingData);
+    console.log('📤 Sending booking data to /with-activities endpoint:', {
+      totalPrice: bookingData.totalPrice,
+      activitiesTotal: bookingData.activitiesTotal,
+      transferTotal: bookingData.transferTotal,
+      selectedActivitiesCount: bookingData.selectedActivities.length,
+      endpoint: '/api/v1/tour-package-bookings/with-activities'
+    });
 
-      if (response.data.success) {
-        navigate('/dashboard/tour-package-bookings', {
-          state: {
-            bookingReference: response.data.data.bookingReference,
-            success: true,
-            currency: userCurrency,
-            totalAmount: calculatedPrices?.grandTotal,
-          },
-        });
-      } else {
-        setError(response.data.message || 'Failed to create booking');
-      }
-    } catch (err) {
-      console.error('Error:', err);
-      setError(err.response?.data?.message || 'An error occurred. Please try again.');
-    } finally {
-      setLoading(false);
+    // IMPORTANT: Call the correct endpoint
+    const response = await tourPackageBookingsAPI.createWithActivities(bookingData);
+    
+    if (response?.data?.success) {
+      navigate('/dashboard/tour-package-bookings', {
+        state: {
+          bookingReference: response.data.data.bookingReference,
+          success: true,
+          currency: bookingCurrency,
+          totalAmount: calculatedPrices?.grandTotal,
+        },
+      });
+    } else {
+      setError(response.data.message || 'Failed to create booking');
     }
-  };
+  } catch (err) {
+    console.error('Error creating booking:', err);
+    setError(
+      err.response?.data?.message || 'An error occurred. Please try again.'
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleChange = (e) => {
     setFormData({
@@ -382,9 +617,13 @@ const TourPackageBookingConfirmation = () => {
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 sm:p-6">
           <div className="flex items-center mb-4">
             <i className="fas fa-exclamation-circle text-red-500 text-xl mr-3"></i>
-            <h2 className="text-lg sm:text-xl font-bold text-red-700">Booking Information Missing</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-red-700">
+              Booking Information Missing
+            </h2>
           </div>
-          <p className="text-red-600 mb-4">Please go back and select your booking options.</p>
+          <p className="text-red-600 mb-4">
+            Please go back and select your booking options.
+          </p>
           <button
             onClick={() => navigate(-1)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
@@ -396,7 +635,8 @@ const TourPackageBookingConfirmation = () => {
     );
   }
 
-  const currencyBadge = getCurrencyBadgeInfo(tour.currencyType);
+  const priceInfo = currencyHelpers.getDisplayPrice(tour);
+  const currencyBadge = currencyHelpers.getCurrencyBadgeInfo(tour);
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -405,28 +645,58 @@ const TourPackageBookingConfirmation = () => {
         <div className="mb-6 bg-white rounded-xl shadow-sm p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-blue-800 mb-1">Complete Your Booking</h1>
-              <p className="text-gray-600 text-sm sm:text-base">Review details and confirm booking</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-blue-800 mb-1">
+                Complete Your Booking
+              </h1>
+              <p className="text-gray-600 text-sm sm:text-base">
+                Review details and confirm booking
+              </p>
             </div>
             <div className="flex items-center bg-blue-50 px-3 py-2 rounded-lg">
-              <i className="fas fa-money-bill-wave text-blue-500 mr-2 text-sm"></i>
+              <i
+                className={`fas fa-money-bill-wave mr-2 text-sm ${
+                  bookingCurrency === 'EUR'
+                    ? 'text-yellow-500'
+                    : 'text-green-500'
+                }`}
+              ></i>
               <span className="text-sm font-medium text-blue-700">
-                {getCurrencyDisplayName()}
+                {bookingCurrency === 'EUR'
+                  ? 'Euros (€)'
+                  : 'Mauritian Rupees (Rs)'}
               </span>
             </div>
           </div>
-          
+
           <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm">
             <div className="flex items-start">
               <i className="fas fa-info-circle text-blue-500 mt-0.5 mr-2"></i>
               <div>
-                <p className="text-blue-800 font-medium">Prices shown in {userCurrency === 'euro' ? 'Euros (€)' : 'Mauritian Rupees (Rs)'}</p>
-                <p className="text-blue-600 mt-1">
-                  <i className="fas fa-users mr-1"></i>
-                  For {guests} guest(s) • 
-                  <i className="far fa-calendar ml-2 mr-1"></i>
-                  {formattedDate}
+                <p className="text-blue-800 font-medium">
+                  Prices shown in{' '}
+                  {bookingCurrency === 'EUR'
+                    ? 'Euros (€)'
+                    : 'Mauritian Rupees (Rs)'}
+                  {currencyBadge.label && (
+                    <span
+                      className={`ml-2 px-2 py-1 text-xs rounded-full ${currencyBadge.bg} ${currencyBadge.text}`}
+                    >
+                      <i
+                        className={`${
+                          currencyBadge.icon || 'fas fa-money-bill'
+                        } mr-1`}
+                      ></i>
+                      {currencyBadge.label}
+                    </span>
+                  )}
                 </p>
+                {priceInfo.hasAlternative && (
+                  <p className="text-blue-600 text-xs mt-1">
+                    <i className="fas fa-exchange-alt mr-1"></i>
+                    Also available in{' '}
+                    {priceInfo.alternativeCurrency === 'EUR' ? '€' : 'Rs'}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -441,23 +711,44 @@ const TourPackageBookingConfirmation = () => {
                 <i className="fas fa-map-marked-alt mr-2 text-blue-500"></i>
                 Tour Package
               </h2>
-              
+
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="sm:w-1/4">
-                  <img 
-                    src={tour.image || '/api/placeholder/400/300'} 
+                  <img
+                    src={tour.image || '/api/placeholder/400/300'}
                     alt={tour.title}
                     className="w-full h-40 object-cover rounded-lg"
                   />
-                  <div className="mt-3">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${currencyBadge.bg} ${currencyBadge.text}`}>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${currencyBadge.bg} ${currencyBadge.text}`}
+                    >
+                      <i className={`${currencyBadge.icon} mr-1`}></i>
                       {currencyBadge.label}
+                    </span>
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        bookingCurrency === 'EUR'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-green-100 text-green-800'
+                      }`}
+                    >
+                      <i
+                        className={`fas fa-eye mr-1 ${
+                          bookingCurrency === 'EUR'
+                            ? 'text-yellow-600'
+                            : 'text-green-600'
+                        }`}
+                      ></i>
+                      Viewing in {bookingCurrency}
                     </span>
                   </div>
                 </div>
                 <div className="sm:w-3/4">
-                  <h3 className="text-xl font-bold text-blue-700 mb-2">{tour.title}</h3>
-                  
+                  <h3 className="text-xl font-bold text-blue-700 mb-2">
+                    {tour.title}
+                  </h3>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 text-sm">
                     <div className="flex items-center">
                       <i className="fas fa-map-marker-alt text-gray-400 w-4 mr-2"></i>
@@ -476,13 +767,28 @@ const TourPackageBookingConfirmation = () => {
                       <span>{formattedDate}</span>
                     </div>
                   </div>
-                  
+
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <div className="flex justify-between items-center">
                       <div>
-                        <div className="text-xs text-gray-500">Package Price</div>
+                        <div className="text-xs text-gray-500">
+                          Package Price per person
+                        </div>
                         <div className="text-lg sm:text-xl font-bold text-blue-700">
-                          {formatPrice(calculatedPrices.packageTotal)}
+                          {priceInfo.display}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {guests} guest(s) × {priceInfo.display}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg sm:text-xl font-bold text-blue-800">
+                          {currencyHelpers.formatCurrency(
+                            calculatedPrices.packageTotal
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Package Total
                         </div>
                       </div>
                     </div>
@@ -492,65 +798,84 @@ const TourPackageBookingConfirmation = () => {
             </div>
 
             {/* Selected Activities */}
-            {selectedActivities && selectedActivities.length > 0 && (
+            {calculatedPrices.activitiesTotal > 0 && (
               <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6">
                 <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                   <i className="fas fa-hiking mr-2 text-green-500"></i>
                   Selected Activities
                 </h2>
-                
+
                 <div className="space-y-3">
-                  {(activitiesData.length > 0 ? activitiesData : selectedActivities).map((activity, index) => {
-                    let activityPrice = 0;
-                    let activityTitle = '';
-                    
-                    if (activitiesData.length > 0) {
-                      activityPrice = activity.price || 0;
-                      activityTitle = activity.title;
-                    } else {
-                      activityPrice = getPriceInCurrency(
-                        activity.priceRs || activity.price,
-                        activity.priceEuro,
-                        activity.currencyType
-                      );
-                      activityTitle = activity.title;
-                    }
-                    
+                  {(activitiesData.length > 0
+                    ? activitiesData
+                    : selectedActivities
+                  ).map((activity, index) => {
+                    const activityPrice =
+                      currencyHelpers.getActivityPrice(activity);
+                    const quantity = activity.quantity || guests;
+                    const activityTotal = activityPrice * quantity;
+                    const duration = activity.duration || activity.durationType;
+
                     return (
-                      <div key={activity._id || activity.activity || index} className="border border-gray-200 rounded-lg p-3">
+                      <div
+                        key={activity._id || activity.activityId || index}
+                        className="border border-gray-200 rounded-lg p-3"
+                      >
                         <div className="flex flex-col sm:flex-row justify-between gap-2">
-                          <div>
-                            <h4 className="font-bold text-gray-800 text-sm sm:text-base">{activityTitle}</h4>
-                            {activity.description && (
-                              <p className="text-gray-600 text-xs mt-1 line-clamp-2">{activity.description}</p>
-                            )}
-                            <div className="mt-2 flex items-center">
-                              <span className={`text-xs px-2 py-1 rounded ${currencyBadge.bg} ${currencyBadge.text}`}>
-                                {currencyBadge.label}
-                              </span>
-                              {activity.durationType && (
-                                <span className="ml-2 text-xs text-blue-600">
-                                  <i className="fas fa-clock mr-1"></i>
-                                  {activity.durationType}
+                          <div className="flex-1">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <h4 className="font-bold text-gray-800 text-sm sm:text-base">
+                                {activity.title}
+                              </h4>
+                              {duration && (
+                                <span
+                                  className={`px-2 py-1 text-xs rounded-full ${
+                                    duration.includes('half')
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-green-100 text-green-800'
+                                  }`}
+                                >
+                                  {duration.includes('half')
+                                    ? 'Half Day'
+                                    : 'Full Day'}
                                 </span>
                               )}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Qty: {quantity} guest{quantity > 1 ? 's' : ''}
+                            </div>
+                            <div className="mt-2 flex items-center text-xs">
+                              <span
+                                className={`px-2 py-1 rounded ${currencyBadge.bg} ${currencyBadge.text}`}
+                              >
+                                {currencyBadge.label}
+                              </span>
+                              <span className="ml-2 text-blue-600">
+                                {bookingCurrency}
+                              </span>
                             </div>
                           </div>
                           <div className="text-right">
                             <div className="text-sm sm:text-base font-bold text-green-600">
-                              {formatPrice(activityPrice)}
+                              {currencyHelpers.formatCurrency(activityTotal)}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {currencyHelpers.formatCurrency(activityPrice)}{' '}
+                              each
                             </div>
                           </div>
                         </div>
                       </div>
                     );
                   })}
-                  
+
                   <div className="pt-3 border-t border-gray-300">
                     <div className="flex justify-between items-center">
                       <span className="font-medium">Activities Total:</span>
                       <span className="text-lg font-bold text-green-600">
-                        {formatPrice(calculatedPrices.activitiesTotal)}
+                        {currencyHelpers.formatCurrency(
+                          calculatedPrices.activitiesTotal
+                        )}
                       </span>
                     </div>
                   </div>
@@ -565,25 +890,41 @@ const TourPackageBookingConfirmation = () => {
                   <i className="fas fa-shuttle-van mr-2 text-purple-500"></i>
                   Airport Transfer
                 </h2>
-                
+
                 <div className="border border-gray-200 rounded-lg p-3">
                   <div className="flex flex-col sm:flex-row justify-between gap-2">
-                    <div>
-                      <h4 className="font-bold text-gray-800 text-sm sm:text-base">{transferDetails.transferName}</h4>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-800 text-sm sm:text-base">
+                        {transferDetails.transferName}
+                      </h4>
                       <div className="space-y-1 mt-2 text-xs sm:text-sm">
                         <div className="flex items-center text-gray-600">
                           <i className="fas fa-car mr-2 text-gray-400"></i>
-                          {transferDetails.vehicleType} • {transferDetails.transferCode}
+                          {transferDetails.vehicleType} •{' '}
+                          {transferDetails.transferCode}
                         </div>
                         <div className="flex items-center text-gray-600">
                           <i className="fas fa-route mr-2 text-gray-400"></i>
-                          {transferDetails.tripType === 'one-way' ? 'One Way' : 'Round Trip'}
+                          {transferDetails.tripType === 'one-way'
+                            ? 'One Way'
+                            : 'Round Trip'}
+                        </div>
+                        <div className="flex items-center text-blue-600 text-xs">
+                          <i className="fas fa-money-bill-wave mr-2"></i>
+                          {bookingCurrency}
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-sm sm:text-base font-bold text-purple-600">
-                        {formatPrice(calculatedPrices.transferTotal)}
+                        {currencyHelpers.formatCurrency(
+                          calculatedPrices.transferTotal
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {transferDetails.tripType === 'one-way'
+                          ? 'One Way'
+                          : 'Round Trip'}
                       </div>
                     </div>
                   </div>
@@ -593,7 +934,9 @@ const TourPackageBookingConfirmation = () => {
 
             {/* Mobile Booking Summary - Placed immediately before the form */}
             <div className="lg:hidden bg-white rounded-xl shadow-sm p-4 mb-6">
-              <h3 className="font-bold text-gray-800 text-lg mb-4">Booking Summary</h3>
+              <h3 className="font-bold text-gray-800 text-lg mb-4">
+                Booking Summary
+              </h3>
 
               <div className="space-y-3 mb-4 text-sm">
                 <div className="flex justify-between">
@@ -607,7 +950,8 @@ const TourPackageBookingConfirmation = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Activities:</span>
                   <span className="font-medium">
-                    {selectedActivities?.length || 0} selected
+                    {selectedActivities?.length || activitiesData?.length || 0}{' '}
+                    selected
                   </span>
                 </div>
                 {includeTransfer && (
@@ -618,50 +962,73 @@ const TourPackageBookingConfirmation = () => {
                 )}
                 <div className="flex justify-between pt-3 border-t">
                   <span className="text-gray-600">Currency:</span>
-                  <span className={`font-medium px-2 py-1 rounded text-xs ${currencyBadge.bg} ${currencyBadge.text}`}>
-                    {getCurrencyDisplayName()}
+                  <span
+                    className={`font-medium px-2 py-1 rounded text-xs ${
+                      bookingCurrency === 'EUR'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-green-100 text-green-800'
+                    }`}
+                  >
+                    <i
+                      className={`fas fa-money-bill-wave mr-1 ${
+                        bookingCurrency === 'EUR'
+                          ? 'text-yellow-600'
+                          : 'text-green-600'
+                      }`}
+                    ></i>
+                    {bookingCurrency}
                   </span>
                 </div>
               </div>
 
               {/* Price Breakdown */}
               <div className="pt-4 border-t">
-                <h4 className="font-semibold text-gray-700 mb-3 text-sm">Price Breakdown</h4>
-                
+                <h4 className="font-semibold text-gray-700 mb-3 text-sm">
+                  Price Breakdown
+                </h4>
+
                 <div className="space-y-2 mb-4 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Tour Package:</span>
                     <span className="font-medium">
-                      {formatPrice(calculatedPrices.packageTotal)}
+                      {currencyHelpers.formatCurrency(
+                        calculatedPrices.packageTotal
+                      )}
                     </span>
                   </div>
-                  
+
                   {calculatedPrices.activitiesTotal > 0 && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Activities:</span>
                       <span className="font-medium">
-                        {formatPrice(calculatedPrices.activitiesTotal)}
+                        {currencyHelpers.formatCurrency(
+                          calculatedPrices.activitiesTotal
+                        )}
                       </span>
                     </div>
                   )}
-                  
+
                   {calculatedPrices.transferTotal > 0 && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Airport Transfer:</span>
                       <span className="font-medium">
-                        {formatPrice(calculatedPrices.transferTotal)}
+                        {currencyHelpers.formatCurrency(
+                          calculatedPrices.transferTotal
+                        )}
                       </span>
                     </div>
                   )}
                 </div>
-                
+
                 {/* Total Amount */}
                 <div className="pt-4 border-t border-gray-300">
                   <div className="flex justify-between items-center">
                     <div>
-                      <span className="font-bold text-gray-800 text-base">Total Amount:</span>
+                      <span className="font-bold text-gray-800 text-base">
+                        Total Amount:
+                      </span>
                       <div className="text-xs text-gray-500 mt-1">
-                        For {guests} guest(s) in {getCurrencyDisplayName()}
+                        For {guests} guest(s) in {bookingCurrency}
                       </div>
                     </div>
                     <div className="text-right">
@@ -680,7 +1047,7 @@ const TourPackageBookingConfirmation = () => {
                 <i className="fas fa-user-circle mr-2 text-blue-500"></i>
                 Your Details
               </h2>
-              
+
               <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                   <div>
@@ -721,7 +1088,10 @@ const TourPackageBookingConfirmation = () => {
                       name="countryCode"
                       value={formData.countryCode}
                       onChange={(e) =>
-                        setFormData({ ...formData, countryCode: e.target.value })
+                        setFormData({
+                          ...formData,
+                          countryCode: e.target.value,
+                        })
                       }
                       className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                       required
@@ -764,8 +1134,8 @@ const TourPackageBookingConfirmation = () => {
                   type="submit"
                   disabled={loading}
                   className={`w-full py-3 px-4 rounded-lg font-medium text-sm sm:text-base ${
-                    loading 
-                      ? 'bg-blue-400 cursor-not-allowed' 
+                    loading
+                      ? 'bg-blue-400 cursor-not-allowed'
                       : 'bg-blue-600 hover:bg-blue-700'
                   } text-white transition-colors flex items-center justify-center`}
                 >
@@ -804,7 +1174,8 @@ const TourPackageBookingConfirmation = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Activities:</span>
                   <span className="font-medium">
-                    {selectedActivities?.length || 0} selected
+                    {selectedActivities?.length || activitiesData?.length || 0}{' '}
+                    selected
                   </span>
                 </div>
                 {includeTransfer && (
@@ -815,53 +1186,76 @@ const TourPackageBookingConfirmation = () => {
                 )}
                 <div className="flex justify-between pt-3 border-t">
                   <span className="text-gray-600">Currency:</span>
-                  <span className={`font-medium px-2 py-1 rounded text-xs ${currencyBadge.bg} ${currencyBadge.text}`}>
-                    {getCurrencyDisplayName()}
+                  <span
+                    className={`font-medium px-2 py-1 rounded text-xs ${
+                      bookingCurrency === 'EUR'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-green-100 text-green-800'
+                    }`}
+                  >
+                    <i
+                      className={`fas fa-money-bill-wave mr-1 ${
+                        bookingCurrency === 'EUR'
+                          ? 'text-yellow-600'
+                          : 'text-green-600'
+                      }`}
+                    ></i>
+                    {bookingCurrency}
                   </span>
                 </div>
               </div>
 
               {/* Price Breakdown */}
               <div className="pt-4 border-t">
-                <h4 className="font-semibold text-gray-700 mb-3">Price Breakdown</h4>
-                
+                <h4 className="font-semibold text-gray-700 mb-3">
+                  Price Breakdown
+                </h4>
+
                 <div className="space-y-2 mb-4 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Tour Package:</span>
                     <span className="font-medium">
-                      {formatPrice(calculatedPrices.packageTotal)}
+                      {currencyHelpers.formatCurrency(
+                        calculatedPrices.packageTotal
+                      )}
                     </span>
                   </div>
-                  
+
                   {calculatedPrices.activitiesTotal > 0 && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Activities:</span>
                       <span className="font-medium">
-                        {formatPrice(calculatedPrices.activitiesTotal)}
+                        {currencyHelpers.formatCurrency(
+                          calculatedPrices.activitiesTotal
+                        )}
                       </span>
                     </div>
                   )}
-                  
+
                   {calculatedPrices.transferTotal > 0 && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Airport Transfer:</span>
                       <span className="font-medium">
-                        {formatPrice(calculatedPrices.transferTotal)}
+                        {currencyHelpers.formatCurrency(
+                          calculatedPrices.transferTotal
+                        )}
                       </span>
                     </div>
                   )}
                 </div>
-                
+
                 {/* Total Amount */}
                 <div className="pt-4 border-t border-gray-300">
                   <div className="flex justify-between items-center">
-                    <span className="font-bold text-gray-800">Total Amount:</span>
+                    <span className="font-bold text-gray-800">
+                      Total Amount:
+                    </span>
                     <div className="text-right">
                       <div className="text-2xl font-bold text-blue-600">
                         {calculatedPrices.formattedGrandTotal}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
-                        For {guests} guest(s)
+                        For {guests} guest(s) in {bookingCurrency}
                       </div>
                     </div>
                   </div>

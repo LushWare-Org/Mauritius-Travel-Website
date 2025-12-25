@@ -5,76 +5,84 @@ const TourPackageSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please add a title'],
     trim: true,
-    maxlength: [100, 'Title cannot be more than 100 characters']
+    maxlength: [100, 'Title cannot be more than 100 characters'],
   },
   description: {
     type: String,
-    required: [true, 'Please add a description']
+    required: [true, 'Please add a description'],
   },
   shortDescription: {
     type: String,
-    maxlength: [200, 'Short description cannot be more than 200 characters']
+    maxlength: [200, 'Short description cannot be more than 200 characters'],
   },
-  priceRs: { type: Number, min: 0 },
-  priceEuro: { type: Number, min: 0 },
-  currencyType: { 
-    type: String, 
-    enum: ['both', 'rs-only', 'euro-only'],
-    default: 'both'
-  },
+  // Dual currency support
   price: {
     type: Number,
-    required: [true, 'Please add a price']
+    required: [true, 'Please add a price in MUR'],
   },
+  priceEur: {
+    type: Number,
+    default: 0, // or simply omit default entirely
+    min: 0,
+  },
+  supportsCurrency: {
+    type: String,
+    enum: ['rs-only', 'eur-only', 'both'],
+    default: 'both',
+  },
+
   itinerary: {
     type: [String],
-    default: []
+    default: [],
   },
   included: {
-    type: [String], 
-    default: []
+    type: [String],
+    default: [],
   },
   notIncluded: {
     type: [String],
-    default: ['Entrance fees']
+    default: ['Entrance fees'],
   },
   image: {
     type: String,
-    required: [true, 'Please add an image URL']
+    required: [true, 'Please add an image URL'],
   },
   galleryImages: {
     type: [String],
-    default: []
+    default: [],
   },
   featured: {
     type: Boolean,
-    default: false
+    default: false,
   },
   status: {
     type: String,
     enum: ['active', 'inactive'],
-    default: 'active'
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
+    default: 'active',
   },
   averageRating: {
     type: Number,
     default: 0,
     min: 0,
     max: 5,
-    set: val => Math.round(val * 10) / 10 // Round to 1 decimal
+    set: (val) => Math.round(val * 10) / 10,
   },
   totalRatings: {
     type: Number,
-    default: 0
+    default: 0,
   },
-  
   createdAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
+
+// Add helper method to get price in specific currency
+TourPackageSchema.methods.getPriceInCurrency = function (currency = 'MUR') {
+  if (currency === 'EUR' && this.priceEur) {
+    return this.priceEur;
+  }
+  return this.price; // Default to MUR price
+};
 
 module.exports = mongoose.model('TourPackage', TourPackageSchema);
