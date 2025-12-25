@@ -19,24 +19,14 @@ const TourPackageListItem = ({
                         localStorage.getItem('preferredCurrency') || 
                         'MUR'; // Default to 'MUR'
         
-        // Debug log
-        console.log('TourPackageListItem - Currency from sources:', { 
-            searchParam: searchParams.get('currency'),
-            localStorage: localStorage.getItem('preferredCurrency'),
-            rawCurrency: currency 
-        });
-        
         // Normalize ALL cases to 'MUR' or 'EUR'
         const normalized = currency.toString().toUpperCase().trim();
         
         if (normalized === 'EUR' || normalized === 'EURO' || normalized === '€') {
-            console.log('TourPackageListItem - Normalized to EUR');
             return 'EUR';
         } else if (normalized === 'RS' || normalized === 'MUR' || normalized === 'RUPEES' || normalized === '₹') {
-            console.log('TourPackageListItem - Normalized to MUR');
             return 'MUR';
         } else {
-            console.log('TourPackageListItem - Defaulting to MUR');
             return 'MUR';
         }
     }, [location.search]);
@@ -58,27 +48,9 @@ const TourPackageListItem = ({
         return normalized === 'EUR' ? 'EUR' : 'MUR';
     }, [normalizedCurrency, userCurrency, currentCurrency]);
 
-    // Debug logging
-    useEffect(() => {
-        console.log('TourPackageListItem props:', {
-            locationSearch: location.search,
-            normalizedCurrency,
-            userCurrency,
-            currentCurrency,
-            displayCurrency,
-            pkgId: pkg._id,
-            pkgTitle: pkg.title,
-            priceMUR: pkg.priceMUR,
-            priceEUR: pkg.priceEUR,
-            currencyType: pkg.currencyType
-        });
-    }, [normalizedCurrency, userCurrency, currentCurrency, displayCurrency, pkg, location.search]);
-
     // Get price information based on display currency
     const priceInfo = useMemo(() => {
-        const priceInfoResult = getDisplayPrice ? getDisplayPrice(pkg) : getFallbackDisplayPrice(pkg, displayCurrency);
-        console.log('TourPackageListItem - Price info:', priceInfoResult);
-        return priceInfoResult;
+        return getDisplayPrice ? getDisplayPrice(pkg) : getFallbackDisplayPrice(pkg, displayCurrency);
     }, [pkg, getDisplayPrice, displayCurrency]);
 
     // Helper function to render stars (same as before)
@@ -163,18 +135,11 @@ const TourPackageListItem = ({
         const baseUrl = `/tour-packages/${pkg._id || pkg.id}`;
         
         // Use displayCurrency for URL to ensure consistency
-        // This ensures the next page knows what currency to display
         const urlCurrency = displayCurrency;
-        
-        console.log('TourPackageListItem - Generating URL:', {
-            baseUrl,
-            urlCurrency,
-            priceInfoCurrency: priceInfo?.currency
-        });
         
         // Always include currency parameter for consistency
         return `${baseUrl}?currency=${urlCurrency}`;
-    }, [pkg._id, pkg.id, displayCurrency, priceInfo?.currency]);
+    }, [pkg._id, pkg.id, displayCurrency]);
 
     const currencyBadge = getCurrencyBadgeInfo();
 
@@ -318,11 +283,6 @@ const TourPackageListItem = ({
 
 // Fallback function for when getDisplayPrice is not provided
 const getFallbackDisplayPrice = (tour, currency = 'MUR') => {
-    console.log('getFallbackDisplayPrice called:', { 
-        tourId: tour?._id, 
-        requestedCurrency: currency 
-    });
-    
     if (!tour) return { 
         display: '', 
         price: 0, 
@@ -332,14 +292,11 @@ const getFallbackDisplayPrice = (tour, currency = 'MUR') => {
     
     // Normalize currency to uppercase for consistency
     const normalizedCurrency = currency.toUpperCase();
-    console.log('Normalized currency:', normalizedCurrency);
     
     // Check if tour has currency-specific prices
     const priceMUR = tour.priceMUR || tour.priceRs || tour.price || 0;
     const priceEUR = tour.priceEUR || tour.priceEur || tour.priceEuro || 0;
     const currencyType = tour.currencyType || tour.supportsCurrency || 'rs-only';
-    
-    console.log('Tour currency data:', { priceMUR, priceEUR, currencyType });
     
     // Determine available currencies based on currencyType
     const isMurAvailable = currencyType === 'both' || 
@@ -348,8 +305,6 @@ const getFallbackDisplayPrice = (tour, currency = 'MUR') => {
     const isEurAvailable = currencyType === 'both' || 
                           currencyType === 'eur-only' || 
                           currencyType === 'euro-only';
-    
-    console.log('Availability:', { isMurAvailable, isEurAvailable });
     
     // Select price based on requested currency
     let displayPrice, displayCurrencyCode, alternativeCurrency, alternativePrice;
@@ -371,13 +326,6 @@ const getFallbackDisplayPrice = (tour, currency = 'MUR') => {
         }
     }
     
-    console.log('Selected price:', { 
-        displayPrice, 
-        displayCurrencyCode, 
-        alternativeCurrency, 
-        alternativePrice 
-    });
-    
     // Format display string
     let display = '';
     if (displayCurrencyCode === 'EUR') {
@@ -386,7 +334,7 @@ const getFallbackDisplayPrice = (tour, currency = 'MUR') => {
         display = `Rs ${Math.round(displayPrice)}`;
     }
     
-    const result = {
+    return {
         display,
         price: displayPrice,
         currency: displayCurrencyCode,
@@ -394,9 +342,6 @@ const getFallbackDisplayPrice = (tour, currency = 'MUR') => {
         alternativeCurrency,
         alternativePrice
     };
-    
-    console.log('Result:', result);
-    return result;
 };
 
 export default TourPackageListItem;
