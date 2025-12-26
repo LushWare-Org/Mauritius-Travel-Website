@@ -84,7 +84,7 @@ const BookingRequest = () => {
     const fetchActivity = async () => {
       try {
         setLoading(true);
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+        const baseUrl = import.meta.env.VITE_API_URL ;
         const response = await fetch(`${baseUrl}/activities/${id}`);
         const data = await response.json();
 
@@ -107,7 +107,7 @@ const BookingRequest = () => {
     if (includeAirportTransfer && airportTransferId) {
       const fetchAirportTransfer = async () => {
         try {
-          const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+          const baseUrl = import.meta.env.VITE_API_URL ;
           const response = await fetch(`${baseUrl}/airport-transfers/${airportTransferId}`);
           const data = await response.json();
 

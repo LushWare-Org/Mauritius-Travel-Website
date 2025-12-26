@@ -8,7 +8,7 @@ const UserContactHistory = () => {
   const [selectedInquiry, setSelectedInquiry] = useState(null);
   const [error, setError] = useState('');
 
-  const API_URL = import.meta.env.VITE_API_URL || 'https://maldives-activity-booking-backend.onrender.com/api/v1';
+  const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     fetchUserInquiries();

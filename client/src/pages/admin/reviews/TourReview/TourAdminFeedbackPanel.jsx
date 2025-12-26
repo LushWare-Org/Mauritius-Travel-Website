@@ -1,8 +1,8 @@
 // AdminFeedbackPanel.jsx - FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import API from '../../../utils/api';
-import AdminLayout from '../../../components/admin/AdminLayout';
+import API from '../../../../utils/api';
+import AdminLayout from '../../../../components/admin/AdminLayout';
 const TourAdminFeedbackPanel = () => {
   const [feedbacks, setFeedbacks] = useState([]);
   const [loading, setLoading] = useState(true);

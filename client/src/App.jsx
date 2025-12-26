@@ -92,12 +92,12 @@ import AdminTourPackageView from './pages/admin/AdminTourPackageView.jsx';
 import TourPackageForm from './pages/admin/TourPackageForm';
 import AdminTourPackageBooking from './pages/admin/AdminTourPackageBooking';
 import AdminTourPackageBookingDetail from './pages/admin/TourPackageBookingDetail';
-import AdminReviews from './pages/admin/ReviewsPage.jsx';
+import AdminReviews from './pages/admin/reviews/ReviewsPage.jsx';
 
 // Import Activity Review Admin Pages
-import AdminActivityReviews from './pages/admin/activity/ActivityReviews';
-import ActivityReviewDetail from './pages/admin/activity/ActivityReviewDetail';
-import TourAdminFeedbackPanel from './pages/admin/TourReview/TourAdminFeedbackPanel';
+import AdminActivityReviews from './pages/admin/reviews/activity/ActivityReviews';
+import ActivityReviewDetail from './pages/admin/reviews/activity/ActivityReviewDetail';
+import TourAdminFeedbackPanel from './pages/admin/reviews/TourReview/TourAdminFeedbackPanel';
 
 const AppContent = () => {
   const location = useLocation();

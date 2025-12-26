@@ -220,7 +220,7 @@ const ContactForm = () => {
                 href="mailto:Mervbn01@gmail.com"
                 className="text-blue-800 font-medium hover:underline"
               >
-                Mervbn01@gmail.com
+                mervbn01@gmail.com
               </a>
             </p>
             <p className="mt-1">

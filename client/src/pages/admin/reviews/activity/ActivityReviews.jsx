@@ -1,8 +1,8 @@
 // src/pages/admin/activity/ActivityReviews.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import AdminLayout from '../../../components/admin/AdminLayout';
-import { activityReviewsAPI, activitiesAPI } from '../../../utils/api';
+import AdminLayout from '../../../../components/admin/AdminLayout';
+import { activityReviewsAPI, activitiesAPI } from '../../../../utils/api';
 import { toast } from 'react-toastify';
 import { FaStar, FaEye, FaTrash, FaUser, FaCalendar, FaSync, FaExclamationTriangle, FaCheck, FaTimes } from 'react-icons/fa';
 

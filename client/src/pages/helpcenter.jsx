@@ -207,7 +207,7 @@ const InfoPage = () => {
                         </li>
                         <li className="flex items-center">
                           <i className="fas fa-check text-green-500 mr-2"></i>
-                          <span>Mail us at Mervbn01@gmail.com</span>
+                          <span>Mail us at mervbn01@gmail.com</span>
                         </li>
                        
                       </ul>
