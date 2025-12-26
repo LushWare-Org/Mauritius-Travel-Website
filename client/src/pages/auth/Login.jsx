@@ -33,9 +33,23 @@ const Login = () => {
       const result = await login(values.email, values.password);
       console.log('✅ Login successful:', result);
 
+      // Get the user data from result or localStorage
+      const userData = result?.user || JSON.parse(localStorage.getItem('user'));
+      console.log('👤 User data:', userData);
+
+      // Check if user is admin
+      const isAdmin =
+        userData?.role === 'admin' || userData?.email === 'mervbn01@gmail.com'; // Add other admin emails if needed
+
+      console.log('🎯 Is admin?', isAdmin);
+
       // Small delay to ensure state is updated
       setTimeout(() => {
-        navigate('/', { replace: true });
+        if (isAdmin) {
+          navigate('/admin/dashboard', { replace: true });
+        } else {
+          navigate('/', { replace: true });
+        }
       }, 100);
     } catch (error) {
       console.error('❌ Login error:', error);

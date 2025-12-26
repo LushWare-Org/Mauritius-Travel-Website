@@ -29,6 +29,16 @@ const AdminLayout = ({ children }) => {
   const navLinks = [
     { path: '/admin/dashboard', icon: 'fa-tachometer-alt', text: 'Dashboard' },
     {
+      path: '/admin/tour-packages',
+      icon: 'fa-umbrella-beach',
+      text: 'Tour Packages',
+    },
+    {
+      path: '/admin/tour-package-bookings',
+      icon: 'fa-calendar-check',
+      text: 'Tour Bookings',
+    },
+    {
       path: '/admin/activities',
       icon: 'fa-umbrella-beach',
       text: 'Excursions',
@@ -38,23 +48,7 @@ const AdminLayout = ({ children }) => {
       icon: 'fa-calendar-check',
       text: 'Excursion Bookings',
     },
-    { path: '/admin/users', icon: 'fa-users', text: 'Users' },
-    {
-      path: '/admin/tour-packages',
-      icon: 'fa-umbrella-beach',
-      text: 'TourPackages',
-    },
-    {
-      path: '/admin/tour-package-bookings',
-      icon: 'fa-calendar-check',
-      text: 'Tour Bookings',
-    },
 
-    {
-      path: '/admin/dashboard?tab=contacts',
-      icon: 'fa-envelope',
-      text: 'Contact Inquiries',
-    },
     {
       path: '/admin/airport-transfers',
       icon: 'fa-plane',
@@ -65,11 +59,16 @@ const AdminLayout = ({ children }) => {
       icon: 'fa-plane',
       text: 'Airport Transfers Bookings',
     },
-
+    { path: '/admin/users', icon: 'fa-users', text: 'Users' },
     {
       path: '/admin/activity-reviews',
       icon: 'fa-plane',
       text: 'Excursion Reviews',
+    },
+    {
+      path: '/admin/dashboard?tab=contacts',
+      icon: 'fa-envelope',
+      text: 'Contact Inquiries',
     },
   ];
 
@@ -290,7 +289,6 @@ const AdminLayout = ({ children }) => {
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-72 mt-14">
-
         {' '}
         {/* Added ml-72 to account for fixed sidebar */}
         {/* Mobile top bar */}

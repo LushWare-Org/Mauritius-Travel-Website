@@ -11,17 +11,17 @@ exports.register = async (req, res, next) => {
     console.log('Registration attempt from origin:', req.headers.origin);
     console.log('Registration request body:', {
       ...req.body,
-      password: req.body.password ? '[REDACTED]' : undefined
+      password: req.body.password ? '[REDACTED]' : undefined,
     });
-    
+
     const { name, email, password } = req.body;
 
     // Validate input
     if (!name || !email || !password) {
       console.error('Missing required fields for registration');
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Please provide name, email and password' 
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide name, email and password',
       });
     }
 
@@ -31,7 +31,7 @@ exports.register = async (req, res, next) => {
       console.log(`Registration failed: Email ${email} already in use`);
       return res.status(400).json({
         success: false,
-        error: 'Email address is already in use'
+        error: 'Email address is already in use',
       });
     }
 
@@ -41,10 +41,10 @@ exports.register = async (req, res, next) => {
       email,
       password,
     });
-    
+
     // Log success details
     console.log(`User registered successfully: ${user.name} (${user._id})`);
-    
+
     // Send token response with detailed logging
     console.log('Sending token response for newly registered user');
     sendTokenResponse(user, 201, res);
@@ -53,14 +53,14 @@ exports.register = async (req, res, next) => {
     // Provide more helpful error messages
     if (error.code === 11000) {
       // Duplicate key error (usually email)
-      res.status(400).json({ 
-        success: false, 
-        error: 'Email address is already in use' 
+      res.status(400).json({
+        success: false,
+        error: 'Email address is already in use',
       });
     } else {
-      res.status(400).json({ 
-        success: false, 
-        error: error.message || 'Registration failed' 
+      res.status(400).json({
+        success: false,
+        error: error.message || 'Registration failed',
       });
     }
   }
@@ -76,30 +76,33 @@ exports.login = async (req, res, next) => {
     console.log('📧 Login attempt for email:', req.body.email);
     console.log('📦 Request body:', {
       email: req.body.email,
-      password: req.body.password ? '[REDACTED]' : undefined
+      password: req.body.password ? '[REDACTED]' : undefined,
     });
-    
+
     // Check database connection
     const mongoose = require('mongoose');
     const connectionState = mongoose.connection.readyState;
-    console.log('🔗 Database connection state:', connectionState === 1 ? 'Connected' : 'NOT Connected');
-    
+    console.log(
+      '🔗 Database connection state:',
+      connectionState === 1 ? 'Connected' : 'NOT Connected'
+    );
+
     if (connectionState !== 1) {
       console.error('❌ Database not connected! Cannot login user.');
       return res.status(500).json({
         success: false,
-        error: 'Database connection not available. Please try again later.'
+        error: 'Database connection not available. Please try again later.',
       });
     }
-    
+
     const { email, password } = req.body;
 
     // Validate email & password
     if (!email || !password) {
       console.log('❌ Login failed: Missing email or password');
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Please provide an email and password' 
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide an email and password',
       });
     }
 
@@ -112,26 +115,26 @@ exports.login = async (req, res, next) => {
       // Check if any users exist
       const userCount = await User.countDocuments();
       console.log(`📊 Total users in database: ${userCount}`);
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Invalid credentials' 
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials',
       });
     }
 
     console.log(`✅ User found: ${user.name} (${user._id})`);
     console.log('🔑 Verifying password...');
-    
+
     // Check if password matches
     const isMatch = await user.matchPassword(password);
 
     if (!isMatch) {
       console.log(`❌ Login failed: Invalid password for user ${email}`);
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Invalid credentials' 
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials',
       });
     }
-    
+
     console.log('✅ Password verified successfully');
     // Log successful login
     console.log(`✅ User logged in successfully: ${user.name} (${user._id})`);
@@ -143,11 +146,11 @@ exports.login = async (req, res, next) => {
     console.error('❌ Error details:', {
       message: error.message,
       name: error.name,
-      stack: error.stack
+      stack: error.stack,
     });
-    res.status(400).json({ 
-      success: false, 
-      error: error.message || 'Login failed' 
+    res.status(400).json({
+      success: false,
+      error: error.message || 'Login failed',
     });
   }
 };
@@ -158,20 +161,23 @@ exports.login = async (req, res, next) => {
 exports.getMe = async (req, res, next) => {
   try {
     console.log('Get current user request from:', req.headers.origin);
-    console.log('User in request:', req.user ? req.user.id : 'Not authenticated');
-    
+    console.log(
+      'User in request:',
+      req.user ? req.user.id : 'Not authenticated'
+    );
+
     const user = await User.findById(req.user.id);
-    
+
     if (!user) {
       console.log(`User not found with ID: ${req.user.id}`);
       return res.status(404).json({
         success: false,
-        error: 'User not found'
+        error: 'User not found',
       });
     }
-    
+
     console.log(`Retrieved user data for: ${user.name} (${user._id})`);
-    
+
     res.status(200).json({
       success: true,
       data: user,
@@ -188,16 +194,19 @@ exports.getMe = async (req, res, next) => {
 exports.getAuthStatus = async (req, res) => {
   // Get token from request
   let token;
-  
+
   // Check for token in headers
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
     token = req.headers.authorization.split(' ')[1];
-  } 
+  }
   // Check for token in cookies
   else if (req.cookies.token) {
     token = req.cookies.token;
   }
-  
+
   // Log request details for debugging
   console.log('Auth status check from origin:', req.headers.origin);
   console.log('Token present:', token ? 'Yes' : 'No');
@@ -208,19 +217,23 @@ exports.getAuthStatus = async (req, res) => {
     host: req.headers.host,
     'user-agent': req.headers['user-agent'],
     'content-type': req.headers['content-type'],
-    authorization: req.headers.authorization ? 'Present (not shown)' : 'Not present'
+    authorization: req.headers.authorization
+      ? 'Present (not shown)'
+      : 'Not present',
   });
-  
+
   res.status(200).json({
     success: true,
     message: 'Auth status endpoint working',
     authenticated: Boolean(token),
-    cookiesReceived: Boolean(req.cookies && Object.keys(req.cookies).length > 0),
+    cookiesReceived: Boolean(
+      req.cookies && Object.keys(req.cookies).length > 0
+    ),
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
     corsSettings: {
-      allowedOrigins: req.app.get('corsOrigins') || 'Not explicitly set'
-    }
+      allowedOrigins: req.app.get('corsOrigins') || 'Not explicitly set',
+    },
   });
 };
 
@@ -232,13 +245,13 @@ exports.logout = async (req, res, next) => {
     expires: new Date(Date.now() + 10 * 1000),
     httpOnly: true,
   };
-  
+
   // Match cookie settings with login for consistent behavior
   if (process.env.NODE_ENV === 'production') {
     options.secure = true;
     options.sameSite = 'none';
   }
-  
+
   res.cookie('token', 'none', options);
 
   res.status(200).json({
@@ -279,9 +292,9 @@ exports.updatePassword = async (req, res, next) => {
 
     // Check current password
     if (!(await user.matchPassword(req.body.currentPassword))) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Password is incorrect' 
+      return res.status(401).json({
+        success: false,
+        error: 'Password is incorrect',
       });
     }
 
@@ -302,9 +315,9 @@ exports.forgotPassword = async (req, res, next) => {
     const user = await User.findOne({ email: req.body.email });
 
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'There is no user with that email' 
+      return res.status(404).json({
+        success: false,
+        error: 'There is no user with that email',
       });
     }
 
@@ -335,7 +348,9 @@ exports.forgotPassword = async (req, res, next) => {
 
       await user.save({ validateBeforeSave: false });
 
-      return res.status(500).json({ success: false, error: 'Email could not be sent' });
+      return res
+        .status(500)
+        .json({ success: false, error: 'Email could not be sent' });
     }
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
@@ -359,9 +374,9 @@ exports.resetPassword = async (req, res, next) => {
     });
 
     if (!user) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Invalid token' 
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid token',
       });
     }
 
@@ -384,10 +399,11 @@ const sendTokenResponse = (user, statusCode, res) => {
     console.error('❌ JWT_SECRET is not configured!');
     return res.status(500).json({
       success: false,
-      error: 'Server configuration error: JWT_SECRET is missing. Please contact administrator.'
+      error:
+        'Server configuration error: JWT_SECRET is missing. Please contact administrator.',
     });
   }
-  
+
   // Create token
   const token = user.getSignedJwtToken();
   console.log(`✅ Generated JWT token for user ${user.email}`);
@@ -395,52 +411,56 @@ const sendTokenResponse = (user, statusCode, res) => {
   // Calculate expiration - use JWT_EXPIRE or default to 30 days
   const jwtExpire = process.env.JWT_EXPIRE || '30d';
   let expiresInDays = 30;
-  
+
   // Parse JWT_EXPIRE (e.g., "30d" = 30 days)
   if (jwtExpire.endsWith('d')) {
     expiresInDays = parseInt(jwtExpire);
   }
-  
+
   const options = {
-    expires: new Date(
-      Date.now() + expiresInDays * 24 * 60 * 60 * 1000
-    ),
+    expires: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000),
     httpOnly: true,
-    path: '/',  // Ensure cookie is available across the entire site
+    path: '/', // Ensure cookie is available across the entire site
   };
-  
+
   // Determine the client origin for debugging
   const clientOrigin = res.req.headers.origin || 'Unknown origin';
   console.log(`Request from client origin: ${clientOrigin}`);
-  
+
   // Apply production settings for cookies
   if (process.env.NODE_ENV === 'production') {
     options.secure = true;
     options.sameSite = 'none'; // Required for cross-site cookies in modern browsers
-    console.log('Using production cookie settings with secure=true and sameSite=none');
+    console.log(
+      'Using production cookie settings with secure=true and sameSite=none'
+    );
   } else {
     console.log('Using development cookie settings');
   }
-  
+
   // Enhanced logging for authentication
   console.log('Cookie options:', {
     ...options,
     expires: options.expires.toISOString(),
   });
-  
+
   // Always verify the JWT_SECRET is set
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
-    console.warn('WARNING: JWT_SECRET is missing or too short. Authentication may fail!');
+    console.warn(
+      'WARNING: JWT_SECRET is missing or too short. Authentication may fail!'
+    );
   }
 
   // Log CORS settings
   console.log('Current CORS settings:', {
-    allowedOrigins: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : 'Not configured'
+    allowedOrigins: process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',')
+      : 'Not configured',
   });
 
   // Log the response being sent
   console.log(`Sending authentication response with status code ${statusCode}`);
-  
+
   // Set both cookie and return token in body for more flexible client handling
   res
     .status(statusCode)
@@ -451,7 +471,8 @@ const sendTokenResponse = (user, statusCode, res) => {
       user: {
         id: user._id,
         name: user.name,
-        email: user.email
-      }
+        email: user.email,
+        role: user.role, // ← ADD THIS LINE
+      },
     });
 };

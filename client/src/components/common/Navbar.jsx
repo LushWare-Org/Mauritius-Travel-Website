@@ -232,23 +232,6 @@ const Navbar = () => {
                             </Link>
 
                             <Link
-                              to="/admin/activities"
-                              className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-blue-50 rounded-md transition-colors"
-                            >
-                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white text-xs shadow">
-                                <i className="fas fa-water"></i>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-gray-900 text-sm group-hover:text-blue-700 truncate">
-                                  Excursions
-                                </div>
-                                <div className="text-xs text-gray-500 truncate">
-                                  Manage Activities
-                                </div>
-                              </div>
-                            </Link>
-
-                            <Link
                               to="/admin/tour-packages"
                               className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-amber-50 rounded-md transition-colors"
                             >
@@ -261,6 +244,39 @@ const Navbar = () => {
                                 </div>
                                 <div className="text-xs text-gray-500 truncate">
                                   Manage Packages
+                                </div>
+                              </div>
+                            </Link>
+
+                            <Link
+                              to="/admin/tour-package-bookings"
+                              className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-violet-50 rounded-md transition-colors"
+                            >
+                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-white text-xs shadow">
+                                <i className="fas fa-ticket-alt"></i>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 text-sm group-hover:text-violet-700 truncate">
+                                  Tour Bookings
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  Package Reservations
+                                </div>
+                              </div>
+                            </Link>
+                            <Link
+                              to="/admin/activities"
+                              className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-blue-50 rounded-md transition-colors"
+                            >
+                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white text-xs shadow">
+                                <i className="fas fa-water"></i>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-900 text-sm group-hover:text-blue-700 truncate">
+                                  Excursions
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  Manage Activities
                                 </div>
                               </div>
                             </Link>
@@ -282,80 +298,63 @@ const Navbar = () => {
                               </div>
                             </Link>
 
-                            <Link
-                              to="/admin/tour-package-bookings"
-                              className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-violet-50 rounded-md transition-colors"
-                            >
-                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-white text-xs shadow">
-                                <i className="fas fa-ticket-alt"></i>
+                            {/* Airport Services Section */}
+                            <div className="mt-2 border-t border-gray-100 pt-2">
+                              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-2 py-2">
+                                Airport Services
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-gray-900 text-sm group-hover:text-violet-700 truncate">
-                                  Tour Bookings
-                                </div>
-                                <div className="text-xs text-gray-500 truncate">
-                                  Package Reservations
-                                </div>
-                              </div>
-                            </Link>
 
-                            <Link
-                              to="/admin/users"
-                              className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-orange-50 rounded-md transition-colors"
-                            >
-                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white text-xs shadow">
-                                <i className="fas fa-users"></i>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-gray-900 text-sm group-hover:text-orange-700 truncate">
-                                  Users
+                              <Link
+                                to="/admin/airport-transfers"
+                                className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-indigo-50 rounded-md transition-colors"
+                              >
+                                <div className="w-8 h-8 rounded-md bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-white text-xs shadow">
+                                  <i className="fas fa-plane"></i>
                                 </div>
-                                <div className="text-xs text-gray-500 truncate">
-                                  Manage Accounts
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-gray-900 text-sm group-hover:text-indigo-700 truncate">
+                                    Transfers
+                                  </div>
+                                  <div className="text-xs text-gray-500 truncate">
+                                    Transport Services
+                                  </div>
                                 </div>
-                              </div>
-                            </Link>
-                          </div>
+                              </Link>
 
-                          {/* Airport Services Section */}
-                          <div className="mt-2 border-t border-gray-100 pt-2">
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-2 py-2">
-                              Airport Services
+                              <Link
+                                to="/admin/airport-transfer-bookings"
+                                className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-cyan-50 rounded-md transition-colors"
+                              >
+                                <div className="w-8 h-8 rounded-md bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-white text-xs shadow">
+                                  <i className="fas fa-ticket-alt"></i>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-gray-900 text-sm group-hover:text-cyan-700 truncate">
+                                    Transfer Bookings
+                                  </div>
+                                  <div className="text-xs text-gray-500 truncate">
+                                    Reservation Management
+                                  </div>
+                                </div>
+                              </Link>
+
+                              <Link
+                                to="/admin/users"
+                                className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-orange-50 rounded-md transition-colors"
+                              >
+                                <div className="w-8 h-8 rounded-md bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white text-xs shadow">
+                                  <i className="fas fa-users"></i>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-gray-900 text-sm group-hover:text-orange-700 truncate">
+                                    Users
+                                  </div>
+                                  <div className="text-xs text-gray-500 truncate">
+                                    Manage Accounts
+                                  </div>
+                                </div>
+                              </Link>
                             </div>
-
-                            <Link
-                              to="/admin/airport-transfers"
-                              className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-indigo-50 rounded-md transition-colors"
-                            >
-                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-white text-xs shadow">
-                                <i className="fas fa-plane"></i>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-gray-900 text-sm group-hover:text-indigo-700 truncate">
-                                  Transfers
-                                </div>
-                                <div className="text-xs text-gray-500 truncate">
-                                  Transport Services
-                                </div>
-                              </div>
-                            </Link>
-
-                            <Link
-                              to="/admin/airport-transfer-bookings"
-                              className="group flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-cyan-50 rounded-md transition-colors"
-                            >
-                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-cyan-500 to-teal-500 flex items-center justify-center text-white text-xs shadow">
-                                <i className="fas fa-ticket-alt"></i>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-gray-900 text-sm group-hover:text-cyan-700 truncate">
-                                  Transfer Bookings
-                                </div>
-                                <div className="text-xs text-gray-500 truncate">
-                                  Reservation Management
-                                </div>
-                              </div>
-                            </Link>
 
                             <Link
                               to="/admin/dashboard?tab=contacts"
@@ -414,6 +413,23 @@ const Navbar = () => {
                                 </div>
                               </div>
                             </Link>
+                            {/* Tour Package Bookings */}
+                            <Link
+                              to="/dashboard/tour-package-bookings"
+                              className="group relative block p-3 text-gray-800 hover:bg-gradient-to-br hover:from-amber-50 hover:to-white rounded-lg transition-all duration-250 hover:shadow-md hover:-translate-y-0.5 border border-gray-100 hover:border-amber-200"
+                            >
+                              <div className="flex flex-col items-center text-center">
+                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform duration-250 mb-2">
+                                  <i className="fas fa-suitcase-rolling text-base"></i>
+                                </div>
+                                <div className="font-medium text-gray-900 group-hover:text-amber-700 transition-colors text-sm">
+                                  Tour Bookings
+                                </div>
+                                <div className="text-xs text-gray-500 group-hover:text-amber-500 transition-colors mt-0.5">
+                                  Package Reservations
+                                </div>
+                              </div>
+                            </Link>
 
                             {/* Bookings */}
                             <Link
@@ -429,24 +445,6 @@ const Navbar = () => {
                                 </div>
                                 <div className="text-xs text-gray-500 group-hover:text-emerald-500 transition-colors mt-0.5">
                                   Reservations
-                                </div>
-                              </div>
-                            </Link>
-
-                            {/* Tour Package Bookings */}
-                            <Link
-                              to="/dashboard/tour-package-bookings"
-                              className="group relative block p-3 text-gray-800 hover:bg-gradient-to-br hover:from-amber-50 hover:to-white rounded-lg transition-all duration-250 hover:shadow-md hover:-translate-y-0.5 border border-gray-100 hover:border-amber-200"
-                            >
-                              <div className="flex flex-col items-center text-center">
-                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform duration-250 mb-2">
-                                  <i className="fas fa-suitcase-rolling text-base"></i>
-                                </div>
-                                <div className="font-medium text-gray-900 group-hover:text-amber-700 transition-colors text-sm">
-                                  Tour Bookings
-                                </div>
-                                <div className="text-xs text-gray-500 group-hover:text-amber-500 transition-colors mt-0.5">
-                                  Package Reservations
                                 </div>
                               </div>
                             </Link>
@@ -681,20 +679,20 @@ const Navbar = () => {
                         <span>My Profile</span>
                       </Link>
                       <Link
-                        to="/dashboard/bookings"
-                        className="flex items-center py-2.5 px-3 rounded-lg text-white hover:bg-blue-800/30 hover:text-yellow-300 transition-all"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        <i className="fas fa-calendar-check w-5 mr-3 text-center"></i>
-                        <span>Excursion Bookings</span>
-                      </Link>
-                      <Link
                         to="/dashboard/tour-package-bookings"
                         className="flex items-center py-2.5 px-3 rounded-lg text-white hover:bg-blue-800/30 hover:text-yellow-300 transition-all"
                         onClick={() => setIsOpen(false)}
                       >
                         <i className="fas fa-suitcase-rolling w-5 mr-3 text-center"></i>
                         <span>Tour Package Bookings</span>
+                      </Link>
+                      <Link
+                        to="/dashboard/bookings"
+                        className="flex items-center py-2.5 px-3 rounded-lg text-white hover:bg-blue-800/30 hover:text-yellow-300 transition-all"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <i className="fas fa-calendar-check w-5 mr-3 text-center"></i>
+                        <span>Excursion Bookings</span>
                       </Link>
                     </>
                   )}
