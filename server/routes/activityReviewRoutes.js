@@ -2,19 +2,19 @@
 const express = require('express');
 const router = express.Router();
 const {
-    getReviewsByActivity,      // Renamed
-    getSummary,                // Renamed
-    createReview,              // Renamed
-    getUserReview,             // Renamed
-    canReview,                 // Renamed
-    like,                      // Renamed
-    deleteReview,              // Renamed
-    getAllForModeration,       // Renamed
-    updateStatus,              // Renamed
-    reply,                     // Renamed
-    getStats,                  // Renamed
-    adminDelete,               // Renamed
-    getById                    // Added
+    getReviewsByActivity,      
+    getSummary,                
+    createReview,             
+    getUserReview,             
+    canReview,                
+    like,                     
+    deleteReview,              
+    getAllForModeration,       
+    updateStatus,           
+    reply,                     
+    getStats,                 
+    adminDelete,               
+    getById                    
 } = require('../controllers/activityReviewController');
 const { protect, authorize } = require('../middleware/auth');
 

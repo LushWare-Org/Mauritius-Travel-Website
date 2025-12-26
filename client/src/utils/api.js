@@ -3,9 +3,10 @@ import axios from 'axios';
 
 // Create axios instance with base URL
 const envApiUrl = import.meta.env.VITE_API_URL;
-const API_URL = (typeof envApiUrl === 'string' && !envApiUrl.startsWith('VITE_API_URL=')) 
-  ? envApiUrl 
-  : 'https://api.holidayvibestour.com/api/v1';
+const API_URL =
+  typeof envApiUrl === 'string' && !envApiUrl.startsWith('VITE_API_URL=')
+    ? envApiUrl
+    : 'https://api.holidayvibestour.com/api/v1';
 
 // Debug logging
 if (import.meta.env.DEV) {
@@ -13,7 +14,7 @@ if (import.meta.env.DEV) {
     apiUrl: API_URL,
     mode: import.meta.env.MODE,
     cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME,
-    uploadPreset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+    uploadPreset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET,
   });
 }
 
@@ -21,9 +22,9 @@ if (import.meta.env.DEV) {
 const API = axios.create({
   baseURL: API_URL,
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
   },
-  withCredentials: true
+  withCredentials: true,
 });
 
 // Request interceptor
@@ -33,13 +34,13 @@ API.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     if (config.data instanceof FormData) {
       delete config.headers['Content-Type'];
     }
-    
+
     return config;
-  },  
+  },
   (error) => Promise.reject(error)
 );
 
@@ -47,7 +48,12 @@ API.interceptors.request.use(
 API.interceptors.response.use(
   (response) => {
     if (import.meta.env.DEV) {
-      console.log('✅ API Success:', response.config?.method?.toUpperCase(), response.config?.url, response.status);
+      console.log(
+        '✅ API Success:',
+        response.config?.method?.toUpperCase(),
+        response.config?.url,
+        response.status
+      );
     }
     return response;
   },
@@ -56,9 +62,9 @@ API.interceptors.response.use(
       url: error.config?.url,
       method: error.config?.method?.toUpperCase(),
       status: error.response?.status,
-      message: error.message
+      message: error.message,
     });
-    
+
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -66,7 +72,7 @@ API.interceptors.response.use(
         window.location.href = '/login?session=expired';
       }
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -76,19 +82,15 @@ export const dashboardAPI = {
   getStats: async () => {
     try {
       console.log('Fetching dashboard stats (without activities)...');
-      
+
       // DON'T fetch activities - only fetch other data
-      const [
-        bookingsRes,
-        usersRes,
-        contactsRes,
-        airportBookingsRes
-      ] = await Promise.allSettled([
-        API.get('/bookings'),
-        API.get('/users'),
-        API.get('/contact'),
-        API.get('/airport-transfer-bookings')
-      ]);
+      const [bookingsRes, usersRes, contactsRes, airportBookingsRes] =
+        await Promise.allSettled([
+          API.get('/bookings'),
+          API.get('/users'),
+          API.get('/contact'),
+          API.get('/airport-transfer-bookings'),
+        ]);
 
       const extractData = (result) => {
         if (result.status === 'fulfilled' && result.value?.data) {
@@ -96,7 +98,8 @@ export const dashboardAPI = {
           if (Array.isArray(data)) return data;
           if (data?.data && Array.isArray(data.data)) return data.data;
           if (data?.result && Array.isArray(data.result)) return data.result;
-          if (data?.success && data.data && Array.isArray(data.data)) return data.data;
+          if (data?.success && data.data && Array.isArray(data.data))
+            return data.data;
         }
         return [];
       };
@@ -113,34 +116,54 @@ export const dashboardAPI = {
             // Don't include totalActivities here - it will come from context
             totalBookings: bookings.length,
             totalUsers: users.length,
-            pendingBookings: bookings.filter(b => 
-              b.status === 'pending' || b.bookingStatus === 'pending'
+            pendingBookings: bookings.filter(
+              (b) => b.status === 'pending' || b.bookingStatus === 'pending'
             ).length,
             totalContacts: contacts.length,
-            unreadContacts: contacts.filter(c => 
-              !c.status || c.status === 'unread' || c.status === 'new' || c.isRead === false
+            unreadContacts: contacts.filter(
+              (c) =>
+                !c.status ||
+                c.status === 'unread' ||
+                c.status === 'new' ||
+                c.isRead === false
             ).length,
             recentBookings: bookings
-              .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+              .sort(
+                (a, b) =>
+                  new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+              )
               .slice(0, 5),
             recentAirportBookings: airportBookings
-              .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+              .sort(
+                (a, b) =>
+                  new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+              )
               .slice(0, 5),
             airportTransfers: {
               totalBookings: airportBookings.length,
-              totalRevenue: airportBookings.reduce((sum, booking) => 
-                sum + (parseFloat(booking.totalPrice) || parseFloat(booking.price) || 0), 0
+              totalRevenue: airportBookings.reduce(
+                (sum, booking) =>
+                  sum +
+                  (parseFloat(booking.totalPrice) ||
+                    parseFloat(booking.price) ||
+                    0),
+                0
               ),
-              pendingBookings: airportBookings.filter(b => b.status === 'pending').length,
-              confirmedBookings: airportBookings.filter(b => b.status === 'confirmed').length,
-              completedBookings: airportBookings.filter(b => b.status === 'completed').length
-            }
-          }
-        }
+              pendingBookings: airportBookings.filter(
+                (b) => b.status === 'pending'
+              ).length,
+              confirmedBookings: airportBookings.filter(
+                (b) => b.status === 'confirmed'
+              ).length,
+              completedBookings: airportBookings.filter(
+                (b) => b.status === 'completed'
+              ).length,
+            },
+          },
+        },
       };
 
       return result;
-
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
       return {
@@ -160,94 +183,97 @@ export const dashboardAPI = {
               totalRevenue: 0,
               pendingBookings: 0,
               confirmedBookings: 0,
-              completedBookings: 0
-            }
-          }
-        }
+              completedBookings: 0,
+            },
+          },
+        },
       };
     }
-  }
+  },
 };
 
 // Activities API - ONLY ONE DEFINITION
 export const activitiesAPI = {
   baseUrl: API_URL,
-  
+
   getAll: async (params = {}) => {
     console.log('📋 Activities API: Fetching all activities...', params);
-    
+
     try {
       // Add currency parameter if not present
       const queryParams = { ...params };
-      
+
       const response = await API.get('/activities', {
         params: queryParams,
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
+          Pragma: 'no-cache',
+          Expires: '0',
+        },
       });
-      
+
       console.log('✅ Activities API Response:', {
         success: response.data.success,
         count: response.data.data?.length || 0,
         currency: response.data.currency,
-        hasData: !!response.data.data
+        hasData: !!response.data.data,
       });
-      
+
       return response;
-      
     } catch (error) {
       console.error('❌ Activities API getAll failed:', {
         message: error.message,
         status: error.response?.status,
-        data: error.response?.data
+        data: error.response?.data,
       });
-      
+
       return {
         data: {
           success: false,
           error: error.message,
           data: [],
-          currency: params.currency || 'USD'
-        }
+          currency: params.currency || 'USD',
+        },
       };
     }
   },
-  
+
   getById: async (id, currency = 'USD') => {
-  console.log(`🔍 Activities API: Fetching activity ${id} with currency ${currency}`);
-  try {
-    const response = await API.get(`/activities/${id}`, {
-      params: { 
-        currency,
-        _t: Date.now() // Add timestamp to bypass cache
-      },
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    });
-    
-    console.log('✅ Activity fetch response:', {
-      hasGalleryImages: !!response.data.data?.galleryImages,
-      galleryType: typeof response.data.data?.galleryImages,
-      galleryLength: Array.isArray(response.data.data?.galleryImages) 
-        ? response.data.data.galleryImages.length 
-        : 'N/A'
-    });
-    
-    return response;
-  } catch (error) {
-    console.error(`❌ Error fetching activity ${id}:`, error);
-    throw error;
-  }
-},
-  
+    console.log(
+      `🔍 Activities API: Fetching activity ${id} with currency ${currency}`
+    );
+    try {
+      const response = await API.get(`/activities/${id}`, {
+        params: {
+          currency,
+          _t: Date.now(), // Add timestamp to bypass cache
+        },
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
+        },
+      });
+
+      console.log('✅ Activity fetch response:', {
+        hasGalleryImages: !!response.data.data?.galleryImages,
+        galleryType: typeof response.data.data?.galleryImages,
+        galleryLength: Array.isArray(response.data.data?.galleryImages)
+          ? response.data.data.galleryImages.length
+          : 'N/A',
+      });
+
+      return response;
+    } catch (error) {
+      console.error(`❌ Error fetching activity ${id}:`, error);
+      throw error;
+    }
+  },
+
   create: async (data) => {
-    console.log('➕ Activities API: Creating new activity with dual currencies');
+    console.log(
+      '➕ Activities API: Creating new activity with dual currencies'
+    );
     try {
       const response = await API.post('/activities', data);
       return response;
@@ -256,9 +282,11 @@ export const activitiesAPI = {
       throw error;
     }
   },
-  
+
   update: async (id, data) => {
-    console.log(`✏️ Activities API: Updating activity ${id} with dual currencies`);
+    console.log(
+      `✏️ Activities API: Updating activity ${id} with dual currencies`
+    );
     try {
       const response = await API.put(`/activities/${id}`, data);
       return response;
@@ -267,7 +295,7 @@ export const activitiesAPI = {
       throw error;
     }
   },
-  
+
   delete: async (id) => {
     console.log(`🗑️ Activities API: Deleting activity ${id}`);
     try {
@@ -277,7 +305,7 @@ export const activitiesAPI = {
       console.error(`❌ Error deleting activity ${id}:`, error);
       throw error;
     }
-  }
+  },
 };
 
 // Tour Packages API
@@ -292,7 +320,7 @@ export const tourPackagesAPI = {
   getById: (id) => API.get(`/tour-packages/${id}`),
   create: (data) => API.post('/tour-packages', data),
   update: (id, data) => API.put(`/tour-packages/${id}`, data),
-  delete: (id) => API.delete(`/tour-packages/${id}`)
+  delete: (id) => API.delete(`/tour-packages/${id}`),
 };
 
 // Tour Packages Booking API
@@ -305,13 +333,15 @@ export const tourPackageBookingsAPI = {
   getById: async (id) => {
     try {
       console.log(`🔍 Fetching booking with ID: ${id}`);
-      console.log(`🔗 Full URL: ${API.defaults.baseURL}/tour-package-bookings/${id}`);
-      
+      console.log(
+        `🔗 Full URL: ${API.defaults.baseURL}/tour-package-bookings/${id}`
+      );
+
       const response = await API.get(`/tour-package-bookings/${id}`);
       console.log('✅ Booking fetch successful:', {
         success: response.data.success,
         hasData: !!response.data.data,
-        bookingId: response.data.data?._id
+        bookingId: response.data.data?._id,
       });
       return response;
     } catch (error) {
@@ -320,23 +350,29 @@ export const tourPackageBookingsAPI = {
         status: error.response?.status,
         statusText: error.response?.statusText,
         data: error.response?.data,
-        message: error.message
+        message: error.message,
       });
-      
+
       // Re-throw with more context
-      throw new Error(`Failed to fetch booking ${id}: ${error.response?.data?.message || error.message}`);
+      throw new Error(
+        `Failed to fetch booking ${id}: ${
+          error.response?.data?.message || error.message
+        }`
+      );
     }
   },
 
   createWithTransfer: (data) => {
     return API.post('/tour-package-bookings/with-transfer', data);
   },
-  
+
   create: (data) => API.post('/tour-package-bookings', data),
-  createWithActivities: (data) => API.post('/tour-package-bookings/with-activities', data),
+  createWithActivities: (data) =>
+    API.post('/tour-package-bookings/with-activities', data),
   cancel: (id) => API.put(`/tour-package-bookings/${id}/cancel`),
   getAllAdmin: () => API.get('/tour-package-bookings/admin/all'),
-  updateStatus: (id, status) => API.put(`/tour-package-bookings/${id}/status`, { status }),
+  updateStatus: (id, status) =>
+    API.put(`/tour-package-bookings/${id}/status`, { status }),
 };
 
 // Bookings API
@@ -348,7 +384,8 @@ export const bookingsAPI = {
   updateStatus: (id, status) => API.put(`/bookings/${id}`, { status }),
   delete: (id) => API.delete(`/bookings/${id}`),
   // NEW: Convert price to another currency
-  convertPrice: (id, toCurrency) => API.get(`/bookings/${id}/convert/${toCurrency}`)
+  convertPrice: (id, toCurrency) =>
+    API.get(`/bookings/${id}/convert/${toCurrency}`),
 };
 
 // Users API
@@ -359,7 +396,7 @@ export const usersAPI = {
   update: (id, userData) => API.put(`/users/${id}`, userData),
   updateRole: (id, role) => API.put(`/users/${id}/role`, { role }),
   delete: (id) => API.delete(`/users/${id}`),
-  getBookingCount: (id) => API.get(`/users/${id}/bookings/count`)
+  getBookingCount: (id) => API.get(`/users/${id}/bookings/count`),
 };
 
 // User Bookings API
@@ -368,7 +405,7 @@ export const userBookingsAPI = {
   getHistory: () => API.get('/user/bookings/history'),
   getUpcoming: () => API.get('/user/bookings/upcoming'),
   getStats: () => API.get('/user/bookings/stats'),
-  cancelBooking: (id) => API.put(`/user/bookings/${id}/cancel`)
+  cancelBooking: (id) => API.put(`/user/bookings/${id}/cancel`),
 };
 
 // Function to upload image to Cloudinary with multiple fallbacks
@@ -376,56 +413,56 @@ export const uploadImage = async (file) => {
   console.log('📤 Starting image upload:', {
     fileName: file.name,
     fileSize: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
-    fileType: file.type
+    fileType: file.type,
   });
 
   // Get Cloudinary configuration - HARDCODED FALLBACKS
   const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dwzhs42tz';
-  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'maldives_activities';
-  
+  const uploadPreset =
+    import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'maldives_activities';
+
   console.log('🔧 Using Cloudinary config:', { cloudName, uploadPreset });
 
   // METHOD 1: Try direct Cloudinary upload with fetch (most reliable)
   try {
     console.log('🔄 Method 1: Trying direct Cloudinary upload...');
-    
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', uploadPreset);
-    
+
     // Use fetch instead of axios for Cloudinary
     const response = await fetch(
       `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
       {
         method: 'POST',
-        body: formData
+        body: formData,
       }
     );
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       console.warn('⚠️ Direct Cloudinary upload failed:', {
         status: response.status,
-        error: errorText
+        error: errorText,
       });
       throw new Error(`Cloudinary upload failed: ${response.status}`);
     }
-    
+
     const data = await response.json();
     console.log('✅ Direct Cloudinary upload successful!', data.secure_url);
     return data.secure_url;
-    
   } catch (directError) {
     console.warn('⚠️ Direct upload failed, trying axios...');
-    
+
     // METHOD 2: Try Cloudinary with axios
     try {
       console.log('🔄 Method 2: Trying Cloudinary with axios...');
-      
+
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', uploadPreset);
-      
+
       const response = await axios.post(
         `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
         formData,
@@ -433,75 +470,82 @@ export const uploadImage = async (file) => {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
-          timeout: 30000
+          timeout: 30000,
         }
       );
-      
+
       if (response.data.secure_url) {
-        console.log('✅ Axios Cloudinary upload successful!', response.data.secure_url);
+        console.log(
+          '✅ Axios Cloudinary upload successful!',
+          response.data.secure_url
+        );
         return response.data.secure_url;
       }
-      
+
       throw new Error('No secure_url in response');
-      
     } catch (axiosError) {
       console.warn('⚠️ Axios Cloudinary upload failed:', axiosError.message);
-      
+
       // METHOD 3: Try backend upload endpoint
       try {
         console.log('🔄 Method 3: Trying backend upload...');
-        
+
         const backendFormData = new FormData();
         backendFormData.append('image', file);
-        
+
         const response = await API.post('/upload/image', backendFormData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
-          timeout: 30000
+          timeout: 30000,
         });
-        
+
         if (response.data.success && response.data.url) {
           console.log('✅ Backend upload successful!', response.data.url);
           return response.data.url;
         }
-        
+
         throw new Error('Backend upload failed');
-        
       } catch (backendError) {
         console.warn('⚠️ Backend upload failed:', backendError.message);
-        
+
         // METHOD 4: Return a reliable placeholder image
         console.log('🔄 Method 4: Using placeholder image...');
-        
+
         // Return a reliable placeholder from Unsplash
         const placeholderUrl = `https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600&q=80&crop=center`;
-        
+
         // Also store locally as data URL for fallback
         const dataUrl = await new Promise((resolve) => {
           const reader = new FileReader();
           reader.onloadend = () => resolve(reader.result);
           reader.readAsDataURL(file);
         });
-        
+
         // Store in localStorage with timestamp
-        const storageKey = `local_image_${Date.now()}_${file.name.replace(/[^a-z0-9]/gi, '_')}`;
-        localStorage.setItem(storageKey, JSON.stringify({
-          dataUrl,
-          fileName: file.name,
-          timestamp: Date.now(),
-          placeholder: placeholderUrl
-        }));
-        
+        const storageKey = `local_image_${Date.now()}_${file.name.replace(
+          /[^a-z0-9]/gi,
+          '_'
+        )}`;
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify({
+            dataUrl,
+            fileName: file.name,
+            timestamp: Date.now(),
+            placeholder: placeholderUrl,
+          })
+        );
+
         console.log('📸 Stored locally with key:', storageKey);
-        
+
         // Return the placeholder for now, but note it's local
         return {
           url: placeholderUrl,
           isLocal: true,
           storageKey,
           dataUrl, // Include data URL for immediate use
-          message: 'Using placeholder image - upload service unavailable'
+          message: 'Using placeholder image - upload service unavailable',
         };
       }
     }
@@ -527,11 +571,13 @@ export const contactAPI = {
   submitContact: (contactData) => API.post('/contact', contactData),
   getAllContacts: () => API.get('/contact'),
   getContactById: (id) => API.get(`/contact/${id}`),
-  updateContactStatus: (id, status) => API.put(`/contact/${id}/status`, { status }),
-  replyToContact: (id, replyMessage) => API.post(`/contact/${id}/reply`, { replyMessage }),
+  updateContactStatus: (id, status) =>
+    API.put(`/contact/${id}/status`, { status }),
+  replyToContact: (id, replyMessage) =>
+    API.post(`/contact/${id}/reply`, { replyMessage }),
   deleteContact: (id) => API.delete(`/contact/${id}`),
   getContactStats: () => API.get('/contact/stats'),
-  getUserContacts: () => API.get('/contact/user')
+  getUserContacts: () => API.get('/contact/user'),
 };
 
 // Airport Transfer API
@@ -541,10 +587,13 @@ export const airportTransferAPI = {
   getById: (id) => API.get(`/airport-transfers/${id}`),
   create: (data) => API.post('/airport-transfers', data),
   update: (id, data) => API.put(`/airport-transfers/${id}`, data),
-  updateExchangeRate: (data) => API.put('/airport-transfers/update-exchange-rate', data),
+  updateExchangeRate: (data) =>
+    API.put('/airport-transfers/update-exchange-rate', data),
   delete: (id) => API.delete(`/airport-transfers/${id}`),
-  getBookingsByDateRange: (startDate, endDate) => 
-    API.get(`/airport-transfer-bookings/report?startDate=${startDate}&endDate=${endDate}`),
+  getBookingsByDateRange: (startDate, endDate) =>
+    API.get(
+      `/airport-transfer-bookings/report?startDate=${startDate}&endDate=${endDate}`
+    ),
 };
 // Airport Transfer Booking API
 export const airportTransferBookingAPI = {
@@ -552,11 +601,12 @@ export const airportTransferBookingAPI = {
   getAllBookings: (params) => API.get('/airport-transfer-bookings', { params }),
   getBookingStats: () => API.get('/airport-transfer-bookings/stats'),
   getBookingById: (id) => API.get(`/airport-transfer-bookings/${id}`),
-  updateBookingStatus: (id, status, adminNotes) => 
+  updateBookingStatus: (id, status, adminNotes) =>
     API.put(`/airport-transfer-bookings/${id}/status`, { status, adminNotes }),
-  updateBooking: (id, data) => API.put(`/airport-transfer-bookings/${id}`, data),
+  updateBooking: (id, data) =>
+    API.put(`/airport-transfer-bookings/${id}`, data),
   deleteBooking: (id) => API.delete(`/airport-transfer-bookings/${id}`),
-  getUserBookings: () => API.get('/airport-transfer-bookings/user/my-bookings')
+  getUserBookings: () => API.get('/airport-transfer-bookings/user/my-bookings'),
 };
 
 // Authentication API
@@ -570,13 +620,34 @@ export const authAPI = {
   },
   getProfile: () => API.get('/auth/profile'),
   updateProfile: (userData) => API.put('/auth/profile', userData),
-  changePassword: (passwordData) => API.put('/auth/change-password', passwordData)
+  changePassword: (passwordData) =>
+    API.put('/auth/change-password', passwordData),
 };
 
+// Tour Feedback API
+export const feedbackAPI = {
+  // User feedback endpoints
+  submitFeedback: (packageId, feedbackData) =>
+    API.post(`/feedback/${packageId}`, feedbackData),
+  getPackageFeedbacks: (packageId, params) =>
+    API.get(`/feedback/package/${packageId}`, { params }),
+
+  // Admin feedback endpoints
+  admin: {
+    getAll: (params) => API.get('/feedback/admin/all', { params }),
+    getStatistics: () => API.get('/feedback/admin/statistics'),
+    getById: (id) => API.get(`/feedback/admin/${id}`),
+    delete: (id) => API.delete(`/feedback/admin/${id}`),
+    bulkDelete: (feedbackIds) =>
+      API.delete('/feedback/admin/bulk/delete', { data: { feedbackIds } }),
+    getUserFeedbacks: (userId, params) =>
+      API.get(`/feedback/admin/user/${userId}`, { params }),
+  },
+};
 // Test function to verify uploads work
 export const testImageUpload = async () => {
   console.log('🧪 Testing image upload functionality...');
-  
+
   try {
     // Create a test image
     const canvas = document.createElement('canvas');
@@ -585,11 +656,13 @@ export const testImageUpload = async () => {
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#3B82F6';
     ctx.fillRect(0, 0, 100, 100);
-    
+
     return new Promise((resolve) => {
       canvas.toBlob(async (blob) => {
-        const testFile = new File([blob], 'test-image.png', { type: 'image/png' });
-        
+        const testFile = new File([blob], 'test-image.png', {
+          type: 'image/png',
+        });
+
         try {
           const result = await uploadImage(testFile);
           console.log('✅ Upload test result:', result);
@@ -612,22 +685,25 @@ export const activityReviewsAPI = {
   getByActivityId: async (activityId, params = {}) => {
     try {
       console.log(`📋 Fetching reviews for activity ${activityId}...`, params);
-      const response = await API.get(`/activity-reviews/activity/${activityId}`, { params });
+      const response = await API.get(
+        `/activity-reviews/activity/${activityId}`,
+        { params }
+      );
       console.log(`✅ Reviews response:`, response.data);
       return response;
     } catch (error) {
       console.error(`❌ Error fetching reviews for activity ${activityId}:`, {
         status: error.response?.status,
         url: error.config?.url,
-        message: error.message
+        message: error.message,
       });
       // Return empty data instead of throwing
       return {
         data: {
           success: false,
           data: [],
-          pagination: { total: 0, page: 1, limit: 10, pages: 0 }
-        }
+          pagination: { total: 0, page: 1, limit: 10, pages: 0 },
+        },
       };
     }
   },
@@ -636,23 +712,28 @@ export const activityReviewsAPI = {
   getSummary: async (activityId) => {
     try {
       console.log(`📊 Fetching review summary for activity ${activityId}...`);
-      const response = await API.get(`/activity-reviews/activity/${activityId}/summary`);
+      const response = await API.get(
+        `/activity-reviews/activity/${activityId}/summary`
+      );
       console.log(`✅ Summary response:`, response.data);
       return response;
     } catch (error) {
-      console.error(`❌ Error fetching review summary for activity ${activityId}:`, {
-        status: error.response?.status,
-        url: error.config?.url,
-        message: error.message
-      });
+      console.error(
+        `❌ Error fetching review summary for activity ${activityId}:`,
+        {
+          status: error.response?.status,
+          url: error.config?.url,
+          message: error.message,
+        }
+      );
       // Return default summary
       return {
         data: {
           success: true, // Mark as success so frontend can proceed
           averageRating: 0,
           totalReviews: 0,
-          ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
-        }
+          ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+        },
       };
     }
   },
@@ -661,16 +742,21 @@ export const activityReviewsAPI = {
   canReview: async (activityId) => {
     try {
       console.log(`❓ Checking if user can review activity ${activityId}...`);
-      const response = await API.get(`/activity-reviews/activity/${activityId}/can-review`);
+      const response = await API.get(
+        `/activity-reviews/activity/${activityId}/can-review`
+      );
       console.log(`✅ Can review response:`, response.data);
       return response;
     } catch (error) {
-      console.error(`❌ Error checking if user can review activity ${activityId}:`, {
-        status: error.response?.status,
-        url: error.config?.url,
-        message: error.message
-      });
-      
+      console.error(
+        `❌ Error checking if user can review activity ${activityId}:`,
+        {
+          status: error.response?.status,
+          url: error.config?.url,
+          message: error.message,
+        }
+      );
+
       // If 404, the endpoint doesn't exist yet - return default
       if (error.response?.status === 404) {
         console.log('⚠️ Endpoint not found, using default response');
@@ -678,18 +764,18 @@ export const activityReviewsAPI = {
           data: {
             success: true,
             canReview: true, // Allow review for testing
-            message: 'Using default - review allowed'
-          }
+            message: 'Using default - review allowed',
+          },
         };
       }
-      
+
       // For other errors, also allow review
       return {
         data: {
           success: true,
           canReview: true,
-          message: 'Error occurred, allowing review by default'
-        }
+          message: 'Error occurred, allowing review by default',
+        },
       };
     }
   },
@@ -697,17 +783,23 @@ export const activityReviewsAPI = {
   // Create a review for an activity
   create: async (activityId, reviewData) => {
     try {
-      console.log(`➕ Creating review for activity ${activityId}...`, reviewData);
-      const response = await API.post(`/activity-reviews/activity/${activityId}`, reviewData);
+      console.log(
+        `➕ Creating review for activity ${activityId}...`,
+        reviewData
+      );
+      const response = await API.post(
+        `/activity-reviews/activity/${activityId}`,
+        reviewData
+      );
       console.log(`✅ Create review response:`, response.data);
       return response;
     } catch (error) {
       console.error(`❌ Error creating review for activity ${activityId}:`, {
         status: error.response?.status,
         data: error.response?.data,
-        message: error.message
+        message: error.message,
       });
-      
+
       // If endpoint doesn't exist, simulate success for testing
       if (error.response?.status === 404) {
         console.log('⚠️ Endpoint not found, simulating success');
@@ -719,36 +811,41 @@ export const activityReviewsAPI = {
               ...reviewData,
               user: JSON.parse(localStorage.getItem('user')),
               createdAt: new Date().toISOString(),
-              status: 'approved'
+              status: 'approved',
             },
-            message: 'Review submitted (simulated)'
-          }
+            message: 'Review submitted (simulated)',
+          },
         };
       }
-      
+
       throw error;
     }
   },
-  
+
   // Get user's review for an activity
   getUserReview: async (activityId) => {
     try {
       console.log(`👤 Fetching user review for activity ${activityId}...`);
-      const response = await API.get(`/activity-reviews/activity/${activityId}/user/my-review`);
+      const response = await API.get(
+        `/activity-reviews/activity/${activityId}/user/my-review`
+      );
       console.log(`✅ User review response:`, response.data);
       return response;
     } catch (error) {
-      console.error(`❌ Error fetching user review for activity ${activityId}:`, {
-        status: error.response?.status,
-        url: error.config?.url,
-        message: error.message
-      });
+      console.error(
+        `❌ Error fetching user review for activity ${activityId}:`,
+        {
+          status: error.response?.status,
+          url: error.config?.url,
+          message: error.message,
+        }
+      );
       return {
         data: {
           success: true, // Mark as success
           data: null,
-          hasReviewed: false
-        }
+          hasReviewed: false,
+        },
       };
     }
   },
@@ -764,7 +861,7 @@ export const activityReviewsAPI = {
       console.error(`❌ Error liking review ${reviewId}:`, {
         status: error.response?.status,
         url: error.config?.url,
-        message: error.message
+        message: error.message,
       });
       // Return success anyway for testing
       return {
@@ -773,9 +870,9 @@ export const activityReviewsAPI = {
           data: {
             likes: 1,
             helpfulCount: 1,
-            liked: true
-          }
-        }
+            liked: true,
+          },
+        },
       };
     }
   },
@@ -791,14 +888,14 @@ export const activityReviewsAPI = {
       console.error(`❌ Error deleting review ${reviewId}:`, {
         status: error.response?.status,
         url: error.config?.url,
-        message: error.message
+        message: error.message,
       });
       // Simulate success for testing
       return {
         data: {
           success: true,
-          message: 'Review deleted (simulated)'
-        }
+          message: 'Review deleted (simulated)',
+        },
       };
     }
   },
@@ -816,14 +913,14 @@ export const activityReviewsAPI = {
       console.error('❌ Error fetching reviews for moderation:', {
         status: error.response?.status,
         url: error.config?.url,
-        message: error.message
+        message: error.message,
       });
       return {
         data: {
           success: true, // Mark as success
           data: [],
-          pagination: { total: 0, page: 1, limit: 10, pages: 0 }
-        }
+          pagination: { total: 0, page: 1, limit: 10, pages: 0 },
+        },
       };
     }
   },
@@ -832,14 +929,17 @@ export const activityReviewsAPI = {
   updateStatus: async (reviewId, status) => {
     try {
       console.log(`🔄 Updating status for review ${reviewId} to ${status}...`);
-      const response = await API.put(`/activity-reviews/admin/${reviewId}/status`, { status });
+      const response = await API.put(
+        `/activity-reviews/admin/${reviewId}/status`,
+        { status }
+      );
       console.log(`✅ Update status response:`, response.data);
       return response;
     } catch (error) {
       console.error(`❌ Error updating status for review ${reviewId}:`, {
         status: error.response?.status,
         url: error.config?.url,
-        message: error.message
+        message: error.message,
       });
       // Simulate success for testing
       return {
@@ -847,9 +947,9 @@ export const activityReviewsAPI = {
           success: true,
           data: {
             _id: reviewId,
-            status: status
-          }
-        }
+            status: status,
+          },
+        },
       };
     }
   },
@@ -858,14 +958,17 @@ export const activityReviewsAPI = {
   reply: async (reviewId, replyMessage) => {
     try {
       console.log(`💬 Replying to review ${reviewId}...`);
-      const response = await API.post(`/activity-reviews/admin/${reviewId}/reply`, { replyMessage });
+      const response = await API.post(
+        `/activity-reviews/admin/${reviewId}/reply`,
+        { replyMessage }
+      );
       console.log(`✅ Reply response:`, response.data);
       return response;
     } catch (error) {
       console.error(`❌ Error replying to review ${reviewId}:`, {
         status: error.response?.status,
         url: error.config?.url,
-        message: error.message
+        message: error.message,
       });
       // Simulate success for testing
       return {
@@ -874,9 +977,9 @@ export const activityReviewsAPI = {
           data: {
             _id: reviewId,
             adminReply: replyMessage,
-            adminReplyDate: new Date().toISOString()
-          }
-        }
+            adminReplyDate: new Date().toISOString(),
+          },
+        },
       };
     }
   },
@@ -892,7 +995,7 @@ export const activityReviewsAPI = {
       console.error('❌ Error fetching review stats:', {
         status: error.response?.status,
         url: error.config?.url,
-        message: error.message
+        message: error.message,
       });
       return {
         data: {
@@ -903,9 +1006,9 @@ export const activityReviewsAPI = {
             approvedReviews: 0,
             todayReviews: 0,
             weeklyReviews: 0,
-            approvalRate: 0
-          }
-        }
+            approvalRate: 0,
+          },
+        },
       };
     }
   },
@@ -921,17 +1024,17 @@ export const activityReviewsAPI = {
       console.error(`❌ Admin error deleting review ${reviewId}:`, {
         status: error.response?.status,
         url: error.config?.url,
-        message: error.message
+        message: error.message,
       });
       // Simulate success for testing
       return {
         data: {
           success: true,
-          message: 'Review deleted by admin (simulated)'
-        }
+          message: 'Review deleted by admin (simulated)',
+        },
       };
     }
-  }
+  },
 };
 
 export default API;

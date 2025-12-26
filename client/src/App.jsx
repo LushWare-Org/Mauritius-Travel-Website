@@ -92,10 +92,12 @@ import AdminTourPackageView from './pages/admin/AdminTourPackageView.jsx';
 import TourPackageForm from './pages/admin/TourPackageForm';
 import AdminTourPackageBooking from './pages/admin/AdminTourPackageBooking';
 import AdminTourPackageBookingDetail from './pages/admin/TourPackageBookingDetail';
+import AdminReviews from './pages/admin/ReviewsPage.jsx';
 
 // Import Activity Review Admin Pages
 import AdminActivityReviews from './pages/admin/activity/ActivityReviews';
 import ActivityReviewDetail from './pages/admin/activity/ActivityReviewDetail';
+import TourAdminFeedbackPanel from './pages/admin/TourReview/TourAdminFeedbackPanel';
 
 const AppContent = () => {
   const location = useLocation();
@@ -231,7 +233,24 @@ const AppContent = () => {
               </AdminRoute>
             }
           />
+          {/* Admin Routes */}
+          <Route
+            path="/admin/TourAdminFeedbackPanel"
+            element={
+              <AdminRoute>
+                <TourAdminFeedbackPanel />
+              </AdminRoute>
+            }
+          />
 
+          <Route
+            path="/admin/reviews"
+            element={
+              <AdminRoute>
+                <AdminReviews />
+              </AdminRoute>
+            }
+          />
           {/* Activity Review Admin Routes */}
           <Route
             path="/admin/activity-reviews"
@@ -249,15 +268,6 @@ const AppContent = () => {
               </AdminRoute>
             }
           />
-
-          {/*    <Route
-            path="/admin/reviews"
-            element={
-              <AdminRoute>
-                <AdminReviews />
-              </AdminRoute>
-            }
-          />*/}
 
           <Route
             path="/admin/activities"

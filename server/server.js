@@ -147,7 +147,7 @@ app.use(
 // Add root endpoint to check if server is running
 app.get('/', (req, res) => {
   res.json({
-    message: 'Maldives Activity Booking API Server',
+    message: 'Mauritius Activity Booking API Server',
     status: 'Running',
     endpoints: [
       '/api/v1/activities',
@@ -161,7 +161,7 @@ app.get('/', (req, res) => {
 
 app.get('/api/v1', (req, res) => {
   res.json({
-    message: 'Maldives Activity Booking API',
+    message: 'Mauritius Activity Booking API',
     status: 'Running',
     version: 'v1',
     documentation: '/api/v1/server-status for more details',

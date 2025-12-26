@@ -61,9 +61,9 @@ const AdminLayout = ({ children }) => {
     },
     { path: '/admin/users', icon: 'fa-users', text: 'Users' },
     {
-      path: '/admin/activity-reviews',
+      path: '/admin/reviews',
       icon: 'fa-plane',
-      text: 'Excursion Reviews',
+      text: 'Reviews',
     },
     {
       path: '/admin/dashboard?tab=contacts',
