@@ -4,7 +4,13 @@ import { splitVendorChunkPlugin } from 'vite'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), splitVendorChunkPlugin()],
+  plugins: [
+    // Configure react plugin for better compatibility
+    react({
+      jsxRuntime: 'classic', // Ensures React is available
+    }), 
+    splitVendorChunkPlugin()
+  ],
   
   // Server configuration
   server: {
@@ -19,14 +25,23 @@ export default defineConfig({
   },
   
   build: {
+    // Enable sourcemaps in development, disable in production
+    sourcemap: process.env.NODE_ENV !== 'production',
+    
     rollupOptions: {
       output: {
         manualChunks(id) {
           // Split vendor libraries into separate chunks
           if (id.includes('node_modules')) {
-            // React and related
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
-              return 'react-vendor'
+            // ============ CRITICAL FIX ============
+            // React and ReactDOM MUST be together
+            if (
+              id.includes('/react/') || 
+              id.includes('/react-dom/') ||
+              id.includes('react') && !id.includes('react-aria') // Exclude other react packages
+            ) {
+              console.log('📦 Bundling React in react-vendor:', id.split('/').pop());
+              return 'react-vendor'; // Keep React and ReactDOM together
             }
             // UI libraries
             if (id.includes('@headlessui/react') || id.includes('@heroicons/react')) {
@@ -51,11 +66,29 @@ export default defineConfig({
             // Default vendor chunk for other dependencies
             return 'vendor'
           }
-        }
+        },
+        // Ensure consistent naming
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
       }
     },
     // Increase chunk size warning limit
     chunkSizeWarningLimit: 1000,
+    
+    // Minify for production
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: process.env.NODE_ENV === 'production',
+        drop_debugger: true,
+      },
+    },
+    
+    // Better chunk splitting
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    },
   },
   
   // Optimize dependencies
@@ -67,6 +100,21 @@ export default defineConfig({
       'jspdf',
       'html2canvas',
     ],
+    // Ensure React is not excluded
     exclude: [],
+  },
+  
+  // Define global constants
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+    '__VUE_OPTIONS_API__': true,
+    '__VUE_PROD_DEVTOOLS__': false,
+  },
+  
+  // Resolve configuration
+  resolve: {
+    alias: {
+      // Add any aliases if needed
+    },
   },
 })
