@@ -81,6 +81,7 @@ exports.login = async (req, res, next) => {
 
     // Check database connection
     const mongoose = require('mongoose');
+    const jwt = require('jsonwebtoken');
     const connectionState = mongoose.connection.readyState;
     console.log(
       '🔗 Database connection state:',
@@ -136,11 +137,49 @@ exports.login = async (req, res, next) => {
     }
 
     console.log('✅ Password verified successfully');
+    
+    // Create JWT token
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRE || '30d'
+    });
+
+    // ==================== ADD SESSION SETUP ====================
+    // Set session data for auto-logout tracking
+    req.session.user = {
+      id: user._id.toString(),
+      email: user.email,
+      role: user.role,
+      name: user.name
+    };
+    req.session.lastActivity = Date.now();
+    req.session.jwtToken = token; // Store JWT in session for validation
+    // ==================== END SESSION SETUP ====================
+
+    // Update user's last login
+    user.lastLogin = Date.now();
+    await user.save();
+
     // Log successful login
     console.log(`✅ User logged in successfully: ${user.name} (${user._id})`);
-    console.log('🔐 Preparing token response for login');
+    console.log('🔐 Token created and session initialized');
 
-    sendTokenResponse(user, 200, res);
+    // Create response data
+    const responseData = {
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        role: user.role
+      },
+      session: {
+        expiresIn: 60 * 60, // 1 hour in seconds
+        sessionId: req.sessionID
+      }
+    };
+
+    res.status(200).json(responseData);
   } catch (error) {
     console.error('❌ Error in login:', error);
     console.error('❌ Error details:', {
@@ -240,24 +279,69 @@ exports.getAuthStatus = async (req, res) => {
 // @desc      Logout user / clear cookie
 // @route     GET /api/v1/auth/logout
 // @access    Private
+// @desc    Logout user / clear session
+// @route   GET /api/v1/auth/logout
+// @access  Private
 exports.logout = async (req, res, next) => {
-  const options = {
-    expires: new Date(Date.now() + 10 * 1000),
-    httpOnly: true,
-  };
+  try {
+    console.log('🔐 Logout attempt from:', req.headers.origin);
+    console.log('👤 User logging out:', req.session?.user?.email || 'No session user');
+    console.log('🆔 Session ID:', req.sessionID);
+    
+    // Clear session
+    req.session.destroy((err) => {
+      if (err) {
+        console.error('❌ Error destroying session:', err);
+      } else {
+        console.log('✅ Session destroyed successfully');
+      }
+    });
+    
+    // Clear JWT token cookie with proper options
+    const options = {
+      httpOnly: true,
+    };
 
-  // Match cookie settings with login for consistent behavior
-  if (process.env.NODE_ENV === 'production') {
-    options.secure = true;
-    options.sameSite = 'none';
+    // Match cookie settings with login for consistent behavior
+    if (process.env.NODE_ENV === 'production') {
+      options.secure = true;
+      options.sameSite = 'none';
+    }
+    
+    // Clear the token cookie
+    res.clearCookie('token', options);
+    
+    // Clear session cookie (adjust cookie name based on your session config)
+    const sessionCookieName = 'hv.session' || process.env.SESSION_COOKIE_NAME || 'connect.sid';
+    res.clearCookie(sessionCookieName, options);
+    
+    // Additional cookie clearing for "none" token
+    res.cookie('token', 'none', {
+      expires: new Date(Date.now() + 10 * 1000),
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    });
+
+    console.log('✅ Cookies cleared successfully');
+    
+    res.status(200).json({
+      success: true,
+      message: 'Logged out successfully',
+      data: {}
+    });
+  } catch (error) {
+    console.error('❌ Error in logout:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+    });
+    res.status(400).json({
+      success: false,
+      error: error.message || 'Logout failed',
+    });
   }
-
-  res.cookie('token', 'none', options);
-
-  res.status(200).json({
-    success: true,
-    data: {},
-  });
 };
 
 // @desc      Update user details
@@ -475,4 +559,32 @@ const sendTokenResponse = (user, statusCode, res) => {
         role: user.role,
       },
     });
+};
+
+// @desc    Validate session (for auto-logout checking)
+// @route   GET /api/v1/auth/validate-session
+// @access  Private
+exports.validateSession = async (req, res, next) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({
+        success: false,
+        valid: false,
+        message: 'Session expired'
+      });
+    }
+    
+    // Update last activity
+    req.session.lastActivity = Date.now();
+    
+    res.status(200).json({
+      success: true,
+      valid: true,
+      user: req.session.user,
+      lastActivity: req.session.lastActivity,
+      expiresIn: 60 * 60 - Math.floor((Date.now() - req.session.lastActivity) / 1000)
+    });
+  } catch (error) {
+    next(error);
+  }
 };

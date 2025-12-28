@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { 
   getCurrentUser, 
   login as loginService, 
@@ -8,7 +8,8 @@ import {
   resetPassword as resetPasswordService,
   updateProfile as updateProfileService, 
   updatePassword as updatePasswordService,
-  setupAxiosInterceptors
+  setupAxiosInterceptors,
+  validateSession // Add this import for session validation
 } from '../services/authService';
 import tokenManager from '../utils/tokenManager';
 
@@ -59,6 +60,24 @@ export const AuthProvider = ({ children }) => {
       }
     }
   }, []);
+
+  // ==================== MOVE LOGOUT FUNCTION UP HERE ====================
+  // Logout user - moved BEFORE useEffect to avoid reference error
+  const logout = useCallback(async () => {
+    try {
+      console.log('👋 Logging out user:', currentUser?.name || 'Unknown user');
+      await logoutService();
+    } catch (err) {
+      console.error('Server logout error:', err);
+      // Continue with client-side cleanup even if server fails
+    } finally {
+      // ALWAYS clear client-side data
+      setCurrentUserWithPersistence(null);
+      tokenManager.clearAuth();
+      localStorage.removeItem('token');
+      console.log('✅ Logout complete');
+    }
+  }, [currentUser, setCurrentUserWithPersistence]);
 
   // Check if user is logged in on page load - SIMPLIFIED
   useEffect(() => {
@@ -121,6 +140,105 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
   }, [setCurrentUserWithPersistence]);
 
+  // ==================== AUTO-LOGOUT MECHANISM ====================
+  useEffect(() => {
+    let sessionCheckInterval;
+    let inactivityTimer;
+
+    const resetInactivityTimer = () => {
+      // Clear existing timer
+      if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+      }
+      
+      // Set new timer for 1 hour (60 minutes)
+      inactivityTimer = setTimeout(() => {
+        console.log('🕐 User inactive for 1 hour, auto-logout triggered');
+        handleAutoLogout();
+      }, 60 * 60 * 1000); // 1 hour in milliseconds (2 mins for testing)
+    };
+
+    const handleUserActivity = () => {
+      if (currentUser) {
+        console.log('🎯 User activity detected, resetting inactivity timer');
+        resetInactivityTimer();
+      }
+    };
+
+    const handleAutoLogout = async () => {
+      console.log('👋 Auto-logout initiated for:', currentUser?.name || 'Unknown user');
+      try {
+        await logout();
+        // Redirect to login with message
+        window.location.href = '/login?message=auto_logout&reason=inactivity';
+      } catch (error) {
+        console.error('Auto-logout error:', error);
+        // Force clear local state even if logout fails
+        setCurrentUserWithPersistence(null);
+        tokenManager.clearAuth();
+        localStorage.removeItem('token');
+        window.location.href = '/login?message=auto_logout_failed';
+      }
+    };
+
+    const checkSessionWithServer = async () => {
+      if (!currentUser) return;
+      
+      try {
+        console.log('🔍 Checking session validity with server...');
+        const response = await validateSession(); // Make sure this API exists in authService
+        if (!response.data.valid) {
+          console.log('🕐 Server session expired, logging out');
+          handleAutoLogout();
+        }
+      } catch (error) {
+        // Session validation failed, could be expired
+        if (error.response?.status === 401) {
+          console.log('🕐 Session validation failed (401), logging out');
+          handleAutoLogout();
+        } else {
+          console.warn('⚠️ Session check error (non-401):', error.message);
+          // Don't logout for network errors, just log warning
+        }
+      }
+    };
+
+    // Only setup timers if user is logged in
+    if (currentUser) {
+      console.log('⏰ Setting up auto-logout timers for user:', currentUser.name);
+      
+      // Reset timer on user activity
+      const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+      activityEvents.forEach(event => {
+        window.addEventListener(event, handleUserActivity);
+      });
+
+      // Set initial timer
+      resetInactivityTimer();
+
+      // Check session with server every 5 minutes
+      sessionCheckInterval = setInterval(checkSessionWithServer, 5 * 60 * 1000);
+
+      // Initial check
+      checkSessionWithServer();
+
+      // Cleanup function
+      return () => {
+        console.log('🧹 Cleaning up auto-logout timers');
+        if (inactivityTimer) {
+          clearTimeout(inactivityTimer);
+        }
+        if (sessionCheckInterval) {
+          clearInterval(sessionCheckInterval);
+        }
+        activityEvents.forEach(event => {
+          window.removeEventListener(event, handleUserActivity);
+        });
+      };
+    }
+  }, [currentUser, logout, setCurrentUserWithPersistence]);
+  // ==================== END AUTO-LOGOUT MECHANISM ====================
+
   // Register user
   const register = async (userData) => {
     try {
@@ -136,7 +254,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Login user - FIXED with immediate persistence
+  // Login user
   const login = async (email, password) => {
     try {
       setLoading(true);
@@ -156,6 +274,9 @@ export const AuthProvider = ({ children }) => {
         // Update user state with persistence
         setCurrentUserWithPersistence(data.user);
         
+        // Reset inactivity timer by triggering user activity
+        window.dispatchEvent(new Event('click'));
+        
         return data;
       } else {
         throw new Error('Login response missing user data');
@@ -167,23 +288,6 @@ export const AuthProvider = ({ children }) => {
       throw err;
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Logout user
-  const logout = async () => {
-    try {
-      console.log('👋 Logging out user:', currentUser?.name || 'Unknown user');
-      await logoutService();
-    } catch (err) {
-      console.error('Server logout error:', err);
-      // Continue with client-side cleanup even if server fails
-    } finally {
-      // ALWAYS clear client-side data
-      setCurrentUserWithPersistence(null);
-      tokenManager.clearAuth();
-      localStorage.removeItem('token');
-      console.log('✅ Logout complete');
     }
   };
 
@@ -258,7 +362,7 @@ export const AuthProvider = ({ children }) => {
     resetPassword,
     updateProfile,
     updatePassword,
-    refreshUserData, // Add this
+    refreshUserData,
     setError,
     clearError
   };

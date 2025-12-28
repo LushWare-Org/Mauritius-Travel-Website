@@ -41,6 +41,7 @@ if (import.meta.env.PROD) {
 }
 
 // Import all your existing pages
+import LogoutWarning from './pages/auth/LogoutWarning';
 import Home from './pages/Home';
 import Activities from './pages/Activities';
 import ActivityDetail from './pages/ActivityDetail';
@@ -421,6 +422,7 @@ function App() {
       <Router>
         <AppContent />
         <AuthMonitor />
+        <LogoutWarning />
       </Router>
     </AuthProvider>
   );

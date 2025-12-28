@@ -6,6 +6,10 @@ const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 const fileUpload = require('express-fileupload');
 
+// session timeout 1 hour inactive
+const session = require('express-session');
+const { MongoStore } = require('connect-mongo'); // FIXED: Use destructuring for version 6
+
 // Load env vars
 dotenv.config();
 
@@ -25,11 +29,9 @@ const userContactRoutes = require('./routes/userContactRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const tourPackageBookingRoutes = require('./routes/tourPackageBooking.routes');
 const userTourPackageBookingRoutes = require('./routes/userTourPackageBooking.routes');
-const tourPackageRoutes = require('./routes/tourPackage.routes'); 
+const tourPackageRoutes = require('./routes/tourPackage.routes');
 const feedbackRoutes = require('./routes/feedback');
 const activityReviewRoutes = require('./routes/activityReviewRoutes');
-
-
 
 const airportTransferRoutes = require('./routes/airportTransfer');
 const airportTransferBookingRoutes = require('./routes/airportTransferBooking');
@@ -84,11 +86,7 @@ const allowedOrigins = corsOriginValue
   ? corsOriginValue === '*'
     ? '*'
     : corsOriginValue.split(',').map((origin) => origin.trim())
-  : [
-      'https://holidayvibestour.com',
-      'https://www.holidayvibestour.com'
-      
-    ];
+  : ['https://holidayvibestour.com', 'https://www.holidayvibestour.com'];
 
 // Enhanced CORS configuration for debugging
 const corsOrigins = process.env.CORS_ORIGIN
@@ -115,6 +113,65 @@ app.use(
 
 // Add OPTIONS handling for preflight requests
 app.options('*', cors());
+
+// ==================== SESSION inactive 1 hour CONFIGURATION ====================
+app.use(
+  session({
+    secret:
+      process.env.SESSION_SECRET || 'fallback-secret-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    rolling: true, // This resets expiry on each request
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGODB_URI,
+      collectionName: 'sessions',
+      ttl: 60 * 60, // 1 hour in seconds (changed from 2 minutes)
+      autoRemove: 'native',
+      crypto: {
+        secret:
+          process.env.SESSION_ENCRYPTION_SECRET || 'another-secret-change-me',
+      },
+    }),
+    cookie: {
+      maxAge: 60 * 60 * 1000, // 1 hour (changed from 2 minutes)
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      domain:
+        process.env.NODE_ENV === 'production'
+          ? '.holidayvibestour.com'
+          : undefined,
+    },
+    name: 'hv.session',
+  })
+);
+
+// Session activity tracking middleware
+app.use((req, res, next) => {
+  if (req.session.user) {
+    // Update last activity on authenticated requests
+    req.session.lastActivity = Date.now();
+
+    // Check if session expired
+    if (
+      req.session.lastActivity &&
+      Date.now() - req.session.lastActivity > 60 * 60 * 1000
+    ) {
+      req.session.destroy((err) => {
+        if (err) console.error('Session destruction error:', err);
+      });
+      // Clear session cookie
+      res.clearCookie('hv.session');
+      return res.status(401).json({
+        success: false,
+        error: 'Session expired. Please login again.',
+        code: 'SESSION_EXPIRED',
+      });
+    }
+  }
+  next();
+});
+// ==================== END SESSION CONFIGURATION ====================
 
 // Diagnostic root endpoint to check if the server is running
 app.get('/server-status', (req, res) => {
@@ -256,8 +313,6 @@ app.use('/api/v1/tour-packages', tourPackageRoutes);
 app.use('/api/v1/feedback', feedbackRoutes);
 app.use('/api/v1/activity-reviews', activityReviewRoutes);
 
-
-
 app.use('/api/v1/airport-transfers', airportTransferRoutes);
 app.use('/api/v1/airport-transfer-bookings', airportTransferBookingRoutes);
 
@@ -272,13 +327,13 @@ app.use('/api/v1/debug', debugUploadRoutes);
 app.get('/api/v1/contacts/migrate', async (req, res) => {
   try {
     const Contact = require('./models/Contact');
-    
+
     console.log('🔄 Migrating existing contacts...');
-    
+
     // Get all contacts
     const contacts = await Contact.find({});
     let updated = 0;
-    
+
     for (const contact of contacts) {
       // If contact has email but no userEmail, copy it
       if (contact.email && !contact.userEmail) {
@@ -288,26 +343,27 @@ app.get('/api/v1/contacts/migrate', async (req, res) => {
         console.log(`  ✅ Updated ${contact.email}`);
       }
     }
-    
+
     // Get stats
     const total = await Contact.countDocuments();
-    const withUserEmail = await Contact.countDocuments({ userEmail: { $exists: true, $ne: null } });
-    
+    const withUserEmail = await Contact.countDocuments({
+      userEmail: { $exists: true, $ne: null },
+    });
+
     res.json({
       success: true,
       message: `Migration complete. Updated ${updated} of ${total} contacts.`,
       stats: {
         total,
         withUserEmail,
-        withoutUserEmail: total - withUserEmail
-      }
+        withoutUserEmail: total - withUserEmail,
+      },
     });
-    
   } catch (err) {
     console.error('Migration error:', err);
     res.status(500).json({
       success: false,
-      error: err.message
+      error: err.message,
     });
   }
 });

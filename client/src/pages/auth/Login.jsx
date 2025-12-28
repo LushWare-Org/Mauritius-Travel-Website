@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
@@ -9,6 +9,38 @@ const Login = () => {
   const location = useLocation();
   const { login, error, setError, clearError } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Add this at the beginning of the Login component
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const [logoutReason, setLogoutReason] = useState('');
+
+  useEffect(() => {
+    // Check URL for session expiry message
+    const queryParams = new URLSearchParams(window.location.search);
+    const sessionParam = queryParams.get('session');
+    const messageParam = queryParams.get('message');
+    const authParam = queryParams.get('auth');
+    
+    if (sessionParam === 'expired' || 
+        messageParam === 'auto_logout' ||
+        authParam === 'invalid') {
+      
+      setSessionExpired(true);
+      
+      // Determine the reason
+      if (messageParam === 'auto_logout') {
+        setLogoutReason('inactivity');
+      } else if (sessionParam === 'expired') {
+        setLogoutReason('session_expired');
+      } else if (authParam === 'invalid') {
+        setLogoutReason('invalid_auth');
+      }
+      
+      // Clear the URL parameter
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, []);
 
   // Determine where to redirect after login
   const from = location.state?.from || '/';
@@ -27,6 +59,7 @@ const Login = () => {
   const handleLogin = async (values, { setSubmitting, setFieldError }) => {
     setIsLoading(true);
     clearError();
+    setSessionExpired(false); // Clear session expired message when user tries to login again
 
     try {
       console.log('🔐 Attempting to login with email:', values.email);
@@ -72,6 +105,20 @@ const Login = () => {
     }
   };
 
+  // Get appropriate message based on logout reason
+  const getSessionExpiredMessage = () => {
+    switch (logoutReason) {
+      case 'inactivity':
+        return 'Your session has expired due to inactivity. Please log in again.';
+      case 'session_expired':
+        return 'Your session has expired. Please log in again to continue.';
+      case 'invalid_auth':
+        return 'Your authentication is no longer valid. Please log in again.';
+      default:
+        return 'Your session has expired. Please log in again.';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-md">
@@ -85,10 +132,52 @@ const Login = () => {
             </p>
           </div>
 
+          {/* Add this in the return JSX, before the error message */}
+          {sessionExpired && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-md text-sm">
+              <div className="flex items-start">
+                <svg 
+                  className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24" 
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth="2" 
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.338 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  ></path>
+                </svg>
+                <div>
+                  <p className="font-medium">Session Expired</p>
+                  <p className="mt-1">{getSessionExpiredMessage()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Error Message */}
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">
-              {error}
+              <div className="flex items-start">
+                <svg 
+                  className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24" 
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth="2" 
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
+                </svg>
+                <div>{error}</div>
+              </div>
             </div>
           )}
 

@@ -44,7 +44,8 @@ API.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor
+// ==================== ENHANCED RESPONSE INTERCEPTOR ====================
+// Add this response interceptor for session expiry
 API.interceptors.response.use(
   (response) => {
     if (import.meta.env.DEV) {
@@ -65,17 +66,60 @@ API.interceptors.response.use(
       message: error.message,
     });
 
+    // Handle session expiry
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login?session=expired';
+      const errorCode = error.response?.data?.code;
+      const errorMessage = error.response?.data?.error;
+      
+      // Check if it's a session expiry
+      if (errorCode === 'SESSION_EXPIRED' || errorMessage?.includes('Session expired')) {
+        console.log('🕐 Session expired detected via API interceptor');
+        
+        // Clear local auth data
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        
+        // Don't redirect if already on login page
+        if (!window.location.pathname.includes('/login')) {
+          // Use setTimeout to avoid React state updates during render
+          setTimeout(() => {
+            window.location.href = '/login?session=expired';
+          }, 100);
+        }
+      } else {
+        // Regular 401 (invalid token)
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        if (!window.location.pathname.includes('/login')) {
+          setTimeout(() => {
+            window.location.href = '/login?auth=invalid';
+          }, 100);
+        }
+      }
+    }
+
+    // Also handle 403 Forbidden (session might be invalid)
+    if (error.response?.status === 403) {
+      const errorMessage = error.response?.data?.error;
+      if (errorMessage?.includes('session') || errorMessage?.includes('Session')) {
+        console.log('🔒 Session forbidden detected via API interceptor');
+        
+        // Clear local auth data
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        
+        if (!window.location.pathname.includes('/login')) {
+          setTimeout(() => {
+            window.location.href = '/login?session=forbidden';
+          }, 100);
+        }
       }
     }
 
     return Promise.reject(error);
   }
 );
+// ==================== END ENHANCED RESPONSE INTERCEPTOR ====================
 
 // Dashboard API
 export const dashboardAPI = {
