@@ -3,11 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [
-    react({
-      jsxRuntime: 'classic',
-    }),
-  ],
+  plugins: [react()],
   
   resolve: {
     alias: {
@@ -21,96 +17,42 @@ export default defineConfig({
       '/api/v1': {
         target: 'https://api.holidayvibestour.com',
         changeOrigin: true,
-        secure: false,
+        // The rewrite is redundant - remove it
+        // rewrite: (path) => path.replace(/^\/api\/v1/, '/api/v1')
       },
     },
   },
   
+  // ADD THIS BUILD CONFIGURATION
   build: {
     outDir: 'dist',
-    sourcemap: false,
-    minify: 'esbuild',
+    sourcemap: false, // Disable sourcemaps in production
+    minify: 'esbuild', // Use esbuild (fast, built-in)
     
+    // Optional: Remove console logs in production
     esbuild: {
-      drop: ['console', 'debugger'],
+      drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
     },
     
+    // Let Vite handle chunking automatically (prevents circular dependency errors)
     rollupOptions: {
       output: {
-        // Smart manual chunking - prevents React errors while optimizing
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            // Group React packages together (CRITICAL to prevent undefined errors)
-            if (id.includes('/react/') || id.includes('/react-dom/')) {
-              return 'vendor-react';
-            }
-            
-            // Group jsPDF and html2canvas together
-            if (id.includes('jspdf') || id.includes('html2canvas')) {
-              return 'vendor-pdf';
-            }
-            
-            // Group UI libraries
-            if (id.includes('lucide-react') || id.includes('recharts')) {
-              return 'vendor-ui';
-            }
-            
-            // Group routing/state management
-            if (id.includes('react-router') || id.includes('react-hook-form')) {
-              return 'vendor-routing';
-            }
-            
-            // Everything else
-            return 'vendor';
-          }
-          // IMPORTANT:  return undefined for app code
-          // This lets Vite handle your src/ files automatically
-          return undefined;
-        },
-        
+        manualChunks: undefined,
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
       },
     },
     
-    // Increase warning limit
-    chunkSizeWarningLimit: 2000,
-    
-    commonjsOptions: {
-      transformMixedEsModules: true,
-    },
-    
-    target: 'es2020',
-    
-    // Enable brotli compression for better gzip
-    reportCompressedSize: true,
+    chunkSizeWarningLimit: 1500, // Increase warning limit
   },
   
   optimizeDeps: {
     include: [
-      'react',
-      'react-dom',
-      'react-router-dom',
       'axios',
-      'lucide-react',
-      'jspdf',
-      'html2canvas',
-      'react-datepicker',
-      'framer-motion',
-      'react-icons',
-      'yup',
-      'formik',
-      '@heroicons/react',
+      'react',        // Add React
+      'react-dom',    // Add React DOM
+      'react-router-dom', // Add if using React Router
     ],
-    exclude: [],
-  },
-  
-  define: {
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
-  },
-  
-  css: {
-    devSourcemap: false,
   },
 });
