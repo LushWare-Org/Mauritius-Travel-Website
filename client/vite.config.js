@@ -1,120 +1,116 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { splitVendorChunkPlugin } from 'vite'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    // Configure react plugin for better compatibility
     react({
-      jsxRuntime: 'classic', // Ensures React is available
-    }), 
-    splitVendorChunkPlugin()
+      jsxRuntime: 'classic',
+    }),
   ],
   
-  // Server configuration
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src'),
+    },
+  },
+  
   server: {
     port: 3000,
     proxy: {
       '/api/v1': {
         target: 'https://api.holidayvibestour.com',
         changeOrigin: true,
-        secure: false,  
-      }
-    }
+        secure: false,
+      },
+    },
   },
   
   build: {
-    // Enable sourcemaps in development, disable in production
-    sourcemap: process.env.NODE_ENV !== 'production',
+    outDir: 'dist',
+    sourcemap: false,
+    minify: 'esbuild',
+    
+    esbuild: {
+      drop: ['console', 'debugger'],
+    },
     
     rollupOptions: {
       output: {
+        // Smart manual chunking - prevents React errors while optimizing
         manualChunks(id) {
-          // Split vendor libraries into separate chunks
           if (id.includes('node_modules')) {
-            // ============ CRITICAL FIX ============
-            // React and ReactDOM MUST be together
-            if (
-              id.includes('/react/') || 
-              id.includes('/react-dom/') ||
-              id.includes('react') && !id.includes('react-aria') // Exclude other react packages
-            ) {
-              console.log('📦 Bundling React in react-vendor:', id.split('/').pop());
-              return 'react-vendor'; // Keep React and ReactDOM together
+            // Group React packages together (CRITICAL to prevent undefined errors)
+            if (id.includes('/react/') || id.includes('/react-dom/')) {
+              return 'vendor-react';
             }
-            // UI libraries
-            if (id.includes('@headlessui/react') || id.includes('@heroicons/react')) {
-              return 'ui-vendor'
-            }
-            // PDF generation
+            
+            // Group jsPDF and html2canvas together
             if (id.includes('jspdf') || id.includes('html2canvas')) {
-              return 'pdf-vendor'
+              return 'vendor-pdf';
             }
-            // Charts
-            if (id.includes('recharts') || id.includes('chart.js')) {
-              return 'chart-vendor'
+            
+            // Group UI libraries
+            if (id.includes('lucide-react') || id.includes('recharts')) {
+              return 'vendor-ui';
             }
-            // Maps
-            if (id.includes('leaflet')) {
-              return 'map-vendor'
+            
+            // Group routing/state management
+            if (id.includes('react-router') || id.includes('react-hook-form')) {
+              return 'vendor-routing';
             }
-            // Forms
-            if (id.includes('react-hook-form') || id.includes('yup')) {
-              return 'form-vendor'
-            }
-            // Default vendor chunk for other dependencies
-            return 'vendor'
+            
+            // Everything else
+            return 'vendor';
           }
+          // IMPORTANT:  return undefined for app code
+          // This lets Vite handle your src/ files automatically
+          return undefined;
         },
-        // Ensure consistent naming
+        
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
-      }
-    },
-    // Increase chunk size warning limit
-    chunkSizeWarningLimit: 1000,
-    
-    // CHANGE HERE: Use esbuild instead of terser
-    minify: 'esbuild',
-    
-    // Optional esbuild configuration
-    esbuild: {
-      drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
-      pure: process.env.NODE_ENV === 'production' ? ['console.log', 'console.debug'] : [],
+      },
     },
     
-    // Better chunk splitting
+    // Increase warning limit
+    chunkSizeWarningLimit: 2000,
+    
     commonjsOptions: {
       transformMixedEsModules: true,
     },
+    
+    target: 'es2020',
+    
+    // Enable brotli compression for better gzip
+    reportCompressedSize: true,
   },
   
-  // Optimize dependencies
   optimizeDeps: {
     include: [
-      'react', 
-      'react-dom', 
+      'react',
+      'react-dom',
       'react-router-dom',
+      'axios',
+      'lucide-react',
       'jspdf',
       'html2canvas',
+      'react-datepicker',
+      'framer-motion',
+      'react-icons',
+      'yup',
+      'formik',
+      '@heroicons/react',
     ],
-    // Ensure React is not excluded
     exclude: [],
   },
   
-  // Define global constants
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
-    '__VUE_OPTIONS_API__': true,
-    '__VUE_PROD_DEVTOOLS__': false,
   },
   
-  // Resolve configuration
-  resolve: {
-    alias: {
-      // Add any aliases if needed
-    },
+  css: {
+    devSourcemap: false,
   },
-})
+});
