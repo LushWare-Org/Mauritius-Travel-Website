@@ -76,13 +76,13 @@ export default defineConfig({
     // Increase chunk size warning limit
     chunkSizeWarningLimit: 1000,
     
-    // Minify for production
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: process.env.NODE_ENV === 'production',
-        drop_debugger: true,
-      },
+    // CHANGE HERE: Use esbuild instead of terser
+    minify: 'esbuild',
+    
+    // Optional esbuild configuration
+    esbuild: {
+      drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+      pure: process.env.NODE_ENV === 'production' ? ['console.log', 'console.debug'] : [],
     },
     
     // Better chunk splitting
