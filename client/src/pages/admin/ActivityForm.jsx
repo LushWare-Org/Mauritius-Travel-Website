@@ -82,7 +82,7 @@ const ActivityForm = () => {
     displayCurrency: Yup.string().oneOf(['EUR', 'MUR'], 'Invalid display currency').default('EUR'),
   });
 
-  // Handle image upload (same as before)
+  // Handle image upload 
   const handleImageUpload = async (event, isGallery = false) => {
     const files = Array.from(event.target.files);
     if (!files.length) return;
@@ -168,6 +168,13 @@ const ActivityForm = () => {
 
   // Handle form submission
   const handleSubmit = async (values, { setSubmitting }) => {
+    // Check if images are still uploading
+    if (uploading) {
+      alert('Please wait for images to finish uploading before saving.');
+      setSubmitting(false);
+      return;
+    }
+    
     try {
       if (images.length === 0) {
         alert('Please upload at least one main image');
@@ -227,12 +234,7 @@ const ActivityForm = () => {
     }
   };
 
-  // Auto-calculate other currencies based on one (optional feature)
-  const calculateOtherCurrencies = (values, baseCurrency, baseField, baseValue) => {
-    // This is optional - if you want to have auto-calculation
-    // For now, we'll require manual entry for all currencies
-    return values;
-  };
+ 
 
   if (error) {
     return (
@@ -870,21 +872,30 @@ const ActivityForm = () => {
                   </p>
                 </div>
               
-                {/* Submit Button */}
+                {/* Submit Button - disable when uploading */}
                 <div className="border-t border-gray-200 pt-6 flex justify-end">
                   <button
                     type="submit"
-                    disabled={isSubmitting}
-                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    disabled={isSubmitting || uploading}
+                    className={`inline-flex items-center px-6 py-3 border border-transparent shadow-sm text-base font-medium rounded-md text-white 
+                      ${(isSubmitting || uploading) 
+                        ? 'bg-blue-400 cursor-not-allowed' 
+                        : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                      }`}
                   >
                     {isSubmitting ? (
                       <>
-                        <div className="animate-spin mr-2 h-4 w-4 border-t-2 border-b-2 border-white rounded-full"></div>
+                        <div className="animate-spin mr-3 h-5 w-5 border-t-2 border-b-2 border-white rounded-full"></div>
                         Saving...
+                      </>
+                    ) : uploading ? (
+                      <>
+                        <div className="animate-spin mr-3 h-5 w-5 border-t-2 border-b-2 border-white rounded-full"></div>
+                        Uploading Images...
                       </>
                     ) : (
                       <>
-                        <i className="fas fa-save mr-2"></i>
+                        <i className="fas fa-save mr-3"></i>
                         Save Excursion
                       </>
                     )}

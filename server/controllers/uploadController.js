@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Configure Cloudinary with either environment variables or fallback values
-const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'dwzhs42tz';
+const cloudName = process.env.CLOUDINARY_CLOUD_NAME ;
 const apiKey = process.env.CLOUDINARY_API_KEY || '';
 const apiSecret = process.env.CLOUDINARY_API_SECRET || '';
 
@@ -143,7 +143,7 @@ exports.uploadImage = async (req, res) => {
     try {
       console.log('Attempting to upload to Cloudinary...');
       const result = await cloudinary.uploader.upload(filePath, {
-        folder: 'maldives_activities',
+        folder: 'mauritius_activities',
         use_filename: true,
         unique_filename: true
       });

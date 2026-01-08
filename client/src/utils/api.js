@@ -461,9 +461,9 @@ export const uploadImage = async (file) => {
   });
 
   // Get Cloudinary configuration - HARDCODED FALLBACKS
-  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dwzhs42tz';
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME ;
   const uploadPreset =
-    import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'maldives_activities';
+    import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
   console.log('🔧 Using Cloudinary config:', { cloudName, uploadPreset });
 

@@ -6,7 +6,7 @@ const uploadToCloudinary = async (filePath, options = {}) => {
   try {
     // Set default options
     const uploadOptions = {
-      folder: 'maldives_activities',
+      folder: 'mauritius_activities',
       use_filename: true,
       unique_filename: true,
       ...options
