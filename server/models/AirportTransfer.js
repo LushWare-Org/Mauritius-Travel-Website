@@ -6,11 +6,11 @@ const AirportTransferSchema = new mongoose.Schema({
     required: [true, 'Please add airport name'],
     trim: true
   },
-  //airportCode - this is hotel name - change it later
-  airportCode: {
+  
+  // CHANGED: airportCode to hotelName
+  hotelName: {
     type: String,
     required: [true, 'Please add hotel name'],
-    uppercase: true,
     trim: true
   },
   
@@ -69,7 +69,5 @@ const AirportTransferSchema = new mongoose.Schema({
     default: Date.now
   }
 });
-
-
 
 module.exports = mongoose.model('AirportTransfer', AirportTransferSchema);

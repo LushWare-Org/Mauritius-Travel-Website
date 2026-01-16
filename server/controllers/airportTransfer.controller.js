@@ -16,7 +16,7 @@ exports.getActiveTransfers = async (req, res, next) => {
     const formattedTransfers = transfers.map(transfer => ({
       _id: transfer._id,
       airportName: transfer.airportName,
-      airportCode: transfer.airportCode,
+      hotelName: transfer.hotelName, // CHANGED: airportCode to hotelName
       oneWayPriceMUR: transfer.oneWayPriceMUR,
       oneWayPriceEUR: transfer.oneWayPriceEUR,
       roundTripPriceMUR: transfer.roundTripPriceMUR,

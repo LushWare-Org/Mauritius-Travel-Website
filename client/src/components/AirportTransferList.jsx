@@ -225,7 +225,7 @@ const AirportTransferList = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-xl font-bold">{transfer.airportName}</h3>
-                          <p className="text-blue-100 mt-1">{transfer.airportCode}</p>
+                          <p className="text-blue-100 mt-1">{transfer.hotelName}</p> {/* CHANGED: airportCode to hotelName */}
                         </div>
                         <div className="text-right">
                           <div className="bg-white/20 rounded-lg px-3 py-1 inline-block">

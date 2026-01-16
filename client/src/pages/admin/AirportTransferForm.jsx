@@ -16,7 +16,7 @@ const AirportTransferForm = () => {
 
   const [formData, setFormData] = useState({
     airportName: '',
-    airportCode: '',
+    hotelName: '', // CHANGED: airportCode to hotelName
     oneWayPriceMUR: '',
     oneWayPriceEUR: '',
     roundTripPriceMUR: '',
@@ -56,7 +56,7 @@ const AirportTransferForm = () => {
         
         setFormData({
           airportName: transfer.airportName || '',
-          airportCode: transfer.airportCode || '',
+          hotelName: transfer.hotelName || '', // CHANGED: airportCode to hotelName
           oneWayPriceMUR: transfer.oneWayPriceMUR || transfer.oneWayPrice || '',
           oneWayPriceEUR: transfer.oneWayPriceEUR || '',
           roundTripPriceMUR: transfer.roundTripPriceMUR || transfer.roundTripPrice || '',
@@ -99,8 +99,8 @@ const AirportTransferForm = () => {
       return false;
     }
 
-    if (!formData.airportCode.trim()) {
-      setError('Airport code is required');
+    if (!formData.hotelName.trim()) { // CHANGED: airportCode to hotelName
+      setError('Hotel name is required');
       return false;
     }
 
@@ -159,7 +159,7 @@ const AirportTransferForm = () => {
       
       const data = {
         airportName: formData.airportName.trim(),
-        airportCode: formData.airportCode.trim().toUpperCase(),
+        hotelName: formData.hotelName.trim(), // CHANGED: airportCode to hotelName
         oneWayPriceMUR: parseFloat(formData.oneWayPriceMUR),
         oneWayPriceEUR: parseFloat(formData.oneWayPriceEUR),
         roundTripPriceMUR: parseFloat(formData.roundTripPriceMUR),
@@ -274,16 +274,16 @@ const AirportTransferForm = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Hotel Name*
+                      Hotel Name *
                     </label>
                     <input
                       type="text"
-                      name="airportCode"
-                      value={formData.airportCode}
+                      name="hotelName" // CHANGED: airportCode to hotelName
+                      value={formData.hotelName}
                       onChange={handleInputChange}
                       className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       required
-                      placeholder="e.g., MRU"
+                      placeholder="e.g., Hilton Mauritius Resort & Spa"
                     />
                   </div>
                 </div>

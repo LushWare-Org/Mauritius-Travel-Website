@@ -845,7 +845,7 @@ const UserAirportTransfers = () => {
                 <i className="fas fa-phone text-green-500 mt-0.5 mr-2"></i>
                 <span>
                   <strong>Contact:</strong> Call +230 5813 7644 or email
-                  Mervbn01@gmail.com
+                  mervbn01@gmail.com
                 </span>
               </li>
             </ul>

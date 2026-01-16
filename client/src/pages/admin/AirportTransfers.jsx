@@ -153,6 +153,9 @@ const AirportTransfers = () => {
                         Airport
                       </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Hotel Name {/* CHANGED: Airport Code to Hotel Name */}
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Vehicle
                       </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -181,10 +184,12 @@ const AirportTransfers = () => {
                               <div className="text-sm font-medium text-gray-900">
                                 {transfer.airportName}
                               </div>
-                              <div className="text-sm text-gray-500">
-                                {transfer.airportCode}
-                              </div>
                             </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {transfer.hotelName} {/* CHANGED: airportCode to hotelName */}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -196,10 +201,10 @@ const AirportTransfers = () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm">
                             <div className="text-gray-900">
-                              One-way: <span className="font-semibold">Rs{transfer.oneWayPrice}</span>
+                              One-way: <span className="font-semibold">Rs{transfer.oneWayPriceMUR || transfer.oneWayPrice}</span>
                             </div>
                             <div className="text-gray-500">
-                              Round-trip: <span className="font-semibold">Rs{transfer.roundTripPrice}</span>
+                              Round-trip: <span className="font-semibold">Rs{transfer.roundTripPriceMUR || transfer.roundTripPrice}</span>
                             </div>
                           </div>
                         </td>
