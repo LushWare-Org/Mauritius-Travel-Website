@@ -185,34 +185,19 @@ const ActivityTabs = ({ activity }) => {
   const inclusions = activity.included && activity.included.length > 0
     ? activity.included
     : [
-        'Professional English-speaking guide',
-        'Hotel pickup and drop-off',
-        'All equipment needed for the activity',
-        'Safety briefing',
-        'Refreshments',
-        'Insurance coverage',
+        'Professional English-speaking guide'
       ];
 
   const exclusions = activity.notIncluded && activity.notIncluded.length > 0
     ? activity.notIncluded
     : [
-        'Personal expenses',
-        'Gratuities (optional)',
-        'Meals not specified',
-        'Alcoholic beverages',
-        'Additional activities not mentioned',
-        'Souvenirs and personal shopping',
+        'Additional activities not mentioned'
       ];
 
   const requirements = activity.requirements && activity.requirements.length > 0
     ? activity.requirements
     : [
-        'Good physical condition',
-        'Swimwear and towel',
-        'Sunscreen and sunglasses',
-        'Comfortable clothing',
-        'Valid ID/passport',
-        'Minimum age: 12 years',
+        'Good physical condition'
       ];
 
   // Scroll tabs horizontally on mobile

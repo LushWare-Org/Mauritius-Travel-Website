@@ -1,12 +1,10 @@
 // src/pages/admin/activity/ActivityReviews.jsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import AdminLayout from '../../../../components/admin/AdminLayout';
 import { activityReviewsAPI, activitiesAPI } from '../../../../utils/api';
 import { toast } from 'react-toastify';
 import { FaStar, FaEye, FaTrash, FaUser, FaCalendar, FaSync, FaExclamationTriangle, FaCheck, FaTimes } from 'react-icons/fa';
 
-const AdminActivityReviews = () => {
+const ActivityReviews = () => {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -316,427 +314,420 @@ const AdminActivityReviews = () => {
   };
 
   return (
-    <AdminLayout>
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Excursions Reviews</h1>
-        <p className="text-gray-600 mb-8">
-          Manage and moderate customer reviews for excursions
-        </p>
-
-        {/* Error Alert */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <FaExclamationTriangle className="h-5 w-5 text-red-400" />
+    <div className="space-y-6">
+      {/* Error Alert */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <FaExclamationTriangle className="h-5 w-5 text-red-400" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Error</h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>{error}</p>
               </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error</h3>
-                <div className="mt-2 text-sm text-red-700">
-                  <p>{error}</p>
-                </div>
-                <button
-                  onClick={fetchReviews}
-                  className="mt-2 text-sm text-red-700 hover:text-red-800 font-medium"
-                >
-                  Try again →
-                </button>
-              </div>
+              <button
+                onClick={fetchReviews}
+                className="mt-2 text-sm text-red-700 hover:text-red-800 font-medium"
+              >
+                Try again →
+              </button>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Reviews Table */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+      {/* Reviews Table */}
+      <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Excursion & Review
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  User
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Rating
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {loading ? (
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Excursion & Review
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Rating
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                      <p className="text-gray-600">Loading reviews...</p>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center">
-                      <div className="flex flex-col items-center justify-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                        <p className="text-gray-600">Loading reviews...</p>
+              ) : reviews.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="text-center">
+                      <FaStar className="mx-auto h-12 w-12 text-gray-400 mb-3" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">
+                        No reviews found
+                      </h3>
+                      <p className="mt-1 text-sm text-gray-500">
+                        When customers leave reviews, they'll appear here
+                      </p>
+                      <div className="mt-4">
+                        <button
+                          onClick={fetchReviews}
+                          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                        >
+                          <FaSync className="w-4 h-4 mr-2" />
+                          Refresh
+                        </button>
                       </div>
-                    </td>
-                  </tr>
-                ) : reviews.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center">
-                      <div className="text-center">
-                        <FaStar className="mx-auto h-12 w-12 text-gray-400 mb-3" />
-                        <h3 className="mt-2 text-sm font-medium text-gray-900">
-                          No reviews found
-                        </h3>
-                        <p className="mt-1 text-sm text-gray-500">
-                          When customers leave reviews, they'll appear here
-                        </p>
-                        <div className="mt-4">
-                          <button
-                            onClick={fetchReviews}
-                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                          >
-                            <FaSync className="w-4 h-4 mr-2" />
-                            Refresh
-                          </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                reviews.map((review) => {
+                  const activityInfo = getActivityInfo(review);
+                  const userInfo = getUserInfo(review);
+                  
+                  return (
+                    <tr key={review._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {activityInfo.name}
                         </div>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  reviews.map((review) => {
-                    const activityInfo = getActivityInfo(review);
-                    const userInfo = getUserInfo(review);
-                    
-                    return (
-                      <tr key={review._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {activityInfo.name}
-                          </div>
-                          <div className="text-sm text-gray-500 mt-1">
-                            {review.comment && (
-                              <div className="max-w-xs truncate">
-                                {review.comment}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {userInfo}
-                          </div>
-                          {review.user?.email && (
-                            <div className="text-sm text-gray-500">
-                              {review.user.email}
+                        <div className="text-sm text-gray-500 mt-1">
+                          {review.comment && (
+                            <div className="max-w-xs truncate">
+                              {review.comment}
                             </div>
                           )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {renderStars(review.rating)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            review.status === 'approved' 
-                              ? 'bg-green-100 text-green-800'
-                              : review.status === 'rejected'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {review.status || 'pending'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(review.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex justify-end space-x-2">
-                            <button
-                              onClick={() => handleViewReview(review)}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                              title="View Details"
-                            >
-                              <FaEye className="w-5 h-5" />
-                            </button>
-                            {review.status === 'pending' && (
-                              <>
-                                <button
-                                  onClick={() => {
-                                    setSelectedReview(review);
-                                    setCurrentAction('approve');
-                                    setActionDialogOpen(true);
-                                  }}
-                                  className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
-                                  title="Approve"
-                                >
-                                  <FaCheck className="w-5 h-5" />
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setSelectedReview(review);
-                                    setCurrentAction('reject');
-                                    setActionDialogOpen(true);
-                                  }}
-                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                                  title="Reject"
-                                >
-                                  <FaTimes className="w-5 h-5" />
-                                </button>
-                              </>
-                            )}
-                            <button
-                              onClick={() => {
-                                setSelectedReview(review);
-                                setDeleteDialogOpen(true);
-                              }}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                              title="Delete"
-                            >
-                              <FaTrash className="w-5 h-5" />
-                            </button>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {userInfo}
+                        </div>
+                        {review.user?.email && (
+                          <div className="text-sm text-gray-500">
+                            {review.user.email}
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && <PaginationComponent />}
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {renderStars(review.rating)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          review.status === 'approved' 
+                            ? 'bg-green-100 text-green-800'
+                            : review.status === 'rejected'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {review.status || 'pending'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(review.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex justify-end space-x-2">
+                          <button
+                            onClick={() => handleViewReview(review)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                            title="View Details"
+                          >
+                            <FaEye className="w-5 h-5" />
+                          </button>
+                          {review.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setSelectedReview(review);
+                                  setCurrentAction('approve');
+                                  setActionDialogOpen(true);
+                                }}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+                                title="Approve"
+                              >
+                                <FaCheck className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedReview(review);
+                                  setCurrentAction('reject');
+                                  setActionDialogOpen(true);
+                                }}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                                title="Reject"
+                              >
+                                <FaTimes className="w-5 h-5" />
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => {
+                              setSelectedReview(review);
+                              setDeleteDialogOpen(true);
+                            }}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                            title="Delete"
+                          >
+                            <FaTrash className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
 
-        {/* View Review Dialog */}
-        {viewDialogOpen && selectedReview && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold text-gray-800">
-                    Review Details
-                  </h2>
-                  <button
-                    onClick={() => setViewDialogOpen(false)}
-                    className="text-gray-400 hover:text-gray-600 text-2xl"
-                  >
-                    &times;
-                  </button>
-                </div>
+        {/* Pagination */}
+        {totalPages > 1 && <PaginationComponent />}
+      </div>
 
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                      User Information
-                    </h3>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="font-medium">
-                        {getUserInfo(selectedReview)}
-                      </p>
-                      {selectedReview.user?.email && (
-                        <p className="text-gray-600 text-sm mt-1">
-                          {selectedReview.user.email}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                      Excursion Information
-                    </h3>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="font-medium">
-                        {getActivityInfo(selectedReview).name}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                      Rating
-                    </h3>
-                    <div className="flex items-center">
-                      {renderStars(selectedReview.rating)}
-                    </div>
-                  </div>
-
-                  {selectedReview.title && (
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                        Review Title
-                      </h3>
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <p className="text-gray-700 font-medium">
-                          "{selectedReview.title}"
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                      Comment
-                    </h3>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-gray-700 whitespace-pre-wrap">
-                        {selectedReview.comment || 'No comment provided'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-gray-500">
-                      Submitted on:{' '}
-                      {new Date(selectedReview.createdAt).toLocaleString()}
-                    </div>
-                    <div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        selectedReview.status === 'approved' 
-                          ? 'bg-green-100 text-green-800'
-                          : selectedReview.status === 'rejected'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {selectedReview.status || 'pending'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-between">
-                <button
-                  onClick={() => {
-                    setViewDialogOpen(false);
-                    setSelectedReview(null);
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Close
-                </button>
-                {selectedReview.status === 'pending' && (
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => {
-                        setCurrentAction('approve');
-                        setActionDialogOpen(true);
-                      }}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => {
-                        setCurrentAction('reject');
-                        setActionDialogOpen(true);
-                      }}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                    >
-                      Reject
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Delete Confirmation Dialog */}
-        {deleteDialogOpen && selectedReview && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
-              <div className="p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-4">
-                  Delete Review
+      {/* View Review Dialog */}
+      {viewDialogOpen && selectedReview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  Review Details
                 </h2>
-                <p className="text-gray-600 mb-4">
-                  Are you sure you want to delete this review from{' '}
-                  <strong>{getUserInfo(selectedReview)}</strong>{' '}
-                  for{' '}
-                  <strong>
-                    {getActivityInfo(selectedReview).name}
-                  </strong>
-                  ?
-                </p>
-                {selectedReview.comment && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                    <p className="text-yellow-800 text-sm">
-                      <strong>Comment:</strong>{' '}
-                      {selectedReview.comment.substring(0, 100)}...
+                <button
+                  onClick={() => setViewDialogOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  &times;
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                    User Information
+                  </h3>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="font-medium">
+                      {getUserInfo(selectedReview)}
+                    </p>
+                    {selectedReview.user?.email && (
+                      <p className="text-gray-600 text-sm mt-1">
+                        {selectedReview.user.email}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                    Excursion Information
+                  </h3>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="font-medium">
+                      {getActivityInfo(selectedReview).name}
                     </p>
                   </div>
-                )}
-              </div>
-              <div className="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-end space-x-3">
-                <button
-                  onClick={() => {
-                    setDeleteDialogOpen(false);
-                    setSelectedReview(null);
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDeleteReview}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+                </div>
 
-        {/* Action Confirmation Dialog */}
-        {actionDialogOpen && selectedReview && currentAction && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
-              <div className="p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-4">
-                  {currentAction === 'approve' ? 'Approve' : 'Reject'} Review
-                </h2>
-                <p className="text-gray-600 mb-4">
-                  Are you sure you want to {currentAction} this review from{' '}
-                  <strong>{getUserInfo(selectedReview)}</strong>{' '}
-                  for{' '}
-                  <strong>
-                    {getActivityInfo(selectedReview).name}
-                  </strong>
-                  ?
-                </p>
-              </div>
-              <div className="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-end space-x-3">
-                <button
-                  onClick={() => {
-                    setActionDialogOpen(false);
-                    setSelectedReview(null);
-                    setCurrentAction(null);
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleReviewAction(currentAction)}
-                  className={`px-4 py-2 text-white rounded-lg hover:opacity-90 ${
-                    currentAction === 'approve' 
-                      ? 'bg-green-600 hover:bg-green-700' 
-                      : 'bg-red-600 hover:bg-red-700'
-                  }`}
-                >
-                  {currentAction === 'approve' ? 'Approve' : 'Reject'}
-                </button>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                    Rating
+                  </h3>
+                  <div className="flex items-center">
+                    {renderStars(selectedReview.rating)}
+                  </div>
+                </div>
+
+                {selectedReview.title && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                      Review Title
+                    </h3>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-700 font-medium">
+                        "{selectedReview.title}"
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                    Comment
+                  </h3>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-gray-700 whitespace-pre-wrap">
+                      {selectedReview.comment || 'No comment provided'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-500">
+                    Submitted on:{' '}
+                    {new Date(selectedReview.createdAt).toLocaleString()}
+                  </div>
+                  <div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      selectedReview.status === 'approved' 
+                        ? 'bg-green-100 text-green-800'
+                        : selectedReview.status === 'rejected'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {selectedReview.status || 'pending'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
+            <div className="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-between">
+              <button
+                onClick={() => {
+                  setViewDialogOpen(false);
+                  setSelectedReview(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Close
+              </button>
+              {selectedReview.status === 'pending' && (
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => {
+                      setCurrentAction('approve');
+                      setActionDialogOpen(true);
+                    }}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentAction('reject');
+                      setActionDialogOpen(true);
+                    }}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  >
+                    Reject
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        )}
-      </div>
-    </AdminLayout>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteDialogOpen && selectedReview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">
+                Delete Review
+              </h2>
+              <p className="text-gray-600 mb-4">
+                Are you sure you want to delete this review from{' '}
+                <strong>{getUserInfo(selectedReview)}</strong>{' '}
+                for{' '}
+                <strong>
+                  {getActivityInfo(selectedReview).name}
+                </strong>
+                ?
+              </p>
+              {selectedReview.comment && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                  <p className="text-yellow-800 text-sm">
+                    <strong>Comment:</strong>{' '}
+                    {selectedReview.comment.substring(0, 100)}...
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setDeleteDialogOpen(false);
+                  setSelectedReview(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteReview}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Action Confirmation Dialog */}
+      {actionDialogOpen && selectedReview && currentAction && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">
+                {currentAction === 'approve' ? 'Approve' : 'Reject'} Review
+              </h2>
+              <p className="text-gray-600 mb-4">
+                Are you sure you want to {currentAction} this review from{' '}
+                <strong>{getUserInfo(selectedReview)}</strong>{' '}
+                for{' '}
+                <strong>
+                  {getActivityInfo(selectedReview).name}
+                </strong>
+                ?
+              </p>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setActionDialogOpen(false);
+                  setSelectedReview(null);
+                  setCurrentAction(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleReviewAction(currentAction)}
+                className={`px-4 py-2 text-white rounded-lg hover:opacity-90 ${
+                  currentAction === 'approve' 
+                    ? 'bg-green-600 hover:bg-green-700' 
+                    : 'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                {currentAction === 'approve' ? 'Approve' : 'Reject'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
-export default AdminActivityReviews;
+export default ActivityReviews;

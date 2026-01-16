@@ -58,19 +58,17 @@ const ActivityForm = () => {
     }
   }, [id]);
 
-  // Validation schema - only EUR and MUR currencies
+  // Validation schema - only half/full day prices for EUR and MUR
   const validationSchema = Yup.object({
     title: Yup.string().required('Title is required'),
     description: Yup.string().required('Description is required'),
     shortDescription: Yup.string().max(200, 'Short description cannot exceed 200 characters'),
     
-    // EUR Prices
-    priceEUR: Yup.number().required('EUR price is required').positive('Price must be positive'),
+    // EUR Prices (Half/Full Day only)
     fullDayPriceEUR: Yup.number().required('EUR full day price is required').positive('Price must be positive'),
     halfDayPriceEUR: Yup.number().required('EUR half day price is required').positive('Price must be positive'),
     
-    // MUR Prices
-    priceMUR: Yup.number().required('MUR (Rs) price is required').positive('Price must be positive'),
+    // MUR Prices (Half/Full Day only)
     fullDayPriceMUR: Yup.number().required('MUR full day price is required').positive('Price must be positive'),
     halfDayPriceMUR: Yup.number().required('MUR half day price is required').positive('Price must be positive'),
     
@@ -78,8 +76,6 @@ const ActivityForm = () => {
     location: Yup.string().required('Location is required'),
     type: Yup.string().required('Excursion type is required'),
     maxParticipants: Yup.number().positive('Must be positive').integer('Must be a whole number'),
-    currency: Yup.string().oneOf(['EUR', 'MUR'], 'Invalid currency').default('EUR'),
-    displayCurrency: Yup.string().oneOf(['EUR', 'MUR'], 'Invalid display currency').default('EUR'),
   });
 
   // Handle image upload 
@@ -188,7 +184,7 @@ const ActivityForm = () => {
       // Get all gallery image URLs
       const galleryImageUrls = galleryImages.map(img => img.url);
      
-      // Prepare activity data with all currencies
+      // Prepare activity data
       const activityData = {
         ...values,
         image: mainImage,
@@ -202,7 +198,7 @@ const ActivityForm = () => {
                       values.requirements ? values.requirements.split(',').map(item => item.trim()) : [],
       };
      
-      console.log('Submitting activity data with currencies:', activityData);
+      console.log('Submitting activity data:', activityData);
      
       let response;
       if (isNew) {
@@ -220,7 +216,7 @@ const ActivityForm = () => {
           newValue: 'true'
         }));
        
-        console.log('✅ Excursion saved with dual currencies, refresh flags set');
+        console.log('✅ Excursion saved, refresh flags set');
        
         navigate('/admin/activities');
       } else {
@@ -233,8 +229,6 @@ const ActivityForm = () => {
       setSubmitting(false);
     }
   };
-
- 
 
   if (error) {
     return (
@@ -269,7 +263,7 @@ const ActivityForm = () => {
           <button
             type="button"
             onClick={() => navigate('/admin/activities')}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
           >
             Cancel
           </button>
@@ -288,13 +282,11 @@ const ActivityForm = () => {
               description: activity?.description || '',
               shortDescription: activity?.shortDescription || '',
               
-              // EUR Prices
-              priceEUR: activity?.priceEUR || '',
+              // EUR Prices (Half/Full Day only)
               fullDayPriceEUR: activity?.fullDayPriceEUR || '',
               halfDayPriceEUR: activity?.halfDayPriceEUR || '',
               
-              // MUR Prices
-              priceMUR: activity?.priceMUR || '',
+              // MUR Prices (Half/Full Day only)
               fullDayPriceMUR: activity?.fullDayPriceMUR || '',
               halfDayPriceMUR: activity?.halfDayPriceMUR || '',
               
@@ -309,8 +301,6 @@ const ActivityForm = () => {
               requirements: activity?.requirements || [],
               featured: activity?.featured || false,
               status: activity?.status || 'active',
-              currency: activity?.currency || 'EUR',
-              displayCurrency: activity?.displayCurrency || 'EUR',
             }}
             validationSchema={validationSchema}
             onSubmit={handleSubmit}
@@ -372,7 +362,7 @@ const ActivityForm = () => {
                 
                 {/* Currency Prices Section */}
                 <div className="space-y-6">
-                  <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Pricing (All Currencies Required)</h3>
+                  <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Pricing (Half/Full Day Prices Required for Both Currencies)</h3>
                   
                   {/* EUR Prices */}
                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">
@@ -380,22 +370,7 @@ const ActivityForm = () => {
                       <span className="bg-green-600 text-white px-2 py-1 rounded text-sm mr-2">EUR</span>
                       Euro Prices
                     </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label htmlFor="priceEUR" className="block text-sm font-medium text-gray-700">
-                          Base Price (EUR) <span className="text-red-500">*</span>
-                        </label>
-                        <Field
-                          type="number"
-                          name="priceEUR"
-                          id="priceEUR"
-                          className={`mt-1 focus:ring-green-500 focus:border-green-500 block w-full shadow-sm border-gray-300 rounded-md text-base py-2 px-3 ${
-                            errors.priceEUR && touched.priceEUR ? 'border-red-300' : ''
-                          }`}
-                          placeholder="e.g., 275"
-                        />
-                        <ErrorMessage name="priceEUR" component="div" className="mt-1 text-sm text-red-600" />
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label htmlFor="fullDayPriceEUR" className="block text-sm font-medium text-gray-700">
                           Full Day Price (EUR) <span className="text-red-500">*</span>
@@ -435,22 +410,7 @@ const ActivityForm = () => {
                       <span className="bg-yellow-600 text-white px-2 py-1 rounded text-sm mr-2">MUR</span>
                       Mauritian Rupee (Rs) Prices
                     </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label htmlFor="priceMUR" className="block text-sm font-medium text-gray-700">
-                          Base Price (Rs) <span className="text-red-500">*</span>
-                        </label>
-                        <Field
-                          type="number"
-                          name="priceMUR"
-                          id="priceMUR"
-                          className={`mt-1 focus:ring-yellow-500 focus:border-yellow-500 block w-full shadow-sm border-gray-300 rounded-md text-base py-2 px-3 ${
-                            errors.priceMUR && touched.priceMUR ? 'border-red-300' : ''
-                          }`}
-                          placeholder="e.g., 13500"
-                        />
-                        <ErrorMessage name="priceMUR" component="div" className="mt-1 text-sm text-red-600" />
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label htmlFor="fullDayPriceMUR" className="block text-sm font-medium text-gray-700">
                           Full Day Price (Rs) <span className="text-red-500">*</span>
@@ -481,44 +441,6 @@ const ActivityForm = () => {
                         />
                         <ErrorMessage name="halfDayPriceMUR" component="div" className="mt-1 text-sm text-red-600" />
                       </div>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="currency" className="block text-sm font-medium text-gray-700">
-                        Base Currency
-                      </label>
-                      <Field
-                        as="select"
-                        name="currency"
-                        id="currency"
-                        className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-base"
-                      >
-                        <option value="EUR">EUR (Euro)</option>
-                        <option value="MUR">MUR (Mauritian Rupee)</option>
-                      </Field>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Primary currency for internal calculations
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="displayCurrency" className="block text-sm font-medium text-gray-700">
-                        Default Display Currency
-                      </label>
-                      <Field
-                        as="select"
-                        name="displayCurrency"
-                        id="displayCurrency"
-                        className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-base"
-                      >
-                        <option value="EUR">EUR (Euro)</option>
-                        <option value="MUR">MUR (Mauritian Rupee)</option>
-                      </Field>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Currency shown to users by default
-                      </p>
                     </div>
                   </div>
                 </div>

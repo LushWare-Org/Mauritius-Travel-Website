@@ -16,12 +16,7 @@ const activitySchema = new mongoose.Schema({
   },
   
   // Dual Currency Pricing Fields
-  // EUR Prices
-  priceEUR: {
-    type: Number,
-    required: [true, 'Please add EUR price'],
-    min: [0, 'EUR price cannot be negative'],
-  },
+  // EUR Prices (Half/Full Day only)
   fullDayPriceEUR: {
     type: Number,
     required: [true, 'Please add EUR full day price'],
@@ -33,12 +28,7 @@ const activitySchema = new mongoose.Schema({
     min: [0, 'EUR half day price cannot be negative'],
   },
   
-  // MUR Prices (Mauritian Rupee)
-  priceMUR: {
-    type: Number,
-    required: [true, 'Please add MUR price'],
-    min: [0, 'MUR price cannot be negative'],
-  },
+  // MUR Prices (Mauritian Rupee) (Half/Full Day only)
   fullDayPriceMUR: {
     type: Number,
     required: [true, 'Please add MUR full day price'],
@@ -48,18 +38,6 @@ const activitySchema = new mongoose.Schema({
     type: Number,
     required: [true, 'Please add MUR half day price'],
     min: [0, 'MUR half day price cannot be negative'],
-  },
-  
-  // Currency configuration
-  currency: {
-    type: String,
-    enum: ['EUR', 'MUR'],
-    default: 'EUR'
-  },
-  displayCurrency: {
-    type: String,
-    enum: ['EUR', 'MUR'],
-    default: 'EUR'
   },
   
   duration: {
@@ -139,14 +117,6 @@ const activitySchema = new mongoose.Schema({
 // Update the updatedAt field before saving
 activitySchema.pre('save', function(next) {
   this.updatedAt = Date.now();
-  next();
-});
-
-// Middleware to set EUR price as default if not provided
-activitySchema.pre('save', function(next) {
-  if (!this.priceEUR && this.fullDayPriceEUR) {
-    this.priceEUR = this.fullDayPriceEUR;
-  }
   next();
 });
 

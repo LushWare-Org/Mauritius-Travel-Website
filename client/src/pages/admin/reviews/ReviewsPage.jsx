@@ -1,83 +1,177 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import ActivityReviews from './activity/ActivityReviews';
 import TourAdminFeedbackPanel from './TourReview/TourAdminFeedbackPanel';
+import AdminLayout from '../../../components/admin/AdminLayout';
 
 const ReviewsPage = () => {
-  const [activeTab, setActiveTab] = useState('tours');
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Get active tab from URL parameters
+  const params = new URLSearchParams(location.search);
+  const activeTab = params.get('tab') || 'tours';
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    // You can fetch review stats here if needed
+  }, []);
+
+  // Change tab function that updates URL
+  const changeTab = (tabName) => {
+    navigate(`/admin/reviews?tab=${tabName}`);
+  };
 
   return (
-    <div className="space-y-6 px-4 sm:px-0">
-      {/* Header */}
-      <div className="pb-5 border-b border-gray-200 mb-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
-              Reviews & Feedbacks
-            </h1>
-            <p className="text-gray-600 text-xs sm:text-sm">
-              Manage all customer reviews and feedbacks
-            </p>
-          </div>
+    <AdminLayout>
+      <div className="pb-5 border-b border-gray-200 mb-6 flex justify-between items-center bg-gradient-to-r from-white to-blue-50 p-4 rounded-lg shadow-sm">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800 mb-1">Reviews & Feedback Management</h1>
+          <p className="text-gray-500 text-sm">Monitor and respond to customer reviews and feedback</p>
+        </div>
+        <div className="text-sm bg-white py-2 px-3 rounded-md shadow-sm border border-gray-100 text-gray-600">
+          <i className="far fa-star mr-2"></i>
+          Customer Feedback
         </div>
       </div>
 
-      {/* Responsive Tab Navigation */}
-      <div className="mb-8">
-        <nav
-          className="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0 bg-gray-100 p-2 sm:p-1 rounded-xl"
-          aria-label="Tabs"
-        >
+      {/* Tab Navigation */}
+      <div className="mb-6 border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
           <button
-            onClick={() => setActiveTab('tours')}
+            onClick={() => changeTab('tours')}
             className={`${
               activeTab === 'tours'
-                ? 'bg-white text-blue-700 shadow-sm font-semibold'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
-            } flex-1 py-3 sm:py-3 px-4 text-center font-medium text-sm transition-all duration-200 rounded-lg flex items-center justify-center`}
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors duration-200 flex items-center`}
           >
-            <svg
-              className="w-4 h-4 sm:w-5 sm:h-5 mr-2"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
-            <span className="truncate">Tour Feedbacks</span>
+            <i className="fas fa-route mr-2"></i>
+            Tour Feedbacks
           </button>
           <button
-            onClick={() => setActiveTab('excursions')}
+            onClick={() => changeTab('excursions')}
             className={`${
               activeTab === 'excursions'
-                ? 'bg-white text-green-700 shadow-sm font-semibold'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
-            } flex-1 py-3 sm:py-3 px-4 text-center font-medium text-sm transition-all duration-200 rounded-lg flex items-center justify-center`}
+                ? 'border-green-500 text-green-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors duration-200 flex items-center`}
           >
-            <svg
-              className="w-4 h-4 sm:w-5 sm:h-5 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-              />
-            </svg>
-            <span className="truncate">Excursion Reviews</span>
+            <i className="fas fa-hiking mr-2"></i>
+            Excursion Reviews
           </button>
         </nav>
       </div>
 
-      {/* Tab Content */}
-      <div className="-mx-4 sm:mx-0">
-        <div className="px-4 sm:px-0">
-          {activeTab === 'tours' && <TourAdminFeedbackPanel />}
-          {activeTab === 'excursions' && <ActivityReviews />}
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded shadow-sm">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+            <div className="ml-auto pl-3">
+              <div className="-mx-1.5 -my-1.5">
+                <button 
+                  onClick={() => setError('')}
+                  className="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600"
+                >
+                  <span className="sr-only">Dismiss</span>
+                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+
+      {/* Loading State */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+          <p className="text-gray-500">Loading reviews data...</p>
+        </div>
+      ) : (
+        <>
+          {/* Tour Feedbacks Tab */}
+          {activeTab === 'tours' && (
+            <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-white to-blue-50">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-800">Tour Package Feedback Management</h2>
+                    <p className="text-gray-600 text-sm mt-1">View and manage customer feedback for tour packages</p>
+                  </div>
+                  <div className="text-sm bg-blue-100 text-blue-700 py-2 px-3 rounded-md font-medium">
+                    <i className="fas fa-star-half-alt mr-2"></i>
+                    Customer Ratings
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                <div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <i className="fas fa-info-circle text-blue-500 text-lg"></i>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-blue-700">
+                        This section allows you to manage all customer feedback for tour packages. 
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <TourAdminFeedbackPanel />
+              </div>
+            </div>
+          )}
+
+          {/* Excursion Reviews Tab */}
+          {activeTab === 'excursions' && (
+            <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-white to-green-50">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-800">Excursion Reviews Management</h2>
+                    <p className="text-gray-600 text-sm mt-1">View and manage customer reviews for excursions</p>
+                  </div>
+                  <div className="text-sm bg-green-100 text-green-700 py-2 px-3 rounded-md font-medium">
+                    <i className="fas fa-star mr-2"></i>
+                    Activity Ratings
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                <div className="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <i className="fas fa-info-circle text-green-500 text-lg"></i>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-green-700">
+                        This section allows you to manage all customer reviews for excursions. 
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <ActivityReviews />
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </AdminLayout>
   );
 };
 

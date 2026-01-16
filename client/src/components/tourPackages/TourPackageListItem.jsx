@@ -144,31 +144,37 @@ const TourPackageListItem = ({
     const currencyBadge = getCurrencyBadgeInfo();
 
     return (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col sm:flex-row border border-gray-200">
-            <div className="sm:w-1/3 h-48 sm:h-auto relative">
-                <img 
-                    src={pkg.image || '/images/placeholder.jpg'} 
-                    alt={pkg.title || 'Tour Package'}
-                    className="w-full h-full object-cover"
-                />
+        <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col sm:flex-row border border-gray-200 h-[500px] sm:h-64"> {/* Fixed height */}
+            {/* Image Container - Fixed height with aspect ratio preservation */}
+            <div className="sm:w-2/5 h-48 sm:h-full relative overflow-hidden">
+                <div className="absolute inset-0">
+                    <img 
+                        src={pkg.image || '/images/placeholder.jpg'} 
+                        alt={pkg.title || 'Tour Package'}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                    />
+                    {/* Image overlay to ensure consistent appearance */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                </div>
                 
                 {/* Featured Badge */}
                 {pkg.featured && (
-                    <span className="absolute top-3 left-0 bg-yellow-500 text-blue-900 py-1 px-3 font-semibold text-xs uppercase">
+                    <span className="absolute top-3 left-0 bg-yellow-500 text-blue-900 py-1 px-3 font-semibold text-xs uppercase z-10">
                         Featured
                     </span>
                 )}
                 
                 {/* Currency Availability Badge */}
                 {currencyBadge && (
-                    <span className={`absolute top-3 right-0 py-1 px-3 font-semibold text-xs uppercase text-white ${currencyBadge.bgColor} border ${currencyBadge.borderColor}`}>
+                    <span className={`absolute top-3 right-0 py-1 px-3 font-semibold text-xs uppercase text-white ${currencyBadge.bgColor} border ${currencyBadge.borderColor} z-10`}>
                         <i className={`${currencyBadge.icon} mr-1`}></i>
                         {currencyBadge.text}
                     </span>
                 )}
 
                 {/* Current Currency Display */}
-                <div className="absolute bottom-3 left-3 bg-white bg-opacity-90 backdrop-blur-sm py-1 px-3 rounded-full shadow-sm">
+                <div className="absolute bottom-3 left-3 bg-white bg-opacity-90 backdrop-blur-sm py-1 px-3 rounded-full shadow-sm z-10">
                     <span className={`text-xs font-bold ${
                         displayCurrency === 'EUR' ? 'text-blue-700' : 'text-green-700'
                     }`}>
@@ -180,15 +186,16 @@ const TourPackageListItem = ({
                 </div>
             </div>
 
-            <div className="p-5 flex flex-col flex-grow sm:w-2/3 relative">
-                {/* Title and Rating */}
-                <div className="flex justify-between items-start mb-3">
-                    <h2 className="text-xl font-bold text-blue-700 pr-2">
+            {/* Content Container - Fixed height with flex layout */}
+            <div className="p-4 flex flex-col flex-grow sm:w-3/5 relative overflow-hidden">
+                {/* Title and Rating - Fixed height with truncation */}
+                <div className="flex justify-between items-start mb-2 min-h-[3rem]">
+                    <h2 className="text-lg font-bold text-blue-700 pr-2 line-clamp-2">
                         {pkg.title || 'Untitled Package'}
                     </h2>
                     
                     {/* Rating Display */}
-                    <div className="flex flex-col items-end">
+                    <div className="flex flex-col items-end flex-shrink-0">
                         <div className="flex items-center">
                             <div className="flex mr-1">
                                 {renderStars(pkg.averageRating || 0)}
@@ -197,13 +204,14 @@ const TourPackageListItem = ({
                                 {pkg.averageRating ? pkg.averageRating.toFixed(1) : '0.0'}
                             </span>
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-xs text-gray-500 mt-1 whitespace-nowrap">
                             ({pkg.totalRatings || 0} reviews)
                         </div>
                     </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 mb-3">
+                {/* Tags - Fixed height */}
+                <div className="flex flex-wrap gap-1 mb-3 min-h-[1.75rem]">
                     {pkg.type && pkg.type !== 'Unknown' && pkg.type !== 'unknown' && (
                         <span className="bg-blue-100 text-blue-800 text-xs py-1 px-2 rounded capitalize">
                             {pkg.type.replace('-', ' ')}
@@ -223,18 +231,20 @@ const TourPackageListItem = ({
                     )}
                 </div>
 
-                <p className="text-gray-600 my-3 line-clamp-2">
+                {/* Description - Flexible height with truncation */}
+                <p className="text-gray-600 text-sm mb-3 line-clamp-3 flex-grow">
                     {pkg.description || pkg.shortDescription || 'No description available'}
                 </p>
 
-                <div className="mt-auto flex flex-col sm:flex-row justify-between items-start sm:items-center pt-4 border-t border-gray-100">
-                    <div className="mb-3 sm:mb-0">
+                {/* Bottom Section - Fixed height */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pt-3 border-t border-gray-100 mt-auto">
+                    <div className="mb-2 sm:mb-0 w-full sm:w-1/2">
                         {/* Main Price Display */}
                         <div className="flex items-center mb-1">
-                            <span className="text-blue-800 font-bold text-2xl mr-2">
+                            <span className="text-blue-800 font-bold text-xl mr-2 truncate">
                                 {priceInfo.display}
                             </span>
-                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                            <span className={`text-xs font-medium px-2 py-1 rounded-full flex-shrink-0 ${
                                 displayCurrency === 'EUR' 
                                     ? 'bg-blue-100 text-blue-800 border border-blue-200' 
                                     : 'bg-green-100 text-green-800 border border-green-200'
@@ -245,32 +255,34 @@ const TourPackageListItem = ({
                         
                         {/* Show alternative price if available */}
                         {priceInfo.hasAlternative && priceInfo.alternativePrice > 0 && (
-                            <div className="text-xs text-gray-500 flex items-center mt-1">
-                                <i className="fas fa-exchange-alt text-gray-400 mr-1"></i>
-                                Also available in {priceInfo.alternativeCurrency === 'EUR' ? '€' : 'Rs'} 
-                                <span className="ml-1 font-medium">
-                                    {priceInfo.alternativeCurrency === 'EUR' 
-                                        ? `€ ${priceInfo.alternativePrice.toFixed(2)}`
-                                        : `Rs ${Math.round(priceInfo.alternativePrice)}`
-                                    }
+                            <div className="text-xs text-gray-500 flex items-center mt-1 truncate">
+                                <i className="fas fa-exchange-alt text-gray-400 mr-1 flex-shrink-0"></i>
+                                <span className="truncate">
+                                    Also available in {priceInfo.alternativeCurrency === 'EUR' ? '€' : 'Rs'} 
+                                    <span className="ml-1 font-medium">
+                                        {priceInfo.alternativeCurrency === 'EUR' 
+                                            ? `€ ${priceInfo.alternativePrice.toFixed(2)}`
+                                            : `Rs ${Math.round(priceInfo.alternativePrice)}`
+                                        }
+                                    </span>
                                 </span>
                             </div>
                         )}
                         
-                        <div className="text-gray-500 text-sm">per package</div>
+                        <div className="text-gray-500 text-xs">per package</div>
                     </div>
                     
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-1 w-full sm:w-auto">
                         <Link 
                             to={getTourUrl}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors font-medium text-sm flex items-center justify-center"
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm flex items-center justify-center whitespace-nowrap"
                         >
                             <i className="fas fa-eye mr-2"></i>
                             View Details
                         </Link>
                         
                         {/* Display current viewing currency */}
-                        <div className="text-xs text-gray-500 text-center">
+                        <div className="text-xs text-gray-500 text-center whitespace-nowrap">
                             <i className="fas fa-eye mr-1"></i>
                             Viewing in {displayCurrency === 'EUR' ? '€' : 'Rs'}
                         </div>

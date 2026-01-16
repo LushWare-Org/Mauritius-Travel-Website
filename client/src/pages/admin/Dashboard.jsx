@@ -19,13 +19,6 @@ const AdminDashboard = () => {
       pendingBookings: 0,
       confirmedBookings: 0,
       completedBookings: 0
-    },
-    airportTransfers: {
-      totalBookings: 0,
-      totalRevenue: 0,
-      pendingBookings: 0,
-      confirmedBookings: 0,
-      completedBookings: 0
     }
   });
   const [loading, setLoading] = useState(true);
@@ -33,7 +26,6 @@ const AdminDashboard = () => {
   const [tourPackagesLoading, setTourPackagesLoading] = useState(true);
   const [error, setError] = useState('');
   const [recentBookings, setRecentBookings] = useState([]);
-  const [recentAirportBookings, setRecentAirportBookings] = useState([]);
   const [recentTourPackageBookings, setRecentTourPackageBookings] = useState([]);
   
   // Add state for activities breakdown
@@ -82,9 +74,7 @@ const AdminDashboard = () => {
           pendingBookings, 
           recentBookings,
           totalContacts,
-          unreadContacts,
-          airportTransfers,
-          recentAirportBookings 
+          unreadContacts
         } = response.data.data;
         
         setStats(prevStats => ({
@@ -93,18 +83,10 @@ const AdminDashboard = () => {
           totalUsers: totalUsers || 0,
           pendingBookings: pendingBookings || 0,
           totalContacts: totalContacts || 0,
-          unreadContacts: unreadContacts || 0,
-          airportTransfers: airportTransfers || {
-            totalBookings: 0,
-            totalRevenue: 0,
-            pendingBookings: 0,
-            confirmedBookings: 0,
-            completedBookings: 0
-          }
+          unreadContacts: unreadContacts || 0
         }));
         
         setRecentBookings(recentBookings || []);
-        setRecentAirportBookings(recentAirportBookings || []);
       } else {
         setError('Failed to fetch dashboard data');
       }
@@ -329,22 +311,6 @@ const AdminDashboard = () => {
             {stats.unreadContacts > 0 && (
               <span className="ml-2 bg-blue-100 text-blue-600 text-xs font-semibold px-2 py-0.5 rounded-full">
                 {stats.unreadContacts} unread
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => changeTab('airport-transfers')}
-            className={`${
-              activeTab === 'airport-transfers'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            } whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors duration-200`}
-          >
-            <i className="fas fa-plane mr-2"></i>
-            Airport Transfers
-            {stats.airportTransfers.pendingBookings > 0 && (
-              <span className="ml-2 bg-yellow-100 text-yellow-600 text-xs font-semibold px-2 py-0.5 rounded-full">
-                {stats.airportTransfers.pendingBookings} pending
               </span>
             )}
           </button>
@@ -590,40 +556,6 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                 </div>
-
-                {/* Airport Transfers Card */}
-                <div className="bg-white overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg border border-gray-50">
-                  <div className="px-5 py-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <div className="bg-indigo-100 p-3 rounded-full">
-                        <i className="fas fa-plane text-indigo-600 text-xl"></i>
-                      </div>
-                      <span className="text-xs font-medium text-gray-500 bg-indigo-50 py-1 px-2 rounded-md">Transfers</span>
-                    </div>
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Airport Transfers</dt>
-                      <dd className="mt-2 text-3xl font-extrabold text-indigo-600">
-                        {stats.airportTransfers.totalBookings}
-                      </dd>
-                    </dl>
-                    <div className="mt-2">
-                      <span className="text-xs text-gray-500">
-                        Revenue: <span className="font-semibold">Rs {stats.airportTransfers.totalRevenue.toFixed(2)}</span>
-                      </span>
-                    </div>
-                    <div className="mt-5">
-                      <button
-                        onClick={() => changeTab('airport-transfers')}
-                        className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center cursor-pointer"
-                      >
-                        View transfers 
-                        <svg className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               {/* Recent Tour Package Bookings */}
@@ -785,78 +717,6 @@ const AdminDashboard = () => {
                 )}
               </div>
 
-              {/* Recent Airport Transfers */}
-              {recentAirportBookings.length > 0 && (
-                <div className="bg-white shadow-md rounded-lg mb-8 border border-gray-100">
-                  <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-white to-indigo-50">
-                    <div>
-                      <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Airport Transfer Bookings</h3>
-                      <p className="text-sm text-gray-500 mt-1">Latest airport transfer bookings</p>
-                    </div>
-                    <button
-                      onClick={() => changeTab('airport-transfers')}
-                      className="text-sm bg-indigo-500 hover:bg-indigo-600 text-white py-2 px-4 rounded-md transition-colors duration-200 flex items-center cursor-pointer"
-                    >
-                      View all 
-                      <i className="fas fa-arrow-right ml-2"></i>
-                    </button>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Booking Ref
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Airport
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Customer
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Trip Type
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Status
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Amount
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {recentAirportBookings.map((booking) => (
-                          <tr key={booking._id} className="hover:bg-indigo-50 transition-colors duration-150">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-indigo-600">
-                              {booking.bookingReference}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">
-                                {booking.transfer?.airportName || 'Unknown Airport'}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{booking.guestName}</div>
-                              <div className="text-sm text-gray-500">{booking.email}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-600 capitalize">{booking.tripType?.replace('-', ' ') || 'N/A'}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <StatusBadge status={booking.status} />
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">Rs {booking.totalPrice}</div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
               {/* Quick Actions */}
               <div className="bg-white shadow-md rounded-lg border border-gray-100 mb-8">
                 <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-white to-blue-50">
@@ -965,92 +825,6 @@ const AdminDashboard = () => {
             </div>
             
             <AdminContacts />
-          </div>
-        </div>
-      )}
-
-      {/* Airport Transfers Tab */}
-      {activeTab === 'airport-transfers' && (
-        <div className="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-white to-indigo-50">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-800">Airport Transfer Management</h2>
-                <p className="text-gray-600 text-sm mt-1">View and manage airport transfer services and bookings</p>
-              </div>
-              <div className="text-sm bg-indigo-100 text-indigo-700 py-2 px-3 rounded-md font-medium">
-                <i className="fas fa-plane mr-2"></i>
-                Airport Services
-              </div>
-            </div>
-          </div>
-          <div className="p-6">
-            <div className="mb-6 bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <i className="fas fa-info-circle text-indigo-500 text-lg"></i>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-indigo-700">
-                    This section allows you to manage airport transfer services and bookings. 
-                    You can add new transfer services, view booking requests, and manage transfer status.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            {/* Airport Transfer Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
-                <div className="text-3xl font-bold text-indigo-600 mb-2">{stats.airportTransfers.totalBookings}</div>
-                <div className="text-sm text-gray-600">Total Bookings</div>
-              </div>
-              <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
-                <div className="text-3xl font-bold text-yellow-600 mb-2">{stats.airportTransfers.pendingBookings}</div>
-                <div className="text-sm text-gray-600">Pending</div>
-              </div>
-              <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
-                <div className="text-3xl font-bold text-green-600 mb-2">{stats.airportTransfers.confirmedBookings}</div>
-                <div className="text-sm text-gray-600">Confirmed</div>
-              </div>
-              <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
-                <div className="text-3xl font-bold text-blue-600 mb-2">Rs {stats.airportTransfers.totalRevenue.toFixed(2)}</div>
-                <div className="text-sm text-gray-600">Revenue</div>
-              </div>
-            </div>
-            
-            {/* Quick Links */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <Link 
-                to="/admin/airport-transfers"
-                className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow duration-300"
-              >
-                <div className="flex items-center mb-4">
-                  <div className="bg-indigo-100 p-3 rounded-full mr-4">
-                    <i className="fas fa-list text-indigo-600 text-xl"></i>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800">Manage Transfers</h3>
-                    <p className="text-gray-500 text-sm">View and edit airport transfer services</p>
-                  </div>
-                </div>
-              </Link>
-              
-              <Link 
-                to="/admin/airport-transfer-bookings"
-                className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow duration-300"
-              >
-                <div className="flex items-center mb-4">
-                  <div className="bg-green-100 p-3 rounded-full mr-4">
-                    <i className="fas fa-calendar-check text-green-600 text-xl"></i>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800">Manage Bookings</h3>
-                    <p className="text-gray-500 text-sm">View and manage transfer bookings</p>
-                  </div>
-                </div>
-              </Link>
-            </div>
           </div>
         </div>
       )}

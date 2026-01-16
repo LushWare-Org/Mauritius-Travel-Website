@@ -77,26 +77,21 @@ exports.getActivities = async (req, res, next) => {
       activityObj.displayCurrency = displayCurrency;
       activityObj.symbol = getCurrencySymbol(displayCurrency);
       
-      // Check if activity has half/full day pricing
-      const hasHalfFullDay = activity.pricingType === 'half-full-day';
-      
       // Set prices based on selected currency
       if (displayCurrency === 'MUR') {
         // Use MUR (Rs) prices
-        activityObj.price = activity.priceMUR || 0;
+        activityObj.price = activity.halfDayPriceMUR || 0; // Use halfDayPrice as default
         activityObj.fullDayPrice = activity.fullDayPriceMUR || 0;
         activityObj.halfDayPrice = activity.halfDayPriceMUR || 0;
       } else {
         // Default to EUR prices
-        activityObj.price = activity.priceEUR || 0;
+        activityObj.price = activity.halfDayPriceEUR || 0; // Use halfDayPrice as default
         activityObj.fullDayPrice = activity.fullDayPriceEUR || 0;
         activityObj.halfDayPrice = activity.halfDayPriceEUR || 0;
       }
       
-      // For backward compatibility - ensure price is set properly
-      if (hasHalfFullDay) {
-        activityObj.price = activityObj.halfDayPrice;
-      }
+      // Set pricingType based on available prices
+      activityObj.pricingType = 'half-full-day'; // All activities now have half/full day pricing
       
       return activityObj;
     });
@@ -150,29 +145,20 @@ exports.getActivity = async (req, res, next) => {
     activityObj.displayCurrency = displayCurrency;
     activityObj.symbol = getCurrencySymbol(displayCurrency);
     
+    // Set pricingType
+    activityObj.pricingType = 'half-full-day';
+    
     // Set prices based on selected currency
     if (displayCurrency === 'MUR') {
       // Use MUR (Rs) prices
-      if (activityObj.pricingType === 'half-full-day') {
-        activityObj.price = activityObj.halfDayPriceMUR || activityObj.priceMUR;
-        activityObj.fullDayPrice = activityObj.fullDayPriceMUR;
-        activityObj.halfDayPrice = activityObj.halfDayPriceMUR;
-      } else {
-        activityObj.price = activityObj.priceMUR;
-        activityObj.fullDayPrice = activityObj.fullDayPriceMUR;
-        activityObj.halfDayPrice = activityObj.halfDayPriceMUR;
-      }
+      activityObj.price = activity.halfDayPriceMUR || 0;
+      activityObj.fullDayPrice = activity.fullDayPriceMUR;
+      activityObj.halfDayPrice = activity.halfDayPriceMUR;
     } else {
       // Default to EUR prices
-      if (activityObj.pricingType === 'half-full-day') {
-        activityObj.price = activityObj.halfDayPriceEUR || activityObj.priceEUR;
-        activityObj.fullDayPrice = activityObj.fullDayPriceEUR;
-        activityObj.halfDayPrice = activityObj.halfDayPriceEUR;
-      } else {
-        activityObj.price = activityObj.priceEUR;
-        activityObj.fullDayPrice = activityObj.fullDayPriceEUR;
-        activityObj.halfDayPrice = activityObj.halfDayPriceEUR;
-      }
+      activityObj.price = activity.halfDayPriceEUR || 0;
+      activityObj.fullDayPrice = activity.fullDayPriceEUR;
+      activityObj.halfDayPrice = activity.halfDayPriceEUR;
     }
 
     res.status(200).json({
@@ -195,10 +181,10 @@ exports.createActivity = async (req, res, next) => {
   try {
     const activityData = { ...req.body };
     
-    // Validate all currency prices are provided (only EUR and MUR now)
+    // Validate all currency prices are provided (only half/full day prices now)
     const requiredPrices = [
-      'priceEUR', 'fullDayPriceEUR', 'halfDayPriceEUR',
-      'priceMUR', 'fullDayPriceMUR', 'halfDayPriceMUR'
+      'fullDayPriceEUR', 'halfDayPriceEUR',
+      'fullDayPriceMUR', 'halfDayPriceMUR'
     ];
     
     for (const priceField of requiredPrices) {
@@ -210,9 +196,10 @@ exports.createActivity = async (req, res, next) => {
       }
     }
     
-    // Set default currency values to EUR
-    activityData.currency = 'EUR';
-    activityData.displayCurrency = 'EUR';
+    // Set default price fields for backward compatibility
+    activityData.price = activityData.halfDayPriceEUR; // Use half day EUR price as default
+    activityData.priceEUR = activityData.halfDayPriceEUR; // For backward compatibility
+    activityData.priceMUR = activityData.halfDayPriceMUR; // For backward compatibility
     
     const activity = await Activity.create(activityData);
 
@@ -235,10 +222,10 @@ exports.updateActivity = async (req, res, next) => {
   try {
     const activityData = { ...req.body };
     
-    // Validate all currency prices if provided (only EUR and MUR now)
+    // Validate currency prices if provided
     const currencyPrices = [
-      'priceEUR', 'fullDayPriceEUR', 'halfDayPriceEUR',
-      'priceMUR', 'fullDayPriceMUR', 'halfDayPriceMUR'
+      'fullDayPriceEUR', 'halfDayPriceEUR',
+      'fullDayPriceMUR', 'halfDayPriceMUR'
     ];
     
     for (const priceField of currencyPrices) {

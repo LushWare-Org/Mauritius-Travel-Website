@@ -20,9 +20,9 @@ const ActivityInfo = ({ activity, currency = 'MUR' }) => {
                 setReviewStats(response.data);
             } catch (error) {
                 console.error('Error fetching review stats:', error);
-                // Set default stats if API fails
+                // Set default stats if API fails - 0 stars
                 setReviewStats({
-                    averageRating: activity.rating || 0,
+                    averageRating: 0,
                     totalReviews: 0,
                     ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
                 });
@@ -36,25 +36,31 @@ const ActivityInfo = ({ activity, currency = 'MUR' }) => {
 
     // Determine current price based on selection
     const getCurrentPrice = () => {
-        if (activity.pricingType === 'half-full-day') {
-            return selectedDuration === 'halfDay' 
-                ? (activity.halfDayPrice || activity.price)
-                : (activity.fullDayPrice || activity.price);
-        }
-        return activity.price;
+        // All activities now have half/full day pricing
+        return selectedDuration === 'halfDay' 
+            ? (activity.halfDayPrice || activity.price)
+            : (activity.fullDayPrice || activity.price);
     };
     
     const getCurrentDuration = () => {
-        if (activity.pricingType === 'half-full-day') {
-            return selectedDuration === 'halfDay' ? 'Half Day' : 'Full Day';
-        }
-        return activity.duration;
+        return selectedDuration === 'halfDay' ? 'Half Day' : 'Full Day';
     };
 
     // Function to render stars
     const renderStars = (rating) => {
         const fullStars = Math.floor(rating);
         const hasHalfStar = rating % 1 >= 0.5;
+        
+        // If rating is 0, show all empty stars
+        if (rating === 0) {
+            return (
+                <div className="flex items-center">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                        <FaRegStar key={star} className="w-5 h-5 text-gray-300" />
+                    ))}
+                </div>
+            );
+        }
         
         return (
             <div className="flex items-center">
@@ -94,13 +100,13 @@ const ActivityInfo = ({ activity, currency = 'MUR' }) => {
                         ) : (
                             <>
                                 <div className="flex items-center mr-4">
-                                    {renderStars(reviewStats.averageRating)}
+                                    {renderStars(reviewStats?.averageRating || 0)}
                                     <span className="ml-2 text-xl font-bold text-gray-800">
-                                        {reviewStats.averageRating.toFixed(1)}
+                                        {(reviewStats?.averageRating || 0).toFixed(1)}
                                     </span>
                                 </div>
                                 <div className="text-gray-600">
-                                    ({reviewStats.totalReviews} review{reviewStats.totalReviews !== 1 ? 's' : ''})
+                                    ({(reviewStats?.totalReviews || 0)} review{(reviewStats?.totalReviews || 0) !== 1 ? 's' : ''})
                                 </div>
                             </>
                         )}
@@ -115,41 +121,39 @@ const ActivityInfo = ({ activity, currency = 'MUR' }) => {
                 
                 {/* Pricing Info */}
                 <div className="mt-4 md:mt-0 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                    {/* Duration Selection for Half/Full Day */}
-                    {activity.pricingType === 'half-full-day' ? (
-                        <div className="mb-4">
-                            <div className="flex space-x-3">
-                                <button
-                                    type="button"
-                                    className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all ${
-                                        selectedDuration === 'halfDay'
-                                            ? 'bg-blue-600 text-white shadow-sm'
-                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
-                                    }`}
-                                    onClick={() => setSelectedDuration('halfDay')}
-                                >
-                                    <div className="font-semibold">Half Day</div>
-                                    <div className="text-sm mt-1 font-bold">
-                                        {getCurrencySymbol()}{activity.halfDayPrice || activity.price}
-                                    </div>
-                                </button>
-                                <button
-                                    type="button"
-                                    className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all ${
-                                        selectedDuration === 'fullDay'
-                                            ? 'bg-blue-600 text-white shadow-sm'
-                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
-                                    }`}
-                                    onClick={() => setSelectedDuration('fullDay')}
-                                >
-                                    <div className="font-semibold">Full Day</div>
-                                    <div className="text-sm mt-1 font-bold">
-                                        {getCurrencySymbol()}{activity.fullDayPrice || activity.price}
-                                    </div>
-                                </button>
-                            </div>
+                    {/* Duration Selection */}
+                    <div className="mb-4">
+                        <div className="flex space-x-3">
+                            <button
+                                type="button"
+                                className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all ${
+                                    selectedDuration === 'halfDay'
+                                        ? 'bg-blue-600 text-white shadow-sm'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+                                }`}
+                                onClick={() => setSelectedDuration('halfDay')}
+                            >
+                                <div className="font-semibold">Half Day</div>
+                                <div className="text-sm mt-1 font-bold">
+                                    {getCurrencySymbol()}{activity.halfDayPrice || activity.price}
+                                </div>
+                            </button>
+                            <button
+                                type="button"
+                                className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all ${
+                                    selectedDuration === 'fullDay'
+                                        ? 'bg-blue-600 text-white shadow-sm'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+                                }`}
+                                onClick={() => setSelectedDuration('fullDay')}
+                            >
+                                <div className="font-semibold">Full Day</div>
+                                <div className="text-sm mt-1 font-bold">
+                                    {getCurrencySymbol()}{activity.fullDayPrice || activity.price}
+                                </div>
+                            </button>
                         </div>
-                    ) : null}
+                    </div>
                     
                     <div className="space-y-3">
                         <div className="flex justify-between items-center">
@@ -162,9 +166,7 @@ const ActivityInfo = ({ activity, currency = 'MUR' }) => {
                         <div className="flex justify-between items-center">
                             <span className="text-gray-600">Duration:</span>
                             <span className="font-semibold">
-                                {activity.pricingType === 'half-full-day' 
-                                    ? getCurrentDuration() 
-                                    : `${activity.duration} hour${activity.duration !== 1 ? 's' : ''}`}
+                                {getCurrentDuration()} 
                             </span>
                         </div>
                         <div className="flex justify-between items-center">
