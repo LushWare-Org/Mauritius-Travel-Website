@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { bookingsAPI, airportTransferBookingAPI } from '../../utils/api';
 import AdminLayout from '../../components/admin/AdminLayout';
 import logo from '../../assets/logo.png'; 
-import { formatBookingPrice } from '../../utils/currency'; // Import the currency formatting function
+import { formatBookingPrice } from '../../utils/currency'; 
 
 const BookingDetail = () => {
   const { id } = useParams();

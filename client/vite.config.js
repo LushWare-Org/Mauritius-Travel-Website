@@ -17,7 +17,7 @@ export default defineConfig({
       '/api/v1': {
         target: 'https://api.holidayvibestour.com',
         changeOrigin: true,
-        // The rewrite is redundant - remove it
+        
         // rewrite: (path) => path.replace(/^\/api\/v1/, '/api/v1')
       },
     },
@@ -26,10 +26,10 @@ export default defineConfig({
   // ADD THIS BUILD CONFIGURATION
   build: {
     outDir: 'dist',
-    sourcemap: false, // Disable sourcemaps in production
-    minify: 'esbuild', // Use esbuild (fast, built-in)
+    sourcemap: false, 
+    minify: 'esbuild', 
     
-    // Optional: Remove console logs in production
+    //Remove console logs in production
     esbuild: {
       drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
     },
@@ -44,15 +44,15 @@ export default defineConfig({
       },
     },
     
-    chunkSizeWarningLimit: 1500, // Increase warning limit
+    chunkSizeWarningLimit: 1800, 
   },
   
   optimizeDeps: {
     include: [
       'axios',
-      'react',        // Add React
-      'react-dom',    // Add React DOM
-      'react-router-dom', // Add if using React Router
+      'react',       
+      'react-dom',   
+      'react-router-dom', 
     ],
   },
 });

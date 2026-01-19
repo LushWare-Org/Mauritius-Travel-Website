@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { airportTransferBookingAPI } from '../../utils/airportTransferApi';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { formatBookingPrice } from '../../utils/currency'; // Added import
+import { formatBookingPrice } from '../../utils/currency'; 
 import { jsPDF } from 'jspdf';
 import logo from '../../assets/logo.png';
 

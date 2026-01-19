@@ -1,4 +1,4 @@
-// AdminFeedbackPanel.jsx - FIXED VERSION
+// AdminFeedbackPanel.jsx
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import API from '../../../../utils/api';
@@ -21,7 +21,7 @@ const TourAdminFeedbackPanel = () => {
   });
   const [totalPages, setTotalPages] = useState(1);
 
-  // Add useEffect to fetch data on component mount
+  //  useEffect to fetch data on component mount
   useEffect(() => {
     fetchFeedbacks();
     fetchStatistics();
@@ -32,7 +32,7 @@ const TourAdminFeedbackPanel = () => {
     console.log(`🔍 ${message}`, data ? data : '');
   };
 
-  // Fetch feedbacks - FIXED VERSION
+  // Fetch feedbacks 
   const fetchFeedbacks = async () => {
     try {
       setLoading(true);
@@ -59,7 +59,7 @@ const TourAdminFeedbackPanel = () => {
     }
   };
 
-  // Fetch statistics - FIXED VERSION
+  // Fetch statistics 
   const fetchStatistics = async () => {
     try {
       const response = await API.get('/feedback/admin/statistics');
@@ -72,7 +72,7 @@ const TourAdminFeedbackPanel = () => {
     }
   };
 
-  // Handle view feedback - FIXED
+  // Handle view feedback 
   const handleViewFeedback = async (id) => {
     try {
       const response = await API.get(`/feedback/admin/${id}`);
@@ -89,7 +89,7 @@ const TourAdminFeedbackPanel = () => {
     }
   };
 
-  // Handle delete feedback - FIXED
+  // Handle delete feedback 
   const handleDeleteFeedback = async (id) => {
     try {
       const response = await API.delete(`/feedback/admin/${id}`);

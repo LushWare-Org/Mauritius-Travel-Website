@@ -16,7 +16,7 @@ const ReviewsPage = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // You can fetch review stats here if needed
+   
   }, []);
 
   // Change tab function that updates URL
@@ -28,8 +28,8 @@ const ReviewsPage = () => {
     <AdminLayout>
       <div className="pb-5 border-b border-gray-200 mb-6 flex justify-between items-center bg-gradient-to-r from-white to-blue-50 p-4 rounded-lg shadow-sm">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-1">Reviews & Feedback Management</h1>
-          <p className="text-gray-500 text-sm">Monitor and respond to customer reviews and feedback</p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-1">Tour and Excursion Reviews Management</h1>
+          <p className="text-gray-500 text-sm">Monitor and respond to customer reviews for tours and excursions</p>
         </div>
         <div className="text-sm bg-white py-2 px-3 rounded-md shadow-sm border border-gray-100 text-gray-600">
           <i className="far fa-star mr-2"></i>

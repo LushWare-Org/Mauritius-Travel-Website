@@ -41,11 +41,10 @@ API.interceptors.request.use(
 
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
-// ==================== ENHANCED RESPONSE INTERCEPTOR ====================
-// Add this response interceptor for session expiry
+//  response interceptor for session expiry
 API.interceptors.response.use(
   (response) => {
     if (import.meta.env.DEV) {
@@ -53,7 +52,7 @@ API.interceptors.response.use(
         '✅ API Success:',
         response.config?.method?.toUpperCase(),
         response.config?.url,
-        response.status
+        response.status,
       );
     }
     return response;
@@ -70,15 +69,18 @@ API.interceptors.response.use(
     if (error.response?.status === 401) {
       const errorCode = error.response?.data?.code;
       const errorMessage = error.response?.data?.error;
-      
+
       // Check if it's a session expiry
-      if (errorCode === 'SESSION_EXPIRED' || errorMessage?.includes('Session expired')) {
+      if (
+        errorCode === 'SESSION_EXPIRED' ||
+        errorMessage?.includes('Session expired')
+      ) {
         console.log('🕐 Session expired detected via API interceptor');
-        
+
         // Clear local auth data
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        
+
         // Don't redirect if already on login page
         if (!window.location.pathname.includes('/login')) {
           // Use setTimeout to avoid React state updates during render
@@ -101,13 +103,16 @@ API.interceptors.response.use(
     // Also handle 403 Forbidden (session might be invalid)
     if (error.response?.status === 403) {
       const errorMessage = error.response?.data?.error;
-      if (errorMessage?.includes('session') || errorMessage?.includes('Session')) {
+      if (
+        errorMessage?.includes('session') ||
+        errorMessage?.includes('Session')
+      ) {
         console.log('🔒 Session forbidden detected via API interceptor');
-        
+
         // Clear local auth data
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        
+
         if (!window.location.pathname.includes('/login')) {
           setTimeout(() => {
             window.location.href = '/login?session=forbidden';
@@ -117,9 +122,8 @@ API.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
-// ==================== END ENHANCED RESPONSE INTERCEPTOR ====================
 
 // Dashboard API
 export const dashboardAPI = {
@@ -157,11 +161,11 @@ export const dashboardAPI = {
         data: {
           success: true,
           data: {
-            // Don't include totalActivities here - it will come from context
+            // Don't include totalActivities here ,it will come from context
             totalBookings: bookings.length,
             totalUsers: users.length,
             pendingBookings: bookings.filter(
-              (b) => b.status === 'pending' || b.bookingStatus === 'pending'
+              (b) => b.status === 'pending' || b.bookingStatus === 'pending',
             ).length,
             totalContacts: contacts.length,
             unreadContacts: contacts.filter(
@@ -169,18 +173,18 @@ export const dashboardAPI = {
                 !c.status ||
                 c.status === 'unread' ||
                 c.status === 'new' ||
-                c.isRead === false
+                c.isRead === false,
             ).length,
             recentBookings: bookings
               .sort(
                 (a, b) =>
-                  new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+                  new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
               )
               .slice(0, 5),
             recentAirportBookings: airportBookings
               .sort(
                 (a, b) =>
-                  new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+                  new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
               )
               .slice(0, 5),
             airportTransfers: {
@@ -191,16 +195,16 @@ export const dashboardAPI = {
                   (parseFloat(booking.totalPrice) ||
                     parseFloat(booking.price) ||
                     0),
-                0
+                0,
               ),
               pendingBookings: airportBookings.filter(
-                (b) => b.status === 'pending'
+                (b) => b.status === 'pending',
               ).length,
               confirmedBookings: airportBookings.filter(
-                (b) => b.status === 'confirmed'
+                (b) => b.status === 'confirmed',
               ).length,
               completedBookings: airportBookings.filter(
-                (b) => b.status === 'completed'
+                (b) => b.status === 'completed',
               ).length,
             },
           },
@@ -236,7 +240,7 @@ export const dashboardAPI = {
   },
 };
 
-// Activities API - ONLY ONE DEFINITION
+// Activities API
 export const activitiesAPI = {
   baseUrl: API_URL,
 
@@ -284,13 +288,13 @@ export const activitiesAPI = {
 
   getById: async (id, currency = 'USD') => {
     console.log(
-      `🔍 Activities API: Fetching activity ${id} with currency ${currency}`
+      `🔍 Activities API: Fetching activity ${id} with currency ${currency}`,
     );
     try {
       const response = await API.get(`/activities/${id}`, {
         params: {
           currency,
-          _t: Date.now(), // Add timestamp to bypass cache
+          _t: Date.now(),
         },
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -316,7 +320,7 @@ export const activitiesAPI = {
 
   create: async (data) => {
     console.log(
-      '➕ Activities API: Creating new activity with dual currencies'
+      '➕ Activities API: Creating new activity with dual currencies',
     );
     try {
       const response = await API.post('/activities', data);
@@ -329,7 +333,7 @@ export const activitiesAPI = {
 
   update: async (id, data) => {
     console.log(
-      `✏️ Activities API: Updating activity ${id} with dual currencies`
+      `✏️ Activities API: Updating activity ${id} with dual currencies`,
     );
     try {
       const response = await API.put(`/activities/${id}`, data);
@@ -378,7 +382,7 @@ export const tourPackageBookingsAPI = {
     try {
       console.log(`🔍 Fetching booking with ID: ${id}`);
       console.log(
-        `🔗 Full URL: ${API.defaults.baseURL}/tour-package-bookings/${id}`
+        `🔗 Full URL: ${API.defaults.baseURL}/tour-package-bookings/${id}`,
       );
 
       const response = await API.get(`/tour-package-bookings/${id}`);
@@ -401,7 +405,7 @@ export const tourPackageBookingsAPI = {
       throw new Error(
         `Failed to fetch booking ${id}: ${
           error.response?.data?.message || error.message
-        }`
+        }`,
       );
     }
   },
@@ -461,13 +465,12 @@ export const uploadImage = async (file) => {
   });
 
   // Get Cloudinary configuration - HARDCODED FALLBACKS
-  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME ;
-  const uploadPreset =
-    import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
   console.log('🔧 Using Cloudinary config:', { cloudName, uploadPreset });
 
-  // METHOD 1: Try direct Cloudinary upload with fetch (most reliable)
+  // METHOD 1: Try direct Cloudinary upload with fetch
   try {
     console.log('🔄 Method 1: Trying direct Cloudinary upload...');
 
@@ -481,7 +484,7 @@ export const uploadImage = async (file) => {
       {
         method: 'POST',
         body: formData,
-      }
+      },
     );
 
     if (!response.ok) {
@@ -515,13 +518,13 @@ export const uploadImage = async (file) => {
             'Content-Type': 'multipart/form-data',
           },
           timeout: 30000,
-        }
+        },
       );
 
       if (response.data.secure_url) {
         console.log(
           '✅ Axios Cloudinary upload successful!',
-          response.data.secure_url
+          response.data.secure_url,
         );
         return response.data.secure_url;
       }
@@ -569,7 +572,7 @@ export const uploadImage = async (file) => {
         // Store in localStorage with timestamp
         const storageKey = `local_image_${Date.now()}_${file.name.replace(
           /[^a-z0-9]/gi,
-          '_'
+          '_',
         )}`;
         localStorage.setItem(
           storageKey,
@@ -578,7 +581,7 @@ export const uploadImage = async (file) => {
             fileName: file.name,
             timestamp: Date.now(),
             placeholder: placeholderUrl,
-          })
+          }),
         );
 
         console.log('📸 Stored locally with key:', storageKey);
@@ -636,7 +639,7 @@ export const airportTransferAPI = {
   delete: (id) => API.delete(`/airport-transfers/${id}`),
   getBookingsByDateRange: (startDate, endDate) =>
     API.get(
-      `/airport-transfer-bookings/report?startDate=${startDate}&endDate=${endDate}`
+      `/airport-transfer-bookings/report?startDate=${startDate}&endDate=${endDate}`,
     ),
 };
 // Airport Transfer Booking API
@@ -723,7 +726,7 @@ export const testImageUpload = async () => {
   }
 };
 
-// Activity Reviews API (v1) - UPDATED WITH CONSISTENT ENDPOINTS
+// Activity Reviews API (v1)
 export const activityReviewsAPI = {
   // Get all reviews for an activity
   getByActivityId: async (activityId, params = {}) => {
@@ -731,7 +734,7 @@ export const activityReviewsAPI = {
       console.log(`📋 Fetching reviews for activity ${activityId}...`, params);
       const response = await API.get(
         `/activity-reviews/activity/${activityId}`,
-        { params }
+        { params },
       );
       console.log(`✅ Reviews response:`, response.data);
       return response;
@@ -757,7 +760,7 @@ export const activityReviewsAPI = {
     try {
       console.log(`📊 Fetching review summary for activity ${activityId}...`);
       const response = await API.get(
-        `/activity-reviews/activity/${activityId}/summary`
+        `/activity-reviews/activity/${activityId}/summary`,
       );
       console.log(`✅ Summary response:`, response.data);
       return response;
@@ -768,7 +771,7 @@ export const activityReviewsAPI = {
           status: error.response?.status,
           url: error.config?.url,
           message: error.message,
-        }
+        },
       );
       // Return default summary
       return {
@@ -787,7 +790,7 @@ export const activityReviewsAPI = {
     try {
       console.log(`❓ Checking if user can review activity ${activityId}...`);
       const response = await API.get(
-        `/activity-reviews/activity/${activityId}/can-review`
+        `/activity-reviews/activity/${activityId}/can-review`,
       );
       console.log(`✅ Can review response:`, response.data);
       return response;
@@ -798,7 +801,7 @@ export const activityReviewsAPI = {
           status: error.response?.status,
           url: error.config?.url,
           message: error.message,
-        }
+        },
       );
 
       // If 404, the endpoint doesn't exist yet - return default
@@ -829,11 +832,11 @@ export const activityReviewsAPI = {
     try {
       console.log(
         `➕ Creating review for activity ${activityId}...`,
-        reviewData
+        reviewData,
       );
       const response = await API.post(
         `/activity-reviews/activity/${activityId}`,
-        reviewData
+        reviewData,
       );
       console.log(`✅ Create review response:`, response.data);
       return response;
@@ -871,7 +874,7 @@ export const activityReviewsAPI = {
     try {
       console.log(`👤 Fetching user review for activity ${activityId}...`);
       const response = await API.get(
-        `/activity-reviews/activity/${activityId}/user/my-review`
+        `/activity-reviews/activity/${activityId}/user/my-review`,
       );
       console.log(`✅ User review response:`, response.data);
       return response;
@@ -882,40 +885,13 @@ export const activityReviewsAPI = {
           status: error.response?.status,
           url: error.config?.url,
           message: error.message,
-        }
+        },
       );
       return {
         data: {
           success: true, // Mark as success
           data: null,
           hasReviewed: false,
-        },
-      };
-    }
-  },
-
-  // Like a review
-  like: async (reviewId) => {
-    try {
-      console.log(`👍 Liking review ${reviewId}...`);
-      const response = await API.post(`/activity-reviews/${reviewId}/like`);
-      console.log(`✅ Like response:`, response.data);
-      return response;
-    } catch (error) {
-      console.error(`❌ Error liking review ${reviewId}:`, {
-        status: error.response?.status,
-        url: error.config?.url,
-        message: error.message,
-      });
-      // Return success anyway for testing
-      return {
-        data: {
-          success: true,
-          data: {
-            likes: 1,
-            helpfulCount: 1,
-            liked: true,
-          },
         },
       };
     }
@@ -969,42 +945,13 @@ export const activityReviewsAPI = {
     }
   },
 
-  // Update review status (admin)
-  updateStatus: async (reviewId, status) => {
-    try {
-      console.log(`🔄 Updating status for review ${reviewId} to ${status}...`);
-      const response = await API.put(
-        `/activity-reviews/admin/${reviewId}/status`,
-        { status }
-      );
-      console.log(`✅ Update status response:`, response.data);
-      return response;
-    } catch (error) {
-      console.error(`❌ Error updating status for review ${reviewId}:`, {
-        status: error.response?.status,
-        url: error.config?.url,
-        message: error.message,
-      });
-      // Simulate success for testing
-      return {
-        data: {
-          success: true,
-          data: {
-            _id: reviewId,
-            status: status,
-          },
-        },
-      };
-    }
-  },
-
   // Reply to review (admin)
   reply: async (reviewId, replyMessage) => {
     try {
       console.log(`💬 Replying to review ${reviewId}...`);
       const response = await API.post(
         `/activity-reviews/admin/${reviewId}/reply`,
-        { replyMessage }
+        { replyMessage },
       );
       console.log(`✅ Reply response:`, response.data);
       return response;

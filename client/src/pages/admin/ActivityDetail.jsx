@@ -10,7 +10,8 @@ const AdminActivityDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  const API_URL = 'https://maldives-activity-booking-backend.onrender.com/api/v1';
+  
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
   useEffect(() => {
     const fetchActivity = async () => {
@@ -34,7 +35,7 @@ const AdminActivityDetail = () => {
     if (id) {
       fetchActivity();
     }
-  }, [id]);
+  }, [id, API_URL]);
 
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this activity?')) {
