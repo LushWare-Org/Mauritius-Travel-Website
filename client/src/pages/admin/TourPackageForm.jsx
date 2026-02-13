@@ -284,9 +284,9 @@ const TourPackageForm = () => {
     switch(values.currencyType) {
       case 'both':
         priceObject = {
-          price: values.priceRs, // Main price field (backward compatibility)
-          priceEur: values.priceEur, // CHANGED: priceEuro → priceEur
-          supportsCurrency: 'both' // CHANGED: currencyType → supportsCurrency
+          price: values.priceRs, // Main price field
+          priceEur: values.priceEur, //  priceEuro → priceEur
+          supportsCurrency: 'both' // currencyType → supportsCurrency
         };
         break;
       case 'rs-only':
@@ -394,8 +394,8 @@ const TourPackageForm = () => {
             shortDescription: packageData?.shortDescription || '',
             description: packageData?.description || '',
             priceRs: packageData?.price || packageData?.priceRs || '',
-            priceEur: packageData?.priceEur || '', // CHANGED: priceEuro → priceEur
-            currencyType: packageData?.supportsCurrency || 'both', // CHANGED: currencyType → supportsCurrency
+            priceEur: packageData?.priceEur || '', //  priceEuro → priceEur
+            currencyType: packageData?.supportsCurrency || 'both', //  currencyType → supportsCurrency
             itinerary: packageData?.itinerary || [],
             included: packageData?.included || [],
             notIncluded: packageData?.notIncluded || ['Entrance fees'],
@@ -503,7 +503,7 @@ const TourPackageForm = () => {
                         <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">€</span>
                         <Field 
                           type="number" 
-                          name="priceEur"  // CHANGED: priceEuro → priceEur
+                          name="priceEur"  //  priceEuro → priceEur
                           className="w-full pl-12 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                           placeholder="Enter price in Euros"
                           min="0"
@@ -743,13 +743,13 @@ const TourPackageForm = () => {
                           {values.itinerary.map((item, index) => (
                             <div key={index} className="flex items-start space-x-3">
                               <span className="flex-shrink-0 mt-3 text-sm font-medium text-gray-700">
-                                Day {index + 1}:
+                                Trip {index + 1}:
                               </span>
                               <div className="flex-1">
                                 <Field 
                                   name={`itinerary.${index}`} 
                                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                                  placeholder={`Describe activities for day ${index + 1}`}
+                                  placeholder={`Describe activities for Trip ${index + 1}`}
                                 />
                               </div>
                               <button 
@@ -768,7 +768,7 @@ const TourPackageForm = () => {
                             className="px-4 py-2.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition font-medium"
                           >
                             <i className="fas fa-plus mr-2"></i>
-                            Add Day
+                            Add Trip
                           </button>
                         </div>
                       )}
